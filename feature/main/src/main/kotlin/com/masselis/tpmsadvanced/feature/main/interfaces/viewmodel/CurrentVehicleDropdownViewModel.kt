@@ -1,6 +1,7 @@
 package com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel
 
 import android.os.Parcelable
+import com.masselis.tpmsadvanced.data.vehicle.model.AlertLevel
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.flow.StateFlow
@@ -26,6 +27,9 @@ internal interface CurrentVehicleDropdownViewModel {
 
     val stateFlow: StateFlow<State>
     val eventChannel: ReceiveChannel<Event>
+
+    /** The red or crimson alert of each vehicle other than the current one, by its uuid */
+    val otherAlerts: StateFlow<Map<UUID, AlertLevel>>
 
     fun setCurrent(vehicle: Vehicle)
 

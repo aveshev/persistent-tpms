@@ -17,11 +17,14 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuBoxScope
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -32,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.vectorResource
@@ -40,6 +44,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.masselis.tpmsadvanced.data.vehicle.model.AlertLevel
+import com.masselis.tpmsadvanced.data.vehicle.model.AlertLevel.CRIMSON
+import com.masselis.tpmsadvanced.data.vehicle.model.AlertLevel.RED
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import com.masselis.tpmsadvanced.feature.main.R
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.CurrentVehicleDropdownTags.AddVehicle.addButton
@@ -54,6 +61,8 @@ import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.CurrentVehicl
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.CurrentVehicleDropdownViewModel.State
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.CurrentVehicleDropdownViewModel
 import kotlinx.collections.immutable.ImmutableList
+import kotlinx.collections.immutable.ImmutableMap
+import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
@@ -93,6 +102,7 @@ private fun CurrentVehicleDropdown(
         }
     }
     val vehicles = viewModel.stateFlow.collectAsState().value as? State.Vehicles ?: return
+    val otherAlerts by viewModel.otherAlerts.collectAsState()
     var expanded by remember { mutableStateOf(false) }
     var askNewVehicle by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(
@@ -105,11 +115,15 @@ private fun CurrentVehicleDropdown(
             modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
         ) {
             Text(text = vehicles.current.name, Modifier.testTag(currentVehicleTest))
-            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            // Another vehicle alerting is told before the list is opened
+            CompositionLocalProvider(LocalContentColor provides alertBlinkColor(otherAlerts.values.maxOrNull())) {
+                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            }
         }
         VehicleListDropdownMenu(
             isExpanded = expanded,
             vehicleList = vehicles.list.toImmutableList(),
+            alerts = otherAlerts.toImmutableMap(),
             onDismissRequest = { expanded = false },
             onNewCurrent = { viewModel.setCurrent(it) },
             onAskNewVehicle = { askNewVehicle = true }
@@ -127,6 +141,7 @@ private fun CurrentVehicleDropdown(
 private fun ExposedDropdownMenuBoxScope.VehicleListDropdownMenu(
     isExpanded: Boolean,
     vehicleList: ImmutableList<Vehicle>,
+    alerts: ImmutableMap<UUID, AlertLevel>,
     onDismissRequest: () -> Unit,
     onNewCurrent: (Vehicle) -> Unit,
     onAskNewVehicle: () -> Unit,
@@ -139,7 +154,7 @@ private fun ExposedDropdownMenuBoxScope.VehicleListDropdownMenu(
     ) {
         vehicleList.forEach { vehicle ->
             DropdownMenuItem(
-                text = { Text(vehicle.name, Modifier.weight(1f)) },
+                text = { Text(vehicle.name, Modifier.weight(1f), color = alertBlinkColor(alerts[vehicle.uuid])) },
                 contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                 onClick = {
                     onNewCurrent(vehicle)
@@ -162,6 +177,20 @@ private fun ExposedDropdownMenuBoxScope.VehicleListDropdownMenu(
         )
     }
 }
+
+/**
+ * Alternates between the error colour and the content's own for a red or crimson [level], in
+ * sync with the tyres and as fast as they blink for it. The content's own colour otherwise.
+ */
+@Composable
+private fun alertBlinkColor(level: AlertLevel?): Color = when (level) {
+    RED -> BLINK
+    CRIMSON -> CRITICAL_BLINK
+    else -> null
+}
+    ?.takeIf { isFirstBlinkPhase(it) }
+    ?.let { MaterialTheme.colorScheme.error }
+    ?: LocalContentColor.current
 
 @Suppress("LongMethod")
 @Composable
@@ -243,29 +272,40 @@ private fun AddVehicle(
     }
 }
 
+private val previewOtherVehicle = previewVehicle.copy(
+    uuid = UUID.randomUUID(),
+    kind = Vehicle.Kind.MOTORCYCLE,
+    name = "PREVIEW 2"
+)
+
 @Preview
 @Composable
 private fun CurrentVehicleDropdownPreview() {
     CurrentVehicleDropdown(
         viewModel = MockCurrentVehicleDropdownViewModel(
-            State.Vehicles(
-                previewVehicle,
-                listOf(
-                    previewVehicle,
-                    previewVehicle.copy(
-                        uuid = UUID.randomUUID(),
-                        kind = Vehicle.Kind.MOTORCYCLE,
-                        name = "PREVIEW 2"
-                    )
-                )
-            )
+            State.Vehicles(previewVehicle, listOf(previewVehicle, previewOtherVehicle))
         )
     )
 }
 
-private class MockCurrentVehicleDropdownViewModel(state: State) : CurrentVehicleDropdownViewModel {
+@Preview
+@Composable
+private fun OtherVehicleAlertingPreview() {
+    CurrentVehicleDropdown(
+        viewModel = MockCurrentVehicleDropdownViewModel(
+            State.Vehicles(previewVehicle, listOf(previewVehicle, previewOtherVehicle)),
+            mapOf(previewOtherVehicle.uuid to CRIMSON),
+        )
+    )
+}
+
+private class MockCurrentVehicleDropdownViewModel(
+    state: State,
+    otherAlerts: Map<UUID, AlertLevel> = emptyMap(),
+) : CurrentVehicleDropdownViewModel {
     override val stateFlow: StateFlow<State> = MutableStateFlow(state)
     override val eventChannel: ReceiveChannel<Event> = Channel()
+    override val otherAlerts: StateFlow<Map<UUID, AlertLevel>> = MutableStateFlow(otherAlerts)
     override fun setCurrent(vehicle: Vehicle) = error("")
     override fun insert(carName: String, kind: Vehicle.Kind) = error("")
 }
