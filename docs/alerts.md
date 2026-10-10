@@ -242,6 +242,14 @@ alert notification.
   - **None**: only the notifications sound. The silence button is then hidden.
 
   Upgrading keeps the previous choice: the former "Spoken alerts" switch off becomes None.
+- **"Vibrate"**, a switch under "Alert sound", off by default: the phone also vibrates with each
+  phrase or tone pattern, in the same queue and loops, and waits for both to end before the next.
+  With the sound on None, it only vibrates, on the same schedule, and the silence button stays. The
+  same rhythm as the tones, twice: 3 pulses of 150 ms at half strength for red, a burst of 3 and 2
+  pulses of 250 ms at full strength for crimson. Phones without amplitude control vibrate every
+  pulse at the same strength, crimson's longer and closer pulses still tell it apart. It uses the
+  alarm vibration usage, for both levels, so it vibrates with the ringer on silent: it was turned
+  on to be felt while riding. Turning it on or off doesn't cut the phrase being said.
 
 ### Silencing the speech
 
@@ -259,7 +267,8 @@ the navigation.
 | Red only | "Silence alerts for 10 min" | Every red alert's speech, including new ones. A new critical alert is still said, and the button turns into the critical one |
 | A critical one | "Silence critical alerts for 10 min" | All the speech, new critical alerts included |
 
-- Only the speech: notifications still post and sound as usual, the dismiss buttons are unchanged.
+- Only the speech, and its vibration: notifications still post and sound as usual, the dismiss
+  buttons are unchanged.
 - The silenced alerts leave the loops, a phrase being said is said to the end. Once the silence
   ends, only a new qualifying reading speaks again.
 - While silenced, the button tells the time left and unmutes on a tap.
