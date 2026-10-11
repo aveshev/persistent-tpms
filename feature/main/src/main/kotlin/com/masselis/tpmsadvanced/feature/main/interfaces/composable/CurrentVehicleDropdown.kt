@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
@@ -115,9 +116,19 @@ private fun CurrentVehicleDropdown(
             modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
         ) {
             Text(text = vehicles.current.name, Modifier.testTag(currentVehicleTest))
-            // Another vehicle alerting is told before the list is opened
-            CompositionLocalProvider(LocalContentColor provides alertBlinkColor(otherAlerts.values.maxOrNull())) {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+            // Another vehicle alerting is told before the list is opened, by a red disc behind the
+            // arrow, the list's entries telling which once open. Drawn over the icon's bounds,
+            // nothing moves while it blinks; the padding keeps it off the name.
+            val isAlertOn = expanded.not() && isAlertBlinkOn(otherAlerts.values.maxOrNull())
+            val discColor = MaterialTheme.colorScheme.error
+            val arrowColor = if (isAlertOn) MaterialTheme.colorScheme.onError else LocalContentColor.current
+            CompositionLocalProvider(LocalContentColor provides arrowColor) {
+                ExposedDropdownMenuDefaults.TrailingIcon(
+                    expanded = expanded,
+                    modifier = Modifier
+                        .padding(start = 4.dp)
+                        .drawBehind { if (isAlertOn) drawCircle(discColor, radius = ALERT_DISC_RADIUS.toPx()) }
+                )
             }
         }
         VehicleListDropdownMenu(
@@ -154,7 +165,14 @@ private fun ExposedDropdownMenuBoxScope.VehicleListDropdownMenu(
     ) {
         vehicleList.forEach { vehicle ->
             DropdownMenuItem(
-                text = { Text(vehicle.name, Modifier.weight(1f), color = alertBlinkColor(alerts[vehicle.uuid])) },
+                text = {
+                    Text(
+                        vehicle.name,
+                        Modifier.weight(1f),
+                        color = if (isAlertBlinkOn(alerts[vehicle.uuid])) MaterialTheme.colorScheme.error
+                        else Color.Unspecified,
+                    )
+                },
                 contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
                 onClick = {
                     onNewCurrent(vehicle)
@@ -179,18 +197,19 @@ private fun ExposedDropdownMenuBoxScope.VehicleListDropdownMenu(
 }
 
 /**
- * Alternates between the error colour and the content's own for a red or crimson [level], in
- * sync with the tyres and as fast as they blink for it. The content's own colour otherwise.
+ * Whether a red or crimson [level] is in its red phase, alternating in sync with the tyres and as
+ * fast as they blink for it. Never for another level.
  */
 @Composable
-private fun alertBlinkColor(level: AlertLevel?): Color = when (level) {
+private fun isAlertBlinkOn(level: AlertLevel?): Boolean = when (level) {
     RED -> BLINK
     CRIMSON -> CRITICAL_BLINK
     else -> null
 }
-    ?.takeIf { isFirstBlinkPhase(it) }
-    ?.let { MaterialTheme.colorScheme.error }
-    ?: LocalContentColor.current
+    ?.let { isFirstBlinkPhase(it) }
+    ?: false
+
+private val ALERT_DISC_RADIUS = 10.dp
 
 @Suppress("LongMethod")
 @Composable
