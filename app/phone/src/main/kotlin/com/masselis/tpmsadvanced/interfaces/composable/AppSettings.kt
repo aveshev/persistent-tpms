@@ -20,6 +20,7 @@ import com.masselis.tpmsadvanced.core.ui.SettingsGroup
 import com.masselis.tpmsadvanced.core.ui.SettingsSectionHeader
 import com.masselis.tpmsadvanced.core.ui.TextSettingsItem
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.ActivateBluetoothDevices
+import com.masselis.tpmsadvanced.feature.background.interfaces.composable.AlertSoundSettings
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.AlertsSettings
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.BeaconMinRssiSettingsItem
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.BeaconScan
@@ -51,6 +52,7 @@ import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
 @Composable
 internal fun AppSettings(
     openTimeSinceUpdate: () -> Unit,
+    openAlertSound: () -> Unit,
     openPersistentScanning: () -> Unit,
     openActivateScanConditions: () -> Unit,
     openSuspendScanConditions: () -> Unit,
@@ -66,7 +68,7 @@ internal fun AppSettings(
         additionalItems = { UnitsSettingsItems() },
     )
     SettingsSectionHeader("Alerts")
-    AlertsSettings(Modifier.testTag(alerts))
+    AlertsSettings(openAlertSound, Modifier.testTag(alerts))
     SettingsSectionHeader("Background scanning")
     PersistentScanningSettings(
         openPersistentScanning = openPersistentScanning,
@@ -128,6 +130,13 @@ internal fun DebugSettingsPage(
             PhoneIdleMechanismSettingsItem()
         }
     )
+}
+
+@Composable
+internal fun AlertSoundSettingsPage(
+    modifier: Modifier = Modifier
+) = SettingsPage(modifier) {
+    AlertSoundSettings()
 }
 
 @Composable

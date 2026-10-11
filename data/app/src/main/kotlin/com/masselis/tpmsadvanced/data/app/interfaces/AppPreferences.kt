@@ -98,9 +98,22 @@ public class AppPreferences internal constructor(
             .getString("ALERT_SOUND", null)
             ?.let { name -> AlertSound.entries.firstOrNull { it.name == name } }
             ?: if (sharedPreferences.getBoolean("SPOKEN_ALERTS", true)) AlertSound.SPEECH else AlertSound.NONE
-    ) { _, newValue ->
-        sharedPreferences.edit { putString("ALERT_SOUND", newValue.name).remove("SPOKEN_ALERTS") }
+    ) { oldValue, newValue ->
+        sharedPreferences.edit {
+            putString("ALERT_SOUND", newValue.name).remove("SPOKEN_ALERTS")
+            // The sound being chosen, or the one being turned off
+            (newValue.takeIf { it != AlertSound.NONE } ?: oldValue.takeIf { it != AlertSound.NONE })
+                ?.also { putString("LAST_ALERT_SOUND", it.name) }
+        }
     }
+
+    /** The last [alertSound] other than [AlertSound.NONE], the one its switch turns back on */
+    public val lastAlertSound: AlertSound
+        get() = sharedPreferences
+            .getString("LAST_ALERT_SOUND", null)
+            ?.let { name -> AlertSound.entries.firstOrNull { it.name == name } }
+            ?: alertSound.value.takeIf { it != AlertSound.NONE }
+            ?: AlertSound.SPEECH
 
     public enum class AlertSound {
         /** Says what the alert is about */

@@ -231,7 +231,8 @@ alert notification.
   it about half a second after it's posted, so the speech waits up to 1.5 s for one to start, then
   until no notification sound plays (10 s at most). A silent or vibrating channel doesn't delay
   it. It takes the audio focus (ducking what plays) only while it speaks.
-- **"Alert sound"**, in a new "Alerts" group of the app settings, chooses between:
+- **"Alert sound"**, in a new "Alerts" group of the app settings: its switch turns it off (None)
+  or back on to the last sound chosen, its text opens a page choosing between:
   - **Speech**, the default: the phrases above.
   - **Tones**: a tone pattern in place of each phrase, with the same queue, loops, silence and
     stop rules. Shaped after the medical alarms (IEC 60601-1-8), which people already read as
@@ -239,7 +240,9 @@ alert notification.
     burst of 3 and 2 pulses at 880 Hz twice for crimson (alarm audio). Generated in the app, a tone
     with a few harmonics carrying through road noise and a helmet better than a pure one. They
     also work whatever the phone's language, the phrases being English only.
-  - **None**: only the notifications sound. The silence button is then hidden.
+  - **None**, the switch off: only the notifications sound. The silence button is then hidden.
+
+  The item's subtitle says which: "Speech", "Tones" or "Off".
 
   Upgrading keeps the previous choice: the former "Spoken alerts" switch off becomes None.
 - **"Vibrate"**, a switch under "Alert sound", off by default: the phone also vibrates with each

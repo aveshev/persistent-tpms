@@ -240,6 +240,9 @@ internal fun VehicleHome(
                             openTimeSinceUpdate = {
                                 navController.navigate("${Path.TimeSinceUpdate}")
                             },
+                            openAlertSound = {
+                                navController.navigate("${Path.AlertSound}")
+                            },
                             openPersistentScanning = {
                                 navController.navigate("${Path.PersistentScanning}")
                             },
@@ -273,6 +276,11 @@ internal fun VehicleHome(
                     }
                     composable("${Path.PressureLoss}") {
                         PressureLossSettingsPage(
+                            modifier = modifier
+                        )
+                    }
+                    composable("${Path.AlertSound}") {
+                        AlertSoundSettingsPage(
                             modifier = modifier
                         )
                     }
@@ -473,6 +481,7 @@ private fun TopAppBar(
                 is Path.PressureLoss -> Text(text = "Pressure loss")
                 is Path.AppSettings -> Text(text = "App settings")
                 is Path.TimeSinceUpdate -> Text(text = "Time since last update")
+                is Path.AlertSound -> Text(text = "Alert sound")
                 is Path.Debug -> Text(text = "Debug")
                 is Path.PersistentScanning -> Text(text = "Persistent scanning")
                 is Path.ActivateScanConditions -> Text(text = "Activate scan conditions")
@@ -499,6 +508,7 @@ private fun TopAppBar(
                 is Path.PressureLoss,
                 is Path.AppSettings,
                 is Path.TimeSinceUpdate,
+                is Path.AlertSound,
                 is Path.Debug,
                 is Path.PersistentScanning,
                 is Path.ActivateScanConditions,
@@ -579,6 +589,7 @@ private fun TopAppBar(
                 is Path.PressureLoss,
                 is Path.AppSettings,
                 is Path.TimeSinceUpdate,
+                is Path.AlertSound,
                 is Path.Debug,
                 is Path.PersistentScanning,
                 is Path.ActivateScanConditions,
