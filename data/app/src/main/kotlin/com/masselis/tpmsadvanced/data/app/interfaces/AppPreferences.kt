@@ -113,6 +113,16 @@ public class AppPreferences internal constructor(
         NONE,
     }
 
+    /**
+     * Vibrates along with the red and crimson tyre alerts' sound, in the same loops, harder for a
+     * crimson one. Works with [AlertSound.NONE] too, vibrating on its own.
+     */
+    public val vibrateAlerts: MutableStateFlow<Boolean> = observableStateFlow(
+        sharedPreferences.getBoolean("VIBRATE_ALERTS", false)
+    ) { _, newValue ->
+        sharedPreferences.edit { putBoolean("VIBRATE_ALERTS", newValue) }
+    }
+
     public val persistentScanning: MutableStateFlow<Boolean> = observableStateFlow(
         sharedPreferences.getBoolean("PERSISTENT_SCANNING", false)
     ) { _, newValue ->

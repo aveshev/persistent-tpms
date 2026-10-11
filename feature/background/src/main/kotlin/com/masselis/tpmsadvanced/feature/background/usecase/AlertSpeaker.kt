@@ -30,6 +30,7 @@ import com.masselis.tpmsadvanced.data.vehicle.model.AlertLevel.RED
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -63,7 +64,8 @@ import kotlin.time.TimeSource
  * loops stop with the tyre scans: no reading could clear their alerts any more. The reminders also
  * stop once [isRepeating] doesn't hold, see docs/alerts.md: an alert is then only said once, when
  * its notification sounds. [silenced] mutes the alerts up to its level, see [AlertSilenceUseCase].
- * [ongoing] follows the loops whatever the speech.
+ * With the vibration on, each phrase also vibrates, see [AlertVibrations], and the loops go on with
+ * the sound off, only vibrating. [ongoing] follows the loops whatever the speech.
  */
 internal class AlertSpeaker(
     private val appPreferences: AppPreferences,
@@ -147,6 +149,9 @@ internal class AlertSpeaker(
         if (queue.value.isRepeating) mutableOngoing.update { it + (tag to Ongoing(vehicle, level)) }
     }
 
+    /** Whether the alerts sound or vibrate, the queue staying empty otherwise */
+    private val isOn get() = appPreferences.alertSound.value != NONE || appPreferences.vibrateAlerts.value
+
     /**
      * The highest level the speech has yet to say: of the alerts waiting for their announcement or
      * repeated by the loops, null once there's nothing left. What the silence button silences.
@@ -165,7 +170,7 @@ internal class AlertSpeaker(
      */
     fun red(tag: String, vehicle: UUID, alertClass: AlertClass, sounded: Boolean = true) {
         ongoing(tag, vehicle, RED)
-        if (appPreferences.alertSound.value != NONE && alertClass in SPOKEN) queue.update {
+        if (isOn && alertClass in SPOKEN) queue.update {
             it.copy(
                 announcements = it.announcements + Announcement(tag, alertClass, isCrimson = false),
                 repeated = it.repeated + (tag to Repeated(alertClass, null)),
@@ -181,7 +186,7 @@ internal class AlertSpeaker(
      */
     fun crimson(tag: String, vehicle: UUID, alertClass: AlertClass) {
         ongoing(tag, vehicle, CRIMSON)
-        if (appPreferences.alertSound.value != NONE && alertClass in SPOKEN) queue.update { queue ->
+        if (isOn && alertClass in SPOKEN) queue.update { queue ->
             // Its red announcement yet to be said would only come before it
             queue
                 .copy(announcements = queue.announcements.filter { it.tag != tag }, sounded = timeSource.markNow())
@@ -248,24 +253,26 @@ internal class AlertSpeaker(
             .onEach { silenced -> queue.update { it.copy(silenced = silenced).scheduled() } }
             .launchIn(scope)
 
-        appPreferences
-            .alertSound
-            .filter { it == NONE }
+        combine(appPreferences.alertSound, appPreferences.vibrateAlerts) { sound, vibrate -> sound != NONE || vibrate }
+            .filter { it.not() }
             .onEach { queue.update { Queue(isRepeating = it.isRepeating, silenced = it.silenced) } }
             .launchIn(scope)
 
         @Suppress("MaxLineLength")
         scope.launch {
             // The engine is only kept while there's something to say, the queue being spoken for as
-            // long as it lives
+            // long as it lives. The vibration is read at each phrase instead: turning it on or off
+            // doesn't cut the phrase being said
             combine(appPreferences.alertSound, queue) { sound, queue -> sound.takeIf { queue.isIdle.not() } }
                 .distinctUntilChanged()
                 .collectLatest { sound ->
                     when (sound) {
-                        null, NONE -> Unit
+                        null -> Unit
                         SPEECH -> textToSpeech().collect { tts -> Voice { text, usage -> tts.say(text, usage) }.speakQueue() }
                         // The usage tells the crimson phrases apart
                         TONES -> Voice { _, usage -> playTones(usage) }.speakQueue()
+                        // Only vibrating, the queue being emptied once the vibration is off too
+                        NONE -> Voice { _, _ -> }.speakQueue()
                     }
                 }
         }
@@ -352,7 +359,10 @@ internal class AlertSpeaker(
         .joinToString(", ")
         .let { "$it. $it." }
 
-    /** Says [text], keeping the engine alive until it's said even if the queue empties meanwhile */
+    /**
+     * Says [text], vibrating meanwhile if the vibration is on, keeping the engine alive until both
+     * are done even if the queue empties meanwhile
+     */
     private suspend fun Voice.sayToTheEnd(
         text: String,
         usage: Int,
@@ -361,7 +371,11 @@ internal class AlertSpeaker(
     ) {
         queue.update { dequeue(it).copy(isSpeaking = true) }
         try {
-            say(text, usage)
+            coroutineScope {
+                // The alarm usage tells the crimson phrases apart, as for the tones
+                if (appPreferences.vibrateAlerts.value) launch { AlertVibrations.vibrate(usage == USAGE_ALARM) }
+                say(text, usage)
+            }
         } finally {
             queue.update { it.copy(isSpeaking = false) }
         }

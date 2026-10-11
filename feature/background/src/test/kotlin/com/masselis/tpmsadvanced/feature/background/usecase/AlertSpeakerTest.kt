@@ -33,7 +33,7 @@ internal class AlertSpeakerTest {
 
     @Before
     fun setup() {
-        // Nothing is ever said, the speech engine isn't started
+        // Nothing is ever said nor vibrated, the speech engine isn't started
         alertSound = MutableStateFlow(NONE)
         isScanningTyres = MutableStateFlow(true)
         isRepeating = MutableStateFlow(true)
@@ -41,7 +41,10 @@ internal class AlertSpeakerTest {
     }
 
     private fun TestScope.test() = AlertSpeaker(
-        mockk<AppPreferences> { every { alertSound } returns this@AlertSpeakerTest.alertSound },
+        mockk<AppPreferences> {
+            every { alertSound } returns this@AlertSpeakerTest.alertSound
+            every { vibrateAlerts } returns MutableStateFlow(false)
+        },
         isScanningTyres,
         isRepeating,
         silenced,
