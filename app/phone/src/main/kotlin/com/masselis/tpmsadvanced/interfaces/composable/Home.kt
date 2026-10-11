@@ -7,6 +7,8 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -23,6 +25,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -134,23 +138,24 @@ internal fun VehicleHome(
             ?.destination
             ?.route
             ?.let { Path.from(it) }
+        // In the top bar, or beside the vehicle in a wide window
+        val manualBackgroundButtonModifier = Modifier.onGloballyPositioned { coordinates ->
+            if (offsetToFocus != null) return@onGloballyPositioned
+            coordinates.positionInRoot()
+                .takeIf { it != Offset.Unspecified }
+                ?.let { topLeft ->
+                    Offset(
+                        topLeft.x + coordinates.size.width.div(2),
+                        topLeft.y + coordinates.size.height.div(2)
+                    )
+                }
+                ?.also { offsetToFocus = it }
+        }
         Scaffold(
             topBar = {
-                // Manage sensors shows its own beside the vehicle, see isWideWindow
-                if ((currentPath is Path.ManageSensors && isWideWindow()).not()) TopAppBar(
-                    manualBackgroundButtonModifier = Modifier.onGloballyPositioned { coordinates ->
-                        if (offsetToFocus != null) return@onGloballyPositioned
-                        coordinates.positionInRoot()
-                            .takeIf { it != Offset.Unspecified }
-                            ?.let { topLeft ->
-                                Offset(
-                                    topLeft.x + coordinates.size.width.div(2),
-                                    topLeft.y + coordinates.size.height.div(2)
-                                )
-                            }
-                            ?.also { offsetToFocus = it }
-                    },
-                )
+                // The main screen and Manage sensors show theirs beside the vehicle, see isWideWindow
+                if (((currentPath is Path.Home || currentPath is Path.ManageSensors) && isWideWindow()).not())
+                    TopAppBar(manualBackgroundButtonModifier = manualBackgroundButtonModifier)
             },
             content = { paddingValues ->
                 NavHost(
@@ -176,6 +181,20 @@ internal fun VehicleHome(
                             scanBluetooth = {
                                 navController.navigate("${Path.BluetoothAssign(vehicleUuid, locations.indexOf(it))}")
                             },
+                            side = {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    ProvideTextStyle(MaterialTheme.typography.titleLarge) {
+                                        CurrentVehicleDropdown(
+                                            modifier = Modifier.testTag(carListDropdownMenu),
+                                            alerts = alertingVehicles(),
+                                        )
+                                    }
+                                    Row(Modifier.padding(top = 8.dp)) {
+                                        HomeActions(vehicleUuid, manualBackgroundButtonModifier)
+                                    }
+                                }
+                            },
+                            navigationIcon = { DetectedActivitiesIndicator() },
                         )
                     }
                     composable("${Path.Settings(vehicleComponent.vehicle.uuid)}") {
@@ -520,55 +539,8 @@ private fun TopAppBar(
             }
         },
         actions = {
-            var showMenu by remember { mutableStateOf(false) }
-            // Out of the menu, which leaves the composition once closed
-            var simulateReading by remember { mutableStateOf(false) }
-            if (simulateReading) SimulateReadingDialog(onDismissRequest = { simulateReading = false })
             when (currentPath) {
-                is Path.Home -> {
-                    MonitoringButton(
-                        modifier = manualBackgroundButtonModifier
-                            .testTag(HomeTags.Actions.manualBackground)
-                    )
-                    IconButton(
-                        onClick = { showMenu = true },
-                        Modifier.testTag(HomeTags.Actions.overflow)
-                    ) {
-                        Icon(
-                            ImageVector.vectorResource(R.drawable.more_vert_24px),
-                            contentDescription = "Show more options",
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
-                        modifier = Modifier.testTag(HomeTags.Overflow.root)
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Vehicle settings") },
-                            onClick = {
-                                showMenu = false
-                                navController.navigate("${Path.Settings(currentPath.vehicleUUID)}")
-                            },
-                            modifier = Modifier.testTag(HomeTags.Overflow.settings)
-                        )
-                        DropdownMenuItem(
-                            text = { Text("App settings") },
-                            onClick = {
-                                showMenu = false
-                                navController.navigate("${Path.AppSettings}")
-                            },
-                            modifier = Modifier.testTag(HomeTags.Overflow.appSettings)
-                        )
-                        if (isReadingSimulationAvailable()) DropdownMenuItem(
-                            text = { Text("Simulate a reading") },
-                            onClick = {
-                                showMenu = false
-                                simulateReading = true
-                            },
-                        )
-                    }
-                }
+                is Path.Home -> HomeActions(currentPath.vehicleUUID, manualBackgroundButtonModifier)
 
                 is Path.Settings,
                 is Path.ManageSensors,
@@ -597,6 +569,61 @@ private fun TopAppBar(
         },
         modifier = modifier
     )
+}
+
+/** The main screen's actions, in its top bar or beside the vehicle in a wide window */
+@Composable
+private fun HomeActions(vehicleUuid: UUID, manualBackgroundButtonModifier: Modifier) {
+    val navController = LocalHomeNavController.current
+    var showMenu by remember { mutableStateOf(false) }
+    // Out of the menu, which leaves the composition once closed
+    var simulateReading by remember { mutableStateOf(false) }
+    if (simulateReading) SimulateReadingDialog(onDismissRequest = { simulateReading = false })
+    MonitoringButton(
+        modifier = manualBackgroundButtonModifier
+            .testTag(HomeTags.Actions.manualBackground)
+    )
+    // The menu opens under its button, wherever that is
+    Box {
+        IconButton(
+            onClick = { showMenu = true },
+            Modifier.testTag(HomeTags.Actions.overflow)
+        ) {
+            Icon(
+                ImageVector.vectorResource(R.drawable.more_vert_24px),
+                contentDescription = "Show more options",
+            )
+        }
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false },
+            modifier = Modifier.testTag(HomeTags.Overflow.root)
+        ) {
+            DropdownMenuItem(
+                text = { Text("Vehicle settings") },
+                onClick = {
+                    showMenu = false
+                    navController.navigate("${Path.Settings(vehicleUuid)}")
+                },
+                modifier = Modifier.testTag(HomeTags.Overflow.settings)
+            )
+            DropdownMenuItem(
+                text = { Text("App settings") },
+                onClick = {
+                    showMenu = false
+                    navController.navigate("${Path.AppSettings}")
+                },
+                modifier = Modifier.testTag(HomeTags.Overflow.appSettings)
+            )
+            if (isReadingSimulationAvailable()) DropdownMenuItem(
+                text = { Text("Simulate a reading") },
+                onClick = {
+                    showMenu = false
+                    simulateReading = true
+                },
+            )
+        }
+    }
 }
 
 @Composable
