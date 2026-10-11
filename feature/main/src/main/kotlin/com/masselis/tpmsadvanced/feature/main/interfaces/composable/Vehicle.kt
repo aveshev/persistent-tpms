@@ -317,8 +317,8 @@ internal class VehicleSizing(
     fun spareRoom(spareReadout: SpareReadout): Dp? = (SPARE_READOUT_GAP + basicReadoutHeight + OUTLINE_OUTSET)
         .takeIf { hasSpare && spareReadout == SpareReadout.UNDER }
 
-    /** Past the rear right readout, the spare's readout beside it */
-    fun spareBesideWidth(spareReadout: SpareReadout): Dp = (SPARE_BESIDE_GAP + readoutSlotWidth + outset)
+    /** Past the rear right readout, the spare's readout beside it, always framed, see TyreTapArea's title */
+    fun spareBesideWidth(spareReadout: SpareReadout): Dp = (SPARE_BESIDE_GAP + readoutSlotWidth + OUTLINE_OUTSET)
         .takeIf { hasSpare && spareReadout != SpareReadout.UNDER }
         ?: 0.dp
 
