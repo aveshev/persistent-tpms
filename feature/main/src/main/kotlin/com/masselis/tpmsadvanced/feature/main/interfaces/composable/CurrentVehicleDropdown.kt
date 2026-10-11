@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.AlertDialog
@@ -234,7 +236,7 @@ private fun AddVehicle(
         modifier = modifier.testTag(CurrentVehicleDropdownTags.AddVehicle.root),
         title = { Text(text = "Add a new vehicle") },
         text = {
-            Column(modifier = Modifier.selectableGroup()) {
+            Column {
                 OutlinedTextField(
                     label = { Text(text = "Vehicle name") },
                     value = vehicleName,
@@ -245,34 +247,44 @@ private fun AddVehicle(
                         .focusRequester(focusRequester)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                Vehicle.Kind.entries.forEach { kind ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .testTag(kindRadio(kind))
-                            .padding(8.dp)
-                            .selectable(
+                // In landscape only a few kinds fit, they scroll under the name. The name stays out
+                // of it: shorter than the name with the keyboard up, the scroll would jump to it at
+                // each letter typed.
+                Column(
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState())
+                        .selectableGroup()
+                ) {
+                    Vehicle.Kind.entries.forEach { kind ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .testTag(kindRadio(kind))
+                                .padding(8.dp)
+                                .selectable(
+                                    selected = currentKind == kind,
+                                    onClick = { currentKind = kind },
+                                    role = Role.RadioButton
+                                )
+                        ) {
+                            RadioButton(
                                 selected = currentKind == kind,
-                                onClick = { currentKind = kind },
-                                role = Role.RadioButton
+                                onClick = null,
                             )
-                    ) {
-                        RadioButton(
-                            selected = currentKind == kind,
-                            onClick = null,
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = when (kind) {
-                                Vehicle.Kind.CAR -> "Car"
-                                Vehicle.Kind.SINGLE_AXLE_TRAILER -> "Single axle trailer"
-                                Vehicle.Kind.MOTORCYCLE -> "Motorcycle"
-                                Vehicle.Kind.TADPOLE_THREE_WHEELER -> "Tadpole three wheeler"
-                                Vehicle.Kind.DELTA_THREE_WHEELER -> "Delta three wheeler"
-                                Vehicle.Kind.CAR_WITH_SPARE -> "Car with a spare"
-                                Vehicle.Kind.MONOWHEEL -> "Mono-wheel"
-                            }
-                        )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = when (kind) {
+                                    Vehicle.Kind.CAR -> "Car"
+                                    Vehicle.Kind.SINGLE_AXLE_TRAILER -> "Single axle trailer"
+                                    Vehicle.Kind.MOTORCYCLE -> "Motorcycle"
+                                    Vehicle.Kind.TADPOLE_THREE_WHEELER -> "Tadpole three wheeler"
+                                    Vehicle.Kind.DELTA_THREE_WHEELER -> "Delta three wheeler"
+                                    Vehicle.Kind.CAR_WITH_SPARE -> "Car with a spare"
+                                    Vehicle.Kind.MONOWHEEL -> "Mono-wheel"
+                                }
+                            )
+                        }
                     }
                 }
             }
