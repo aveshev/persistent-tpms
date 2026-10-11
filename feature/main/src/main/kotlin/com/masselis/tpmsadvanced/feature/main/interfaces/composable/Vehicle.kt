@@ -20,6 +20,7 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -179,48 +180,53 @@ public fun CurrentVehicle(
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val component = LocalVehicleComponent.current
-    if (isWideWindow()) VehicleBetweenCorners(
-        // As tall as the top bar's
-        start = {
-            Box(contentAlignment = Alignment.Center, modifier = Modifier.height(TOP_BAR_HEIGHT)) {
-                navigationIcon()
-            }
-        },
-        end = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .height(TOP_BAR_HEIGHT)
-                    .padding(end = 4.dp),
-            ) {
-                // Gives way to the actions when it's too long
-                Box(
-                    Modifier
-                        .weight(1f, fill = false)
-                        .padding(start = 16.dp, end = 8.dp)
-                ) {
-                    ProvideTextStyle(MaterialTheme.typography.titleLarge, title)
+    // Another vehicle picked, the screen starts over with it rather than recomposing: what it
+    // collects would keep the previous vehicle's values for a few frames, its size and place with
+    // them
+    key(component.vehicle.uuid) {
+        if (isWideWindow()) VehicleBetweenCorners(
+            // As tall as the top bar's
+            start = {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.height(TOP_BAR_HEIGHT)) {
+                    navigationIcon()
                 }
-                actions()
-            }
-        },
-        vehicle = { vehicleModifier ->
-            Vehicle(
-                component = component,
-                snackbarHostState = snackbarHostState,
-                modifier = vehicleModifier,
-                center = center,
-                taps = TyreTaps(isManaging = false, scanQrCode = scanQrCode, scanBluetooth = scanBluetooth),
-            )
-        },
-        modifier = modifier,
-    ) else Vehicle(
-        component = component,
-        snackbarHostState = snackbarHostState,
-        modifier = modifier,
-        center = center,
-        taps = TyreTaps(isManaging = false, scanQrCode = scanQrCode, scanBluetooth = scanBluetooth),
-    )
+            },
+            end = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .height(TOP_BAR_HEIGHT)
+                        .padding(end = 4.dp),
+                ) {
+                    // Gives way to the actions when it's too long
+                    Box(
+                        Modifier
+                            .weight(1f, fill = false)
+                            .padding(start = 16.dp, end = 8.dp)
+                    ) {
+                        ProvideTextStyle(MaterialTheme.typography.titleLarge, title)
+                    }
+                    actions()
+                }
+            },
+            vehicle = { vehicleModifier ->
+                Vehicle(
+                    component = component,
+                    snackbarHostState = snackbarHostState,
+                    modifier = vehicleModifier,
+                    center = center,
+                    taps = TyreTaps(isManaging = false, scanQrCode = scanQrCode, scanBluetooth = scanBluetooth),
+                )
+            },
+            modifier = modifier,
+        ) else Vehicle(
+            component = component,
+            snackbarHostState = snackbarHostState,
+            modifier = modifier,
+            center = center,
+            taps = TyreTaps(isManaging = false, scanQrCode = scanQrCode, scanBluetooth = scanBluetooth),
+        )
+    }
 }
 
 @Suppress("MaxLineLength")

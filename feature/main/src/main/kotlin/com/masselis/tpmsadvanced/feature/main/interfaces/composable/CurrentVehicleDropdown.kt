@@ -30,6 +30,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -85,8 +86,10 @@ public fun CurrentVehicleDropdown(
     alerts: Map<UUID, AlertLevel> = emptyMap(),
     onVehicleAdded: (UUID) -> Unit = {},
 ) {
+    val component = LocalVehicleComponent.current
     CurrentVehicleDropdown(
-        shown = LocalVehicleComponent.current.vehicleStateFlow.collectAsState().value,
+        // Collected anew for another vehicle, rather than keeping the previous one's name a few frames
+        shown = key(component.vehicle.uuid) { component.vehicleStateFlow.collectAsState().value },
         modifier = modifier,
         alerts = alerts,
         onVehicleAdded = onVehicleAdded,
