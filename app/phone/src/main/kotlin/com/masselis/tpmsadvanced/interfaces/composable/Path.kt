@@ -47,6 +47,10 @@ internal sealed interface Path {
         override fun toString(): String = "app_settings/alert_sound"
     }
 
+    data object PersistentMode : Path {
+        override fun toString(): String = "app_settings/persistent_mode"
+    }
+
     data object Debug : Path {
         override fun toString(): String = "app_settings/debug"
     }
@@ -129,6 +133,7 @@ internal sealed interface Path {
                 AppSettings,
                 TimeSinceUpdate,
                 AlertSound,
+                PersistentMode,
                 Debug,
                 PressureLoss,
                 PersistentScanning,

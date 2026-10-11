@@ -134,8 +134,6 @@ internal fun VehicleHome(
         var qrCodeResult by rememberSaveable { mutableStateOf<QrCodeResult?>(null) }
         var qrCodeLocation by rememberSaveable { mutableIntStateOf(0) }
         var qrCodeScan by rememberSaveable { mutableIntStateOf(0) }
-        // Set by the menu's persistent scanning line, the app settings then open on its section
-        var scrollToBackgroundMonitoring by rememberSaveable { mutableStateOf(false) }
         val currentPath = navController.currentBackStackEntryAsState()
             .value
             ?.destination
@@ -170,7 +168,6 @@ internal fun VehicleHome(
                     lastBarPath?.also {
                         TopAppBar(
                             path = it,
-                            openBackgroundMonitoring = { scrollToBackgroundMonitoring = true },
                             manualBackgroundButtonModifier = manualBackgroundButtonModifier,
                         )
                     }
@@ -211,11 +208,7 @@ internal fun VehicleHome(
                                 )
                             },
                             actions = {
-                                HomeActions(
-                                    vehicleUuid,
-                                    manualBackgroundButtonModifier,
-                                    openBackgroundMonitoring = { scrollToBackgroundMonitoring = true },
-                                )
+                                HomeActions(vehicleUuid, manualBackgroundButtonModifier)
                             },
                         )
                     }
@@ -284,14 +277,8 @@ internal fun VehicleHome(
                             openAlertSound = {
                                 navController.navigate("${Path.AlertSound}")
                             },
-                            openPersistentScanning = {
-                                navController.navigate("${Path.PersistentScanning}")
-                            },
-                            openActivateScanConditions = {
-                                navController.navigate("${Path.ActivateScanConditions}")
-                            },
-                            openSuspendScanConditions = {
-                                navController.navigate("${Path.SuspendScanConditions}")
+                            openPersistentMode = {
+                                navController.navigate("${Path.PersistentMode}")
                             },
                             openDebug = {
                                 navController.navigate("${Path.Debug}")
@@ -303,8 +290,20 @@ internal fun VehicleHome(
                                 navController.navigate("${Path.Licenses}")
                             },
                             modifier = modifier,
-                            scrollToBackgroundMonitoring = scrollToBackgroundMonitoring,
-                            onScrolledToBackgroundMonitoring = { scrollToBackgroundMonitoring = false },
+                        )
+                    }
+                    composable("${Path.PersistentMode}") {
+                        PersistentModeSettings(
+                            openPersistentScanning = {
+                                navController.navigate("${Path.PersistentScanning}")
+                            },
+                            openActivateScanConditions = {
+                                navController.navigate("${Path.ActivateScanConditions}")
+                            },
+                            openSuspendScanConditions = {
+                                navController.navigate("${Path.SuspendScanConditions}")
+                            },
+                            modifier = modifier,
                         )
                     }
                     composable("${Path.Licenses}") {
@@ -494,7 +493,6 @@ internal fun VehicleHome(
 @Composable
 private fun TopAppBar(
     path: Path,
-    openBackgroundMonitoring: () -> Unit,
     modifier: Modifier = Modifier,
     manualBackgroundButtonModifier: Modifier = Modifier
 ) {
@@ -522,6 +520,7 @@ private fun TopAppBar(
                 is Path.AppSettings -> Text(text = "App settings")
                 is Path.TimeSinceUpdate -> Text(text = "Time since last update")
                 is Path.AlertSound -> Text(text = "Alert sound")
+                is Path.PersistentMode -> Text(text = "Persistent mode")
                 is Path.Debug -> Text(text = "Debug")
                 is Path.PersistentScanning -> Text(text = "Persistent scanning")
                 is Path.ActivateScanConditions -> Text(text = "Activate scan conditions")
@@ -549,6 +548,7 @@ private fun TopAppBar(
                 is Path.AppSettings,
                 is Path.TimeSinceUpdate,
                 is Path.AlertSound,
+                is Path.PersistentMode,
                 is Path.Debug,
                 is Path.PersistentScanning,
                 is Path.ActivateScanConditions,
@@ -572,7 +572,7 @@ private fun TopAppBar(
         actions = {
             when (currentPath) {
                 is Path.Home ->
-                    HomeActions(currentPath.vehicleUUID, manualBackgroundButtonModifier, openBackgroundMonitoring)
+                    HomeActions(currentPath.vehicleUUID, manualBackgroundButtonModifier)
 
                 is Path.Settings,
                 is Path.ManageSensors,
@@ -584,6 +584,7 @@ private fun TopAppBar(
                 is Path.AppSettings,
                 is Path.TimeSinceUpdate,
                 is Path.AlertSound,
+                is Path.PersistentMode,
                 is Path.Debug,
                 is Path.PersistentScanning,
                 is Path.ActivateScanConditions,
@@ -610,7 +611,6 @@ private fun TopAppBar(
 private fun HomeActions(
     vehicleUuid: UUID,
     manualBackgroundButtonModifier: Modifier,
-    openBackgroundMonitoring: () -> Unit,
 ) {
     val navController = LocalHomeNavController.current
     var showMenu by remember { mutableStateOf(false) }
@@ -648,6 +648,13 @@ private fun HomeActions(
                 },
                 modifier = Modifier.testTag(HomeTags.Overflow.settings)
             )
+            PersistentScanningMenuItem(
+                onClick = {
+                    showMenu = false
+                    navController.navigate("${Path.PersistentMode}")
+                },
+                modifier = Modifier.testTag(HomeTags.Overflow.persistentScanning)
+            )
             DropdownMenuItem(
                 text = { Text("App settings") },
                 leadingIcon = {
@@ -658,14 +665,6 @@ private fun HomeActions(
                     navController.navigate("${Path.AppSettings}")
                 },
                 modifier = Modifier.testTag(HomeTags.Overflow.appSettings)
-            )
-            PersistentScanningMenuItem(
-                onClick = {
-                    showMenu = false
-                    openBackgroundMonitoring()
-                    navController.navigate("${Path.AppSettings}")
-                },
-                modifier = Modifier.testTag(HomeTags.Overflow.persistentScanning)
             )
             if (isReadingSimulationAvailable()) {
                 HorizontalDivider()
