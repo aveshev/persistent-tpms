@@ -34,6 +34,10 @@ import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.Advertisement
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.DeviceMatch
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.Failure
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.Retrying
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.Scanning
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.WaitingForBluetooth
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanMode
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.impl.SimulatedReadings.withSimulatedReadings
 import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
@@ -83,12 +87,33 @@ internal class BluetoothLeScannerImpl(
 
     private val bluetoothAdapter get() = context.getSystemService<BluetoothManager>()?.adapter
 
-    /** How many tyre scans are running, see [isScanningTyres] */
-    private val tyreScans = MutableStateFlow(0)
+    /** What each running scan is doing, by its key in [sharedScans] */
+    private val scanStatuses = MutableStateFlow(emptyMap<Any, ScanStatus>())
 
-    override val isScanningTyres: Flow<Boolean> = tyreScans
-        .map { it > 0 }
+    override val tyreScanStatus: Flow<ScanStatus?> = scanStatuses
+        .map { statuses ->
+            statuses
+                .filterKeys { it is TyreScan }
+                .values
+                // One scanning is enough to read the tyres
+                .minByOrNull {
+                    when (it) {
+                        Scanning -> 0
+                        is Retrying -> 1
+                        WaitingForBluetooth -> 2
+                    }
+                }
+        }
         .distinctUntilChanged()
+
+    /** Whether Bluetooth is on, from now on */
+    private val isBluetoothOn = IntentFilter(ACTION_STATE_CHANGED)
+        // Protected system broadcast, see asFlow()
+        .asFlow(RECEIVER_EXPORTED)
+        .map { it.getIntExtra(EXTRA_STATE, STATE_OFF) == STATE_ON }
+        // Read just before the receiver is registered: Bluetooth takes far longer to turn on than
+        // the time in between, its "on" broadcast isn't missed
+        .onStart { emit(bluetoothAdapter?.isEnabled == true) }
 
     /** Every result of a scan with [filters] and [settings], debug builds adding the mock ones */
     @SuppressLint("InlinedApi")
@@ -108,6 +133,12 @@ internal class BluetoothLeScannerImpl(
             }
         }
 
+        // Told right away, rather than after waiting for a start below
+        if (bluetoothAdapter?.isEnabled != true) {
+            close(BluetoothOff(bluetoothAdapter?.state))
+            awaitCancellation()
+        }
+
         // Android refuses a start once the app started MAX_STARTS scans within START_WINDOW, and
         // silently: no onScanFailed(), the scan just never delivers anything ("scanning too
         // frequently" in the system log). Every scan of the app counts, the tyre ones and the
@@ -122,18 +153,15 @@ internal class BluetoothLeScannerImpl(
 
         // Listened to before starting, so that a turning off right after the start isn't missed
         launch {
-            IntentFilter(ACTION_STATE_CHANGED)
-                // Protected system broadcast, see asFlow()
-                .asFlow(RECEIVER_EXPORTED)
-                .first { it.getIntExtra(EXTRA_STATE, STATE_OFF) != STATE_ON }
-                // The system drops the scan without calling onScanFailed(): ending it here is what
-                // tells the collectors, and what keeps the next ones from attaching to it
-                .also { close(Failure.BluetoothOff(it.getIntExtra(EXTRA_STATE, STATE_OFF))) }
+            isBluetoothOn.first { it.not() }
+            // The system drops the scan without calling onScanFailed(): ending it here is what
+            // starts it over once Bluetooth is back, see recovering()
+            close(BluetoothOff(bluetoothAdapter?.state))
         }
 
         val leScanner = bluetoothAdapter?.bluetoothLeScanner
         if (leScanner == null) {
-            close(Failure.BluetoothOff(bluetoothAdapter?.state))
+            close(BluetoothOff(bluetoothAdapter?.state))
             awaitCancellation()
         }
         leScanner.startScan(filters, settings, callback)
@@ -174,16 +202,13 @@ internal class BluetoothLeScannerImpl(
         }
         .withSimulatedReadings()
         .onEach { logger.d("Sensor content: $it") }
-        // Shared, see shared(): counts the scans of the radio, not their collectors
-        .onStart { tyreScans.update { it + 1 } }
-        .onCompletion { tyreScans.update { it - 1 } }
 
     override fun highDutyScan(): Flow<Tyre.SensorInput> =
-        shared(ScanSettings.SCAN_MODE_LOW_LATENCY) { scan(ScanSettings.SCAN_MODE_LOW_LATENCY) }
+        shared(TyreScan(ScanSettings.SCAN_MODE_LOW_LATENCY)) { scan(ScanSettings.SCAN_MODE_LOW_LATENCY) }
 
     @SuppressLint("MissingPermission")
     override fun normalScan(): Flow<Tyre.SensorInput> =
-        shared(ScanSettings.SCAN_MODE_BALANCED) { scan(ScanSettings.SCAN_MODE_BALANCED) }
+        shared(TyreScan(ScanSettings.SCAN_MODE_BALANCED)) { scan(ScanSettings.SCAN_MODE_BALANCED) }
 
     @SuppressLint("MissingPermission")
     override fun advertisements(mode: ScanMode, devices: List<DeviceMatch>?): Flow<Advertisement> =
@@ -224,22 +249,32 @@ internal class BluetoothLeScannerImpl(
         name?.let { add(ScanFilter.Builder().setDeviceName(it).build()) }
     }
 
+    /** The key of a tyre scan in [sharedScans], by its `ScanSettings.SCAN_MODE_*` */
+    private data class TyreScan(val mode: Int)
+
     /** The running scans by what they scan for, see [shared] */
     private val sharedScans = ConcurrentHashMap<Any, Flow<*>>()
 
     /**
      * The scan for [key], started by [scan] unless already running. It keeps running for
      * [SCAN_LINGER] after its last collector is gone, so that coming back to a page reuses it:
-     * starting another one counts towards Android's limit, see [rawScan]. A scan that ended, by
-     * failing or after lingering, is forgotten right away: the next collection starts a new one,
-     * rather than attaching to one that will never deliver anything again.
+     * starting another one counts towards Android's limit, see [rawScan]. It starts over by itself
+     * after Bluetooth was turned off or a refused start, see [recovering], its collectors only see
+     * the readings stop meanwhile. A scan that ended, because the phone can't scan or after
+     * lingering, is forgotten right away: the next collection starts a new one, rather than
+     * attaching to one that will never deliver anything again.
      */
     @OptIn(DelicateCoroutinesApi::class)
     @Suppress("UNCHECKED_CAST")
     private fun <T> shared(key: Any, scan: () -> Flow<T>): Flow<T> = sharedScans.getOrPut(key) {
         scan()
+            .recovering(isBluetoothOn) { status -> scanStatuses.update { it + (key to status) } }
             .materializeCompletion()
-            .onCompletion { sharedScans.remove(key) }
+            .onCompletion {
+                // Before forgetting the scan: the next one for this key can't start meanwhile
+                scanStatuses.update { it - key }
+                sharedScans.remove(key)
+            }
             .shareIn(GlobalScope + Dispatchers.Default, WhileSubscribed(SCAN_LINGER))
             .dematerializeCompletion()
     } as Flow<T>
@@ -254,6 +289,12 @@ internal class BluetoothLeScannerImpl(
     }.filter { checkSelfPermission(context, it) != PERMISSION_GRANTED }
 
     override val isBluetoothRequired = true
+
+    /**
+     * Bluetooth is off: the scan couldn't start, or it was turned off while scanning. The system
+     * drops a running scan then, without telling it to the app. See [recovering].
+     */
+    internal class BluetoothOff(adapterState: Int?) : Exception("BluetoothOff(adapterState=$adapterState)")
 
     @OptIn(ExperimentalUnsignedTypes::class)
     companion object {

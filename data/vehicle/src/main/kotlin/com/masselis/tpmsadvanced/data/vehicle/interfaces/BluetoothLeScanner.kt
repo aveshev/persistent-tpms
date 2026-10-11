@@ -3,19 +3,18 @@ package com.masselis.tpmsadvanced.data.vehicle.interfaces
 import android.bluetooth.le.ScanCallback.SCAN_FAILED_FEATURE_UNSUPPORTED
 import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlin.time.Duration
 
 public interface BluetoothLeScanner {
 
-    /** Why a scan ended, the scan flows complete with one of them */
+    /**
+     * Why a scan ended. The scans start over by themselves after anything that can go away
+     * (Bluetooth turned off, a start refused for a while), telling it in [tyreScanStatus]: only
+     * this one ends them.
+     */
     public sealed interface Failure {
-        /**
-         * Bluetooth is off: the scan couldn't start, or it was turned off while scanning. The
-         * system drops a running scan then, without telling it to the app.
-         */
-        public class BluetoothOff(adapterState: Int?) :
-            Exception("Failure.BluetoothOff(adapterState=$adapterState)"), Failure
-
         /** The system refused the scan, [reason] is one of `ScanCallback.SCAN_FAILED_*` */
         public class Scan(public val reason: Int) : Exception("Failure.Scan(reason=$reason)"), Failure {
             /**
@@ -26,6 +25,18 @@ public interface BluetoothLeScanner {
             public val isRecoverable: Boolean
                 get() = reason != SCAN_FAILED_FEATURE_UNSUPPORTED
         }
+    }
+
+    /** What a running scan is doing */
+    public sealed interface ScanStatus {
+        /** The radio listens */
+        public data object Scanning : ScanStatus
+
+        /** Bluetooth is off, the scan starts again once it's turned on */
+        public data object WaitingForBluetooth : ScanStatus
+
+        /** The system refused the scan for a [reason] that can go away, it's started again shortly */
+        public data class Retrying(val reason: Int) : ScanStatus
     }
 
     /** How much the radio listens, from a small part of the time to all the time */
@@ -60,8 +71,17 @@ public interface BluetoothLeScanner {
     public fun highDutyScan(): Flow<Tyre.SensorInput>
     public fun normalScan(): Flow<Tyre.SensorInput>
 
-    /** Whether a [highDutyScan] or a [normalScan] is running, whoever collects it */
+    /**
+     * The status of the [highDutyScan] and the [normalScan], whoever collects them: the one
+     * scanning when both run, null while neither does
+     */
+    public val tyreScanStatus: Flow<ScanStatus?>
+
+    /** Whether a [highDutyScan] or a [normalScan] is scanning, whoever collects it */
     public val isScanningTyres: Flow<Boolean>
+        get() = tyreScanStatus
+            .map { it == ScanStatus.Scanning }
+            .distinctUntilChanged()
 
     /**
      * Every advertisement of the devices matching [devices], or of every device around when null.

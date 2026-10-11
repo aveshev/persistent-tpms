@@ -389,11 +389,6 @@ The main screen's vehicle picker tells the alerts of the vehicles not shown:
 - **Non-persistent ("legacy") mode as a special case of persistent mode**: activate conditions set
   to always, suspended on phone idle only unless turned off. It's a scan policy change, alerts
   already behave the same in both modes. Later, on its own branch.
-- **Scan failure recovery.** A scan starting while Bluetooth is off fails with
-  `Failure.ScannerIsNull`, and the service's pipeline ends for good on any failure: it says "TPMS
-  Advanced must be restarted" and doesn't resume when Bluetooth comes back. Bluetooth being off
-  should be a scanning status that resumes on its own, and transient `onScanFailed` errors
-  retried. On its own branch.
 - **Full-screen intent for crimson alerts.** Later. Since Android 14, Play only allows
   `USE_FULL_SCREEN_INTENT` for calling and alarm apps, so it may not be possible.
 - **`FLAG_INSISTENT`**: repeating sounds are handled by the speech loops instead.

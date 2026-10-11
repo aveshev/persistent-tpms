@@ -10,6 +10,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
@@ -17,7 +18,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.merge
-import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.runningFold
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeMark
@@ -39,7 +39,7 @@ internal class BeaconPresenceUseCase(
      * beacon becomes nearby once [MIN_PACKETS] of its packets at least as loud as [minRssi] were
      * heard within [WINDOW], and stays so while one of them was: a beacon far away (the
      * neighbour's) doesn't count, nor does a single stray packet, nor one gone quiet. Scans while
-     * Bluetooth is on, and again after a failure.
+     * Bluetooth is on.
      */
     fun nearby(beacons: List<Beacon>, mode: ScanMode): Flow<Map<String, Int>> = bluetoothOn
         .distinctUntilChanged()
@@ -48,12 +48,9 @@ internal class BeaconPresenceUseCase(
             merge(
                 scanner
                     .advertisements(mode, beacons.map { DeviceMatch(it.address, it.advertisedName) })
-                    // Scanning too often, permission revoked meanwhile, etc: tried again later
-                    .retryWhen { cause, _ ->
-                        logger.w(cause) { "Beacon scan failed, retrying in $RETRY_DELAY" }
-                        delay(RETRY_DELAY)
-                        true
-                    }
+                    // The scanner starts over by itself after what can go away: what ends it can't,
+                    // the beacons then go quiet
+                    .catch { logger.e(it) { "Beacon scan stopped" } }
                     .mapNotNull { advertisement ->
                         beacons
                             .firstOrNull { it.isSending(advertisement) }
@@ -131,6 +128,5 @@ internal class BeaconPresenceUseCase(
         // A single packet may be a stray one: the neighbour's beacon heard through a reflection
         private const val MIN_PACKETS = 2
         private val TICK = 5.seconds
-        private val RETRY_DELAY = 30.seconds
     }
 }
