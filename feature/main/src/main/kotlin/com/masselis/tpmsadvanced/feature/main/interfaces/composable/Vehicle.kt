@@ -20,7 +20,6 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -171,55 +170,51 @@ public fun CurrentVehicle(
     scanQrCode: (Location) -> Unit = {},
     scanBluetooth: (Location) -> Unit = {},
     /**
-     * In a wide window, see [isWideWindow], the top bar makes way: what it shows is drawn in the
-     * top corners instead, beside the vehicle
+     * In a wide window, see [isWideWindow], the top bar makes way: its [navigationIcon] is drawn in
+     * the top left corner instead, its [title] then its [actions] in the top right one, beside the
+     * vehicle
      */
     navigationIcon: @Composable () -> Unit = {},
     title: @Composable () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     val component = LocalVehicleComponent.current
-    if (isWideWindow()) {
-        val outlines = remember { mutableStateMapOf<Location, Rect>() }
-        VehicleBetweenCorners(
-            outlines = outlines,
-            // As tall as the top bar's
-            navigationIcon = {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.height(TOP_BAR_HEIGHT)) {
-                    navigationIcon()
-                }
-            },
-            title = {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.height(TOP_BAR_HEIGHT)) {
+    if (isWideWindow()) VehicleBetweenCorners(
+        // As tall as the top bar's
+        start = {
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.height(TOP_BAR_HEIGHT)) {
+                navigationIcon()
+            }
+        },
+        end = {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .height(TOP_BAR_HEIGHT)
+                    .padding(end = 4.dp),
+            ) {
+                // Gives way to the actions when it's too long
+                Box(
+                    Modifier
+                        .weight(1f, fill = false)
+                        .padding(start = 16.dp, end = 8.dp)
+                ) {
                     ProvideTextStyle(MaterialTheme.typography.titleLarge, title)
                 }
-            },
-            actions = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .height(TOP_BAR_HEIGHT)
-                        .padding(end = 4.dp),
-                    content = actions,
-                )
-            },
-            vehicle = { vehicleModifier ->
-                Vehicle(
-                    component = component,
-                    snackbarHostState = snackbarHostState,
-                    modifier = vehicleModifier,
-                    center = center,
-                    taps = TyreTaps(
-                        isManaging = false,
-                        scanQrCode = scanQrCode,
-                        scanBluetooth = scanBluetooth,
-                        onOutlinePositioned = { location, outline -> outlines[location] = outline },
-                    ),
-                )
-            },
-            modifier = modifier,
-        )
-    } else Vehicle(
+                actions()
+            }
+        },
+        vehicle = { vehicleModifier ->
+            Vehicle(
+                component = component,
+                snackbarHostState = snackbarHostState,
+                modifier = vehicleModifier,
+                center = center,
+                taps = TyreTaps(isManaging = false, scanQrCode = scanQrCode, scanBluetooth = scanBluetooth),
+            )
+        },
+        modifier = modifier,
+    ) else Vehicle(
         component = component,
         snackbarHostState = snackbarHostState,
         modifier = modifier,

@@ -80,69 +80,46 @@ internal fun VehicleBeside(
 }
 
 /**
- * In a wide window, see [isWideWindow], the vehicle needs all the height: the top bar's
- * [navigationIcon] and [actions] stay in the top corners, its [title] at the top too, centered in
- * the room between the [navigationIcon] and the vehicle's [outlines]. The vehicle is centered in
- * the window, moved left only as much as the [actions] need room beside it. The [title] is as wide
- * as it asks up to that room, [MIN_SIDE_MARGIN] off the vehicle, and shown once the outlines are
- * placed.
+ * In a wide window, see [isWideWindow], the vehicle needs all the height: the top bar's [start] and
+ * [end] stay in the top corners, the [vehicle] beside them rather than under them, centered in the
+ * room they leave. [end] takes up to [MAX_END_SHARE] of the width, the vehicle keeps the rest.
  */
 @Composable
 internal fun VehicleBetweenCorners(
-    /** Where each location's outline is in the window, see [TyreTaps.onOutlinePositioned] */
-    outlines: Map<Location, Rect>,
-    navigationIcon: @Composable () -> Unit,
-    title: @Composable () -> Unit,
-    actions: @Composable () -> Unit,
+    start: @Composable () -> Unit,
+    end: @Composable () -> Unit,
     vehicle: @Composable (Modifier) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Where the vehicle's box is in the window, see VehicleBeside
-    var vehicleX by remember { mutableFloatStateOf(0f) }
     Layout(
-        contents = listOf(
-            navigationIcon,
-            title,
-            actions,
-            {
-                vehicle(
-                    Modifier
-                        .fillMaxSize()
-                        .onGloballyPositioned { vehicleX = it.positionInWindow().x }
-                )
-            },
-        ),
+        contents = listOf(start, end, { vehicle(Modifier.fillMaxSize()) }),
         modifier = modifier,
-    ) { (navigationIcons, titles, actionses, vehicles), constraints ->
+    ) { (starts, ends, vehicles), constraints ->
         val corner = Constraints(maxWidth = constraints.maxWidth, maxHeight = constraints.maxHeight)
-        val margin = MIN_SIDE_MARGIN.toPx()
-        val navigationIconPlaceables = navigationIcons.map { it.measure(corner) }
-        val navigationIconWidth = navigationIconPlaceables.maxOfOrNull { it.width } ?: 0
-        val actionPlaceables = actionses.map { it.measure(corner) }
-        val actionsWidth = actionPlaceables.maxOfOrNull { it.width } ?: 0
-        val vehiclePlaceables = vehicles.map { it.measure(constraints) }
-        // The vehicle draws itself centered in its box, which only moves for the actions: its
-        // outlines don't move with what they tell
-        val span = outlines.spanFrom(vehicleX)
-        val vehicleShift = span
-            ?.let { (_, right) -> (constraints.maxWidth - actionsWidth - margin - right).coerceAtMost(0f) }
-            ?: 0f
-        // Between the navigation icon and the vehicle
-        val titleRoom = span?.let { (left, _) -> navigationIconWidth.toFloat() to vehicleShift + left - margin }
-        val titlePlaceables = titleRoom
-            ?.let { (from, to) -> corner.copy(maxWidth = (to - from).roundToInt().coerceAtLeast(0)) }
-            ?.let { titleConstraints -> titles.map { it.measure(titleConstraints) } }
-            .orEmpty()
+        val startPlaceables = starts.map { it.measure(corner) }
+        val startWidth = startPlaceables.maxOfOrNull { it.width } ?: 0
+        val endPlaceables = ends.map {
+            it.measure(corner.copy(maxWidth = (constraints.maxWidth * MAX_END_SHARE).roundToInt()))
+        }
+        val endWidth = endPlaceables.maxOfOrNull { it.width } ?: 0
+        // The vehicle draws itself centered in the box it's given
+        val vehiclePlaceables = vehicles.map {
+            it.measure(
+                Constraints.fixed(
+                    width = (constraints.maxWidth - startWidth - endWidth).coerceAtLeast(0),
+                    height = constraints.maxHeight,
+                )
+            )
+        }
         layout(constraints.maxWidth, constraints.maxHeight) {
-            vehiclePlaceables.forEach { it.place(vehicleShift.roundToInt(), 0) }
-            navigationIconPlaceables.forEach { it.place(0, 0) }
-            titleRoom?.also { (from, to) ->
-                titlePlaceables.forEach { it.place((from + (to - from - it.width) / 2).roundToInt(), 0) }
-            }
-            actionPlaceables.forEach { it.place(constraints.maxWidth - it.width, 0) }
+            vehiclePlaceables.forEach { it.place(startWidth, 0) }
+            startPlaceables.forEach { it.place(0, 0) }
+            endPlaceables.forEach { it.place(constraints.maxWidth - it.width, 0) }
         }
     }
 }
+
+private const val MAX_END_SHARE = 1f / 3
 
 /** From the left of the outlines to their right, relative to [x], none until they're placed */
 private fun Map<Location, Rect>.spanFrom(x: Float): Pair<Float, Float>? = values
