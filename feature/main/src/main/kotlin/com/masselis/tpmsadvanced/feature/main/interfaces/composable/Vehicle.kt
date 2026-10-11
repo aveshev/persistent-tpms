@@ -183,16 +183,18 @@ public fun CurrentVehicle(
         val outlines = remember { mutableStateMapOf<Location, Rect>() }
         VehicleBetweenCorners(
             outlines = outlines,
-            // Laid out like the top bar's
-            start = {
-                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(TOP_BAR_HEIGHT)) {
+            // As tall as the top bar's
+            navigationIcon = {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.height(TOP_BAR_HEIGHT)) {
                     navigationIcon()
-                    Box(Modifier.padding(horizontal = 16.dp)) {
-                        ProvideTextStyle(MaterialTheme.typography.titleLarge, title)
-                    }
                 }
             },
-            end = {
+            title = {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.height(TOP_BAR_HEIGHT)) {
+                    ProvideTextStyle(MaterialTheme.typography.titleLarge, title)
+                }
+            },
+            actions = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
