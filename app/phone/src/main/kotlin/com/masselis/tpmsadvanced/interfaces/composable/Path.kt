@@ -43,6 +43,10 @@ internal sealed interface Path {
         override fun toString(): String = "app_settings/time_since_last_update"
     }
 
+    data object AlertSound : Path {
+        override fun toString(): String = "app_settings/alert_sound"
+    }
+
     data object Debug : Path {
         override fun toString(): String = "app_settings/debug"
     }
@@ -124,6 +128,7 @@ internal sealed interface Path {
             get() = listOf(
                 AppSettings,
                 TimeSinceUpdate,
+                AlertSound,
                 Debug,
                 PressureLoss,
                 PersistentScanning,

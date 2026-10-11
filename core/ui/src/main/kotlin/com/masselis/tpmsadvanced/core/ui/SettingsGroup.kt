@@ -307,6 +307,7 @@ public fun RadioSettingsItem(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    supporting: String? = null,
 ): Unit = Row(
     verticalAlignment = Alignment.CenterVertically,
     modifier = modifier
@@ -319,7 +320,7 @@ public fun RadioSettingsItem(
         onClick = null,
         modifier = Modifier.padding(horizontal = 16.dp),
     )
-    ItemTexts(headline, emptyList())
+    ItemTexts(headline, listOfNotNull(supporting?.let(::AnnotatedString)))
 }
 
 /** A [SettingsGroup] item of a multiple choice list, the whole item toggles it */

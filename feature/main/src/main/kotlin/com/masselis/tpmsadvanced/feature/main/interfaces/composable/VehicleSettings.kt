@@ -72,7 +72,7 @@ public fun VehicleSettings(
     val batteryKinds by viewModel.batteryKinds.collectAsState()
     var showRename by rememberSaveable { mutableStateOf(false) }
     Column(modifier) {
-        SettingsSectionHeader("Alerts")
+        SettingsSectionHeader("Alert thresholds")
         SettingsGroup {
             fun ClosedFloatingPointRange<Pressure>.summary() =
                 "${start.numberString(pressureUnit)} – ${endInclusive.numberString(pressureUnit)} ${pressureUnit.symbol()}"
