@@ -19,7 +19,7 @@ public class SilenceAlertsUseCase internal constructor(
 ) {
 
     public sealed interface State {
-        /** The alerts make no sound of their own */
+        /** The alerts make no sound nor vibration of their own */
         public data object Disabled : State
 
         /** No red or critical alert left to say */
@@ -34,11 +34,12 @@ public class SilenceAlertsUseCase internal constructor(
 
     public val state: Flow<State> = combine(
         appPreferences.alertSound,
+        appPreferences.vibrateAlerts,
         alertSpeaker.level,
         alertSilenceUseCase.silence,
-    ) { sound, highest, silence ->
+    ) { sound, vibrate, highest, silence ->
         when {
-            sound == NONE -> State.Disabled
+            sound == NONE && vibrate.not() -> State.Disabled
             // A critical alert gets through a silence of the red ones, which can be silenced too
             highest == CRIMSON && silence?.level != CRIMSON -> State.Offer(isCritical = true)
             silence != null -> State.Silenced(silence.level == CRIMSON, silence.until)

@@ -5,4 +5,5 @@ import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
 
 internal class AlertsSettingsViewModel(appPreferences: AppPreferences) : ViewModel() {
     val alertSound = appPreferences.alertSound
+    val vibrate = appPreferences.vibrateAlerts
 }
