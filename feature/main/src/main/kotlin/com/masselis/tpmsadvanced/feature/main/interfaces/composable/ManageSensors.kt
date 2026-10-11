@@ -4,14 +4,11 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.annotation.DrawableRes
@@ -28,7 +25,6 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -201,20 +197,10 @@ public fun ManageSensors(
     Box(modifier.testTag(ManageSensorsTags.root)) {
         // Wider than tall, the vehicle needs all the height: the top bar, the name and the prompt
         // go to its side
-        if (isWideWindow()) BoxWithConstraints(Modifier.fillMaxSize()) {
-            val density = LocalDensity.current
-            // Where the vehicle's box is in the window: its outlines' span is told from it, so it
-            // doesn't change as the box moves
-            var vehicleX by remember { mutableFloatStateOf(0f) }
-            val span = outlines.values
-                .takeIf { it.isNotEmpty() }
-                ?.let { all ->
-                    with(density) {
-                        (all.minOf { it.left } - vehicleX).toDp() to (all.maxOf { it.right } - vehicleX).toDp()
-                    }
-                }
+        if (isWideWindow()) {
             // As wide as its widest text, whichever prompt it shows, so nothing moves with it
             val measurer = rememberTextMeasurer()
+            val density = LocalDensity.current
             val nameStyle = MaterialTheme.typography.titleLarge
             val sidePromptStyle = promptStyle
             val textWidth = remember(measurer, vehicle.name, nameStyle, sidePromptStyle, density) {
@@ -224,24 +210,19 @@ public fun ManageSensors(
                     measurer.measure(MOVE_PROMPT, sidePromptStyle),
                 ).maxOf { it.size.width }.let { with(density) { it.toDp() } }
             }
-            // The text then the vehicle, the room left split evenly: as much from the screen's left
-            // edge to the text, from the text to the vehicle's outlines, and from those to the
-            // screen's right edge
-            val (sideWidth, sideStart, shift) = span
-                ?.let { (left, right) ->
-                    val sideWidth = textWidth
-                        .coerceAtMost(maxWidth - (right - left) - MIN_SIDE_MARGIN * 3)
-                        .coerceAtLeast(0.dp)
-                    val margin = ((maxWidth - sideWidth - (right - left)) / 3).coerceAtLeast(0.dp)
-                    Triple(sideWidth, margin, margin * 2 + sideWidth - left)
-                }
-                // Until the outlines are placed
-                ?: Triple(SIDE_WIDTH, 0.dp, 0.dp)
-            vehicleWithArrows(
-                Modifier
-                    .fillMaxSize()
-                    .offset(x = shift)
-                    .onGloballyPositioned { vehicleX = it.positionInWindow().x }
+            VehicleBeside(
+                outlines = outlines,
+                side = {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.width(textWidth),
+                    ) {
+                        name()
+                        actions(Modifier.fillMaxWidth().padding(top = 16.dp))
+                    }
+                },
+                vehicle = vehicleWithArrows,
+                modifier = Modifier.fillMaxSize(),
             )
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(TOP_BAR_HEIGHT)) {
                 Box(Modifier.padding(start = 4.dp)) { navigationIcon() }
@@ -251,18 +232,6 @@ public fun ManageSensors(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-            }
-            // Centered on the whole height like the vehicle, rather than under the title
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .offset(x = sideStart)
-                    .width(sideWidth),
-            ) {
-                name()
-                actions(Modifier.fillMaxWidth().padding(top = 16.dp))
             }
         } else Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -448,19 +417,8 @@ private val ACTIONS_HEIGHT = 104.dp
 private val promptStyle: TextStyle
     @Composable get() = MaterialTheme.typography.titleMedium
 
-/**
- * The name and prompt's column, next to the vehicle while the screen is wider than tall, until the
- * outlines are placed. Then it's as wide as its text, its margins and the vehicle's equal and at
- * least [MIN_SIDE_MARGIN], its text wrapping otherwise.
- */
-private val SIDE_WIDTH = 200.dp
-private val MIN_SIDE_MARGIN = 8.dp
-
 private const val MANAGE_PROMPT = "Tap the wheel/sensor to manage"
 private const val MOVE_PROMPT = "Tap the wheel to move to"
-
-/** Material's small top app bar */
-private val TOP_BAR_HEIGHT = 64.dp
 
 @Suppress("ConstPropertyName")
 internal object ManageSensorsTags {

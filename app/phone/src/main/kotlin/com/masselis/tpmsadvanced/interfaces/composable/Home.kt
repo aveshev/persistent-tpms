@@ -7,6 +7,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -25,6 +27,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -138,24 +141,40 @@ internal fun VehicleHome(
             ?.destination
             ?.route
             ?.let { Path.from(it) }
+        // In the top bar, or beside the vehicle in a wide window
+        val manualBackgroundButtonModifier = Modifier.onGloballyPositioned { coordinates ->
+            if (offsetToFocus != null) return@onGloballyPositioned
+            coordinates.positionInRoot()
+                .takeIf { it != Offset.Unspecified }
+                ?.let { topLeft ->
+                    Offset(
+                        topLeft.x + coordinates.size.width.div(2),
+                        topLeft.y + coordinates.size.height.div(2)
+                    )
+                }
+                ?.also { offsetToFocus = it }
+        }
+        // The main screen draws its own, see CurrentVehicle, and Manage sensors its own beside the
+        // vehicle in a wide window, see isWideWindow
+        val barPath = currentPath?.takeIf {
+            (it is Path.Home || (it is Path.ManageSensors && isWideWindow())).not()
+        }
+        // Kept while the bar fades out with the screen it was on
+        var lastBarPath by remember { mutableStateOf(barPath) }
+        if (barPath != null && barPath != lastBarPath) lastBarPath = barPath
         Scaffold(
             topBar = {
-                // Manage sensors shows its own beside the vehicle, see isWideWindow
-                if ((currentPath is Path.ManageSensors && isWideWindow()).not()) TopAppBar(
-                    openBackgroundMonitoring = { scrollToBackgroundMonitoring = true },
-                    manualBackgroundButtonModifier = Modifier.onGloballyPositioned { coordinates ->
-                        if (offsetToFocus != null) return@onGloballyPositioned
-                        coordinates.positionInRoot()
-                            .takeIf { it != Offset.Unspecified }
-                            ?.let { topLeft ->
-                                Offset(
-                                    topLeft.x + coordinates.size.width.div(2),
-                                    topLeft.y + coordinates.size.height.div(2)
-                                )
-                            }
-                            ?.also { offsetToFocus = it }
-                    },
-                )
+                // Fades with the screens, still taking its room until it's gone so the screen
+                // leaving doesn't move
+                AnimatedVisibility(visible = barPath != null, enter = fadeIn(), exit = fadeOut()) {
+                    lastBarPath?.also {
+                        TopAppBar(
+                            path = it,
+                            openBackgroundMonitoring = { scrollToBackgroundMonitoring = true },
+                            manualBackgroundButtonModifier = manualBackgroundButtonModifier,
+                        )
+                    }
+                }
             },
             content = { paddingValues ->
                 NavHost(
@@ -173,13 +192,30 @@ internal fun VehicleHome(
                         QuietScanStatusAnnouncementsEffect()
                         CurrentVehicle(
                             snackbarHostState = snackbarHostState,
-                            modifier = modifier,
+                            // Without the top bar's room, it's never shown with its own, see topBar
+                            modifier = Modifier
+                                .windowInsetsPadding(ScaffoldDefaults.contentWindowInsets)
+                                .fillMaxSize(),
                             center = { SilenceAlertsButton(it) },
                             scanQrCode = {
                                 navController.navigate("${Path.QrCode(vehicleUuid, locations.indexOf(it))}")
                             },
                             scanBluetooth = {
                                 navController.navigate("${Path.BluetoothAssign(vehicleUuid, locations.indexOf(it))}")
+                            },
+                            navigationIcon = { DetectedActivitiesIndicator() },
+                            title = {
+                                CurrentVehicleDropdown(
+                                    modifier = Modifier.testTag(carListDropdownMenu),
+                                    alerts = alertingVehicles(),
+                                )
+                            },
+                            actions = {
+                                HomeActions(
+                                    vehicleUuid,
+                                    manualBackgroundButtonModifier,
+                                    openBackgroundMonitoring = { scrollToBackgroundMonitoring = true },
+                                )
                             },
                         )
                     }
@@ -457,16 +493,12 @@ internal fun VehicleHome(
 @Suppress("LongMethod", "CyclomaticComplexMethod")
 @Composable
 private fun TopAppBar(
+    path: Path,
     openBackgroundMonitoring: () -> Unit,
     modifier: Modifier = Modifier,
     manualBackgroundButtonModifier: Modifier = Modifier
 ) {
-    val navController = LocalHomeNavController.current
-    val currentPath = navController.currentBackStackEntryAsState()
-        .value
-        ?.destination
-        ?.route
-        ?.let { Path.from(it) }
+    val currentPath: Path? = path
     CenterAlignedTopAppBar(
         title = {
             when (currentPath) {
@@ -538,75 +570,9 @@ private fun TopAppBar(
             }
         },
         actions = {
-            var showMenu by remember { mutableStateOf(false) }
-            // Out of the menu, which leaves the composition once closed
-            var simulateReading by remember { mutableStateOf(false) }
-            if (simulateReading) SimulateReadingDialog(onDismissRequest = { simulateReading = false })
             when (currentPath) {
-                is Path.Home -> {
-                    MonitoringButton(
-                        modifier = manualBackgroundButtonModifier
-                            .testTag(HomeTags.Actions.manualBackground)
-                    )
-                    IconButton(
-                        onClick = { showMenu = true },
-                        Modifier.testTag(HomeTags.Actions.overflow)
-                    ) {
-                        Icon(
-                            ImageVector.vectorResource(R.drawable.more_vert_24px),
-                            contentDescription = "Show more options",
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = showMenu,
-                        onDismissRequest = { showMenu = false },
-                        modifier = Modifier.testTag(HomeTags.Overflow.root)
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Vehicle settings") },
-                            leadingIcon = {
-                                Icon(ImageVector.vectorResource(R.drawable.car_gear_24px), contentDescription = null)
-                            },
-                            onClick = {
-                                showMenu = false
-                                navController.navigate("${Path.Settings(currentPath.vehicleUUID)}")
-                            },
-                            modifier = Modifier.testTag(HomeTags.Overflow.settings)
-                        )
-                        DropdownMenuItem(
-                            text = { Text("App settings") },
-                            leadingIcon = {
-                                Icon(ImageVector.vectorResource(R.drawable.settings_24px), contentDescription = null)
-                            },
-                            onClick = {
-                                showMenu = false
-                                navController.navigate("${Path.AppSettings}")
-                            },
-                            modifier = Modifier.testTag(HomeTags.Overflow.appSettings)
-                        )
-                        PersistentScanningMenuItem(
-                            onClick = {
-                                showMenu = false
-                                openBackgroundMonitoring()
-                                navController.navigate("${Path.AppSettings}")
-                            },
-                            modifier = Modifier.testTag(HomeTags.Overflow.persistentScanning)
-                        )
-                        if (isReadingSimulationAvailable()) {
-                            HorizontalDivider()
-                            DropdownMenuItem(
-                                text = { Text("Simulate a reading") },
-                                leadingIcon = {
-                                    Icon(ImageVector.vectorResource(R.drawable.science_24px), contentDescription = null)
-                                },
-                                onClick = {
-                                    showMenu = false
-                                    simulateReading = true
-                                },
-                            )
-                        }
-                    }
-                }
+                is Path.Home ->
+                    HomeActions(currentPath.vehicleUUID, manualBackgroundButtonModifier, openBackgroundMonitoring)
 
                 is Path.Settings,
                 is Path.ManageSensors,
@@ -636,6 +602,86 @@ private fun TopAppBar(
         },
         modifier = modifier
     )
+}
+
+/** The main screen's actions, in its top bar or beside the vehicle in a wide window */
+@Suppress("LongMethod")
+@Composable
+private fun HomeActions(
+    vehicleUuid: UUID,
+    manualBackgroundButtonModifier: Modifier,
+    openBackgroundMonitoring: () -> Unit,
+) {
+    val navController = LocalHomeNavController.current
+    var showMenu by remember { mutableStateOf(false) }
+    // Out of the menu, which leaves the composition once closed
+    var simulateReading by remember { mutableStateOf(false) }
+    if (simulateReading) SimulateReadingDialog(onDismissRequest = { simulateReading = false })
+    MonitoringButton(
+        modifier = manualBackgroundButtonModifier
+            .testTag(HomeTags.Actions.manualBackground)
+    )
+    // The menu opens under its button, wherever that is
+    Box {
+        IconButton(
+            onClick = { showMenu = true },
+            Modifier.testTag(HomeTags.Actions.overflow)
+        ) {
+            Icon(
+                ImageVector.vectorResource(R.drawable.more_vert_24px),
+                contentDescription = "Show more options",
+            )
+        }
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false },
+            modifier = Modifier.testTag(HomeTags.Overflow.root)
+        ) {
+            DropdownMenuItem(
+                text = { Text("Vehicle settings") },
+                leadingIcon = {
+                    Icon(ImageVector.vectorResource(R.drawable.car_gear_24px), contentDescription = null)
+                },
+                onClick = {
+                    showMenu = false
+                    navController.navigate("${Path.Settings(vehicleUuid)}")
+                },
+                modifier = Modifier.testTag(HomeTags.Overflow.settings)
+            )
+            DropdownMenuItem(
+                text = { Text("App settings") },
+                leadingIcon = {
+                    Icon(ImageVector.vectorResource(R.drawable.settings_24px), contentDescription = null)
+                },
+                onClick = {
+                    showMenu = false
+                    navController.navigate("${Path.AppSettings}")
+                },
+                modifier = Modifier.testTag(HomeTags.Overflow.appSettings)
+            )
+            PersistentScanningMenuItem(
+                onClick = {
+                    showMenu = false
+                    openBackgroundMonitoring()
+                    navController.navigate("${Path.AppSettings}")
+                },
+                modifier = Modifier.testTag(HomeTags.Overflow.persistentScanning)
+            )
+            if (isReadingSimulationAvailable()) {
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Text("Simulate a reading") },
+                    leadingIcon = {
+                        Icon(ImageVector.vectorResource(R.drawable.science_24px), contentDescription = null)
+                    },
+                    onClick = {
+                        showMenu = false
+                        simulateReading = true
+                    },
+                )
+            }
+        }
+    }
 }
 
 @Composable

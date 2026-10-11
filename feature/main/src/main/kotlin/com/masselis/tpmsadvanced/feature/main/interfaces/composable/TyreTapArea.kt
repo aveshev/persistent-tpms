@@ -1,9 +1,11 @@
 package com.masselis.tpmsadvanced.feature.main.interfaces.composable
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
@@ -44,7 +46,11 @@ import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
 
 /** How far a location's outline reaches past its tyre and readout */
 internal val OUTLINE_OUTSET = 6.dp
-private val SHAPE = RoundedCornerShape(12.dp)
+/** A location's outline's corners */
+private val OUTLINE_SHAPE = RoundedCornerShape(12.dp)
+
+/** A titled location's frame without an outline, see [TyreTapArea] */
+internal val FRAME_WIDTH = 1.dp
 
 /** A location a moving sensor went through, greyed out */
 private const val PASSED_ALPHA = .38f
@@ -68,6 +74,11 @@ internal fun TyreTapArea(
     modifier: Modifier = Modifier,
     calibrate: (Int) -> Unit = {},
     onOutlinePositioned: ((Location, Rect) -> Unit)? = null,
+    /**
+     * Written on its border, it's then always framed: by its outline while it has one, thinly in
+     * the content's color otherwise
+     */
+    title: String? = null,
     vehicleComponent: VehicleComponent = LocalVehicleComponent.current,
     viewModel: TyreActionsViewModel = vehicleComponent
         .TyreComponent(location)
@@ -92,6 +103,7 @@ internal fun TyreTapArea(
         isManaging || isUnassigned -> MaterialTheme.colorScheme.primary
         else -> null
     }
+    val frame = outline ?: MaterialTheme.colorScheme.onBackground.takeIf { title != null }
     Box(
         modifier
             .outset(OUTLINE_OUTSET)
@@ -100,11 +112,32 @@ internal fun TyreTapArea(
                     ?.let { report -> onGloballyPositioned { report(location, it.boundsInWindow()) } }
                     ?: this
             }
-            .run { outline?.let { border(2.dp, it, SHAPE) } ?: this }
-            .clip(SHAPE)
-            .run { onTap?.let { clickable(onClick = it) } ?: this }
-            .testTag(TyreTapAreaTags.root(location))
-    )
+    ) {
+        Box(
+            Modifier
+                .matchParentSize()
+                .run { frame?.let { border(if (outline != null) 2.dp else FRAME_WIDTH, it, OUTLINE_SHAPE) } ?: this }
+                .clip(OUTLINE_SHAPE)
+                .run { onTap?.let { clickable(onClick = it) } ?: this }
+                .testTag(TyreTapAreaTags.root(location))
+        )
+        // Over the border, which draws over what it's around, and out of its clip
+        if (title != null && frame != null) Text(
+            text = title,
+            color = frame,
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier
+                .padding(start = 12.dp)
+                // Centered on the border
+                .layout { measurable, constraints ->
+                    val placeable = measurable.measure(constraints)
+                    layout(placeable.width, placeable.height) { placeable.place(0, -placeable.height / 2) }
+                }
+                // Cuts the border
+                .background(MaterialTheme.colorScheme.background)
+                .padding(horizontal = 4.dp),
+        )
+    }
     (state as? State.Assigned)
         ?.takeIf { isOpen }
         ?.also { assigned ->

@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.material3.AlertDialog
@@ -28,6 +30,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -41,6 +44,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.createSavedStateHandle
@@ -90,17 +94,25 @@ public fun CurrentVehicleDropdown(
     alerts: Map<UUID, AlertLevel> = emptyMap(),
     onVehicleAdded: (UUID) -> Unit = {},
 ) {
+    val component = LocalVehicleComponent.current
     CurrentVehicleDropdown(
-        modifier,
-        alerts,
-        onVehicleAdded,
-        viewModel { CurrentVehicleDropdownViewModel(createSavedStateHandle()) }
+        // Collected anew for another vehicle, rather than keeping the previous one's name a few frames
+        shown = key(component.vehicle.uuid) { component.vehicleStateFlow.collectAsState().value },
+        modifier = modifier,
+        alerts = alerts,
+        onVehicleAdded = onVehicleAdded,
+        viewModel = viewModel { CurrentVehicleDropdownViewModel(createSavedStateHandle()) },
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CurrentVehicleDropdown(
+    /**
+     * The vehicle the screen shows, named from the start rather than once the list is loaded, and
+     * until the screen is gone rather than once another one is picked: nothing moves around it
+     */
+    shown: Vehicle,
     modifier: Modifier = Modifier,
     alerts: Map<UUID, AlertLevel> = emptyMap(),
     onVehicleAdded: (UUID) -> Unit = {},
@@ -117,7 +129,7 @@ private fun CurrentVehicleDropdown(
         }
     }
     LaunchedEffect(viewModel) { viewModel.scanVehicles() }
-    val vehicles = viewModel.stateFlow.collectAsState().value as? State.Vehicles ?: return
+    val vehicles = viewModel.stateFlow.collectAsState().value as? State.Vehicles
     var expanded by remember { mutableStateOf(false) }
     var askNewVehicle by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(
@@ -129,12 +141,20 @@ private fun CurrentVehicleDropdown(
             verticalAlignment = Alignment.Bottom,
             modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
         ) {
-            Text(text = vehicles.current.name, Modifier.testTag(currentVehicleTest))
+            // On one line, giving way to the arrow when the room's short
+            Text(
+                text = shown.name,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .testTag(currentVehicleTest),
+            )
             // Another vehicle alerting is told before the list is opened, by a red disc behind the
             // arrow, the list's entries telling which once open. Drawn behind the icon, nothing
             // moves while it blinks; the padding keeps it off the name.
             val isAlertOn = expanded.not() &&
-                isAlertBlinkOn(alerts.filterKeys { it != vehicles.current.uuid }.values.maxOrNull())
+                isAlertBlinkOn(alerts.filterKeys { it != shown.uuid }.values.maxOrNull())
             val discColor = MaterialTheme.colorScheme.error
             val arrowColor = if (isAlertOn) MaterialTheme.colorScheme.onError else LocalContentColor.current
             CompositionLocalProvider(LocalContentColor provides arrowColor) {
@@ -146,14 +166,17 @@ private fun CurrentVehicleDropdown(
                 )
             }
         }
-        VehicleListDropdownMenu(
-            isExpanded = expanded,
-            vehicleList = vehicles.list.toImmutableList(),
-            alerts = alerts.toImmutableMap(),
-            onDismissRequest = { expanded = false },
-            onNewCurrent = { viewModel.setCurrent(it) },
-            onAskNewVehicle = { askNewVehicle = true }
-        )
+        // Once the list is loaded
+        vehicles?.also {
+            VehicleListDropdownMenu(
+                isExpanded = expanded,
+                vehicleList = it.list.toImmutableList(),
+                alerts = alerts.toImmutableMap(),
+                onDismissRequest = { expanded = false },
+                onNewCurrent = { viewModel.setCurrent(it) },
+                onAskNewVehicle = { askNewVehicle = true }
+            )
+        }
     }
     if (askNewVehicle)
         AddVehicle(
@@ -241,7 +264,7 @@ private fun AddVehicle(
         modifier = modifier.testTag(CurrentVehicleDropdownTags.AddVehicle.root),
         title = { Text(text = "Add a new vehicle") },
         text = {
-            Column(modifier = Modifier.selectableGroup()) {
+            Column {
                 OutlinedTextField(
                     label = { Text(text = "Vehicle name") },
                     value = vehicleName,
@@ -252,42 +275,52 @@ private fun AddVehicle(
                         .focusRequester(focusRequester)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                listOf(
-                    CAR,
-                    CAR_WITH_SPARE,
-                    MOTORCYCLE,
-                    TADPOLE_THREE_WHEELER,
-                    DELTA_THREE_WHEELER,
-                    SINGLE_AXLE_TRAILER,
-                    MONOWHEEL,
-                ).forEach { kind ->
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .testTag(kindRadio(kind))
-                            .padding(8.dp)
-                            .selectable(
+                // In landscape only a few kinds fit, they scroll under the name. The name stays out
+                // of it: shorter than the name with the keyboard up, the scroll would jump to it at
+                // each letter typed.
+                Column(
+                    modifier = Modifier
+                        .weight(1f, fill = false)
+                        .verticalScroll(rememberScrollState())
+                        .selectableGroup()
+                ) {
+                    listOf(
+                        CAR,
+                        CAR_WITH_SPARE,
+                        MOTORCYCLE,
+                        TADPOLE_THREE_WHEELER,
+                        DELTA_THREE_WHEELER,
+                        SINGLE_AXLE_TRAILER,
+                        MONOWHEEL,
+                    ).forEach { kind ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .testTag(kindRadio(kind))
+                                .padding(8.dp)
+                                .selectable(
+                                    selected = currentKind == kind,
+                                    onClick = { currentKind = kind },
+                                    role = Role.RadioButton
+                                )
+                        ) {
+                            RadioButton(
                                 selected = currentKind == kind,
-                                onClick = { currentKind = kind },
-                                role = Role.RadioButton
+                                onClick = null,
                             )
-                    ) {
-                        RadioButton(
-                            selected = currentKind == kind,
-                            onClick = null,
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = when (kind) {
-                                CAR -> "Car"
-                                CAR_WITH_SPARE -> "Car with a spare tyre"
-                                MOTORCYCLE -> "Motorcycle"
-                                TADPOLE_THREE_WHEELER -> "Tadpole three-wheeler"
-                                DELTA_THREE_WHEELER -> "Delta three-wheeler"
-                                SINGLE_AXLE_TRAILER -> "Single axle trailer"
-                                MONOWHEEL -> "Monowheel"
-                            }
-                        )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = when (kind) {
+                                    CAR -> "Car"
+                                    CAR_WITH_SPARE -> "Car with a spare tyre"
+                                    MOTORCYCLE -> "Motorcycle"
+                                    TADPOLE_THREE_WHEELER -> "Tadpole three-wheeler"
+                                    DELTA_THREE_WHEELER -> "Delta three-wheeler"
+                                    SINGLE_AXLE_TRAILER -> "Single axle trailer"
+                                    MONOWHEEL -> "Monowheel"
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -324,6 +357,7 @@ private val previewOtherVehicle = previewVehicle.copy(
 @Composable
 private fun CurrentVehicleDropdownPreview() {
     CurrentVehicleDropdown(
+        shown = previewVehicle,
         viewModel = MockCurrentVehicleDropdownViewModel(
             State.Vehicles(previewVehicle, listOf(previewVehicle, previewOtherVehicle))
         )
@@ -334,6 +368,7 @@ private fun CurrentVehicleDropdownPreview() {
 @Composable
 private fun OtherVehicleAlertingPreview() {
     CurrentVehicleDropdown(
+        shown = previewVehicle,
         alerts = mapOf(previewOtherVehicle.uuid to CRIMSON),
         viewModel = MockCurrentVehicleDropdownViewModel(
             State.Vehicles(previewVehicle, listOf(previewVehicle, previewOtherVehicle))
