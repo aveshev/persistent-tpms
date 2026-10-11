@@ -190,7 +190,8 @@ private val Kind.readoutInset: Float
 
 /**
  * The current vehicle. Tapping a location without a sensor assigns it one by [scanQrCode],
- * [scanBluetooth] or the sensor detected there.
+ * [scanBluetooth] or the sensor detected there, tapping near one with a sensor magnifies its
+ * reading, see [Magnifiable].
  */
 @Composable
 public fun CurrentVehicle(
@@ -218,13 +219,22 @@ public fun CurrentVehicle(
             title = title,
             actions = actions,
             vehicle = { spareReadout ->
-                Vehicle(
-                    component = component,
-                    snackbarHostState = snackbarHostState,
-                    center = center,
-                    taps = TyreTaps(isManaging = false, scanQrCode = scanQrCode, scanBluetooth = scanBluetooth),
-                    spareReadout = spareReadout,
-                )
+                Magnifiable { onTyrePositioned, onOutlinePositioned ->
+                    Vehicle(
+                        component = component,
+                        snackbarHostState = snackbarHostState,
+                        modifier = Modifier.fillMaxSize(),
+                        center = center,
+                        taps = TyreTaps(
+                            isManaging = false,
+                            scanQrCode = scanQrCode,
+                            scanBluetooth = scanBluetooth,
+                            onTyrePositioned = onTyrePositioned,
+                            onOutlinePositioned = onOutlinePositioned,
+                        ),
+                        spareReadout = spareReadout,
+                    )
+                }
             },
             modifier = modifier,
         )
@@ -484,7 +494,7 @@ private fun rememberBasicReadoutHeight(): Dp {
  * location without a sensor, outlined, shows what it shows instead ([isOutlined]).
  */
 @Composable
-private fun rememberWidestReadoutWidth(pressureUnit: PressureUnit, isOutlined: Boolean): Dp {
+internal fun rememberWidestReadoutWidth(pressureUnit: PressureUnit, isOutlined: Boolean): Dp {
     val measurer = rememberTextMeasurer()
     val pressureStyle = LocalTextStyle.current.copy(fontWeight = FontWeight.SemiBold)
     val density = LocalDensity.current

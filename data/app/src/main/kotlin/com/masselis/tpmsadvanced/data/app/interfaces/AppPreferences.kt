@@ -73,6 +73,16 @@ public class AppPreferences internal constructor(
     }
 
     /**
+     * How long, in seconds, a tyre's reading is shown magnified once its part of the main screen is
+     * tapped, to read it on a shaking phone. 0 turns it off.
+     */
+    public val magnifierSeconds: MutableStateFlow<Int> = observableStateFlow(
+        sharedPreferences.getInt("MAGNIFIER_SECONDS", DEFAULT_MAGNIFIER_SECONDS)
+    ) { _, newValue ->
+        sharedPreferences.edit { putInt("MAGNIFIER_SECONDS", newValue) }
+    }
+
+    /**
      * Warns about a tyre losing at least [pressureLossMinDrop] kPa while riding. Experimental, so
      * off by default.
      */
@@ -377,5 +387,6 @@ public class AppPreferences internal constructor(
         public const val DEFAULT_BEACON_MIN_RSSI: Int = -85
         private const val DEFAULT_STAY_ACTIVE_MINUTES = 10
         private const val DEFAULT_PRESSURE_LOSS_MIN_DROP = 7f
+        private const val DEFAULT_MAGNIFIER_SECONDS = 5
     }
 }
