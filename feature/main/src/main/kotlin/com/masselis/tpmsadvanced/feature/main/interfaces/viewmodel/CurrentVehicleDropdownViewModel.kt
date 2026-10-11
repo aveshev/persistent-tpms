@@ -1,7 +1,6 @@
 package com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel
 
 import android.os.Parcelable
-import com.masselis.tpmsadvanced.data.vehicle.model.AlertLevel
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.flow.StateFlow
@@ -28,8 +27,11 @@ internal interface CurrentVehicleDropdownViewModel {
     val stateFlow: StateFlow<State>
     val eventChannel: ReceiveChannel<Event>
 
-    /** The red or crimson alert of each vehicle alerting, the current one included, by its uuid */
-    val alerts: StateFlow<Map<UUID, AlertLevel>>
+    /**
+     * Scans every vehicle's tyres until cancelled, so their alerts are known while the picker is
+     * shown, as the monitor service does in the background: listening to a tyre is what scans it
+     */
+    suspend fun scanVehicles()
 
     fun setCurrent(vehicle: Vehicle)
 

@@ -338,6 +338,23 @@ The normal tyre colour already fades from green to red as the temperature nears 
 so a tyre at amber temperature is already reddish: the orange value in the stats is what marks it
 as amber. Android Auto follows the same levels with its own icons.
 
+### Vehicle picker
+
+The main screen's vehicle picker tells the alerts of the vehicles not shown:
+
+- **A red disc blinks behind its arrow** while another vehicle has a red or crimson alert, in
+  400 ms phases for red, 200 ms for crimson, crimson winning. Not while the list is open.
+- **In the list, every alerting vehicle's name blinks red**, at its own worst level's pace, the one
+  shown included.
+- **An alert counts as long as the speech loops would repeat it** (see "When the loops stop"):
+  until a reading lowers it to amber or clears it, it's snoozed or dismissed, or the loops stop
+  with the scans or the monitoring. Silencing the speech or turning the alert sound off doesn't
+  end it: the picker still shows what can't be heard. Like the loops, it starts from a new reading
+  only.
+- **While the picker is shown, every vehicle is scanned**, not only the one shown, as the monitor
+  service does in the background: the other vehicles' readings are stored, notified and spoken too,
+  which is what lets the picker know of their alerts with background monitoring off.
+
 ## Architecture
 
 - **The evaluator runs at app scope**, not in `MonitorService`, so alerts work the same while the

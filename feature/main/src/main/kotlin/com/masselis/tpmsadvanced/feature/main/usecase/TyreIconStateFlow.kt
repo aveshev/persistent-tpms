@@ -143,8 +143,7 @@ public class TyreIconStateFlow internal constructor(
         public data object DetectionIssue : State
     }
 
-    internal companion object {
-        /** A reading older than it isn't shown on the tyre any longer, it may be long gone */
-        internal val obsoleteTimeout = 5.minutes
+    private companion object {
+        private val obsoleteTimeout = 5.minutes
     }
 }

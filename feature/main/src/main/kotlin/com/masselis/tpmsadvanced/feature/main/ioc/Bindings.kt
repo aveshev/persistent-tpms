@@ -18,7 +18,6 @@ import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.impl.CurrentV
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
 import com.masselis.tpmsadvanced.feature.main.usecase.CurrentVehicleUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.NoveltyUseCase
-import com.masselis.tpmsadvanced.feature.main.usecase.VehicleAlertLevelsUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.VehicleComponentCacheUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.VehicleCountStateFlowUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.VehicleListUseCase
@@ -45,10 +44,6 @@ public interface Bindings {
     @Provides
     private fun vehicleListUseCase(vehicleDatabase: VehicleDatabase): VehicleListUseCase =
         VehicleListUseCase(vehicleDatabase)
-
-    @Provides
-    private fun vehicleAlertLevelsUseCase(vehicleListUseCase: VehicleListUseCase): VehicleAlertLevelsUseCase =
-        VehicleAlertLevelsUseCase(vehicleListUseCase)
 
     @Provides
     private fun vehicleCountStateFlowUseCase(vehicleDatabase: VehicleDatabase): VehicleCountStateFlowUseCase =

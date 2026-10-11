@@ -72,14 +72,20 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import java.util.UUID
 
-/** The vehicle picker, [onVehicleAdded] being called with the uuid of a vehicle once added */
+/**
+ * The vehicle picker, [onVehicleAdded] being called with the uuid of a vehicle once added. The
+ * vehicles' red or crimson [alerts], by their uuid, blink: the other vehicles' behind the arrow,
+ * every vehicle's in the list.
+ */
 @Composable
 public fun CurrentVehicleDropdown(
     modifier: Modifier = Modifier,
+    alerts: Map<UUID, AlertLevel> = emptyMap(),
     onVehicleAdded: (UUID) -> Unit = {},
 ) {
     CurrentVehicleDropdown(
         modifier,
+        alerts,
         onVehicleAdded,
         viewModel { CurrentVehicleDropdownViewModel(createSavedStateHandle()) }
     )
@@ -89,6 +95,7 @@ public fun CurrentVehicleDropdown(
 @Composable
 private fun CurrentVehicleDropdown(
     modifier: Modifier = Modifier,
+    alerts: Map<UUID, AlertLevel> = emptyMap(),
     onVehicleAdded: (UUID) -> Unit = {},
     viewModel: CurrentVehicleDropdownViewModel = viewModel {
         CurrentVehicleDropdownViewModel(createSavedStateHandle())
@@ -102,8 +109,8 @@ private fun CurrentVehicleDropdown(
             }
         }
     }
+    LaunchedEffect(viewModel) { viewModel.scanVehicles() }
     val vehicles = viewModel.stateFlow.collectAsState().value as? State.Vehicles ?: return
-    val alerts by viewModel.alerts.collectAsState()
     var expanded by remember { mutableStateOf(false) }
     var askNewVehicle by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(
@@ -312,20 +319,17 @@ private fun CurrentVehicleDropdownPreview() {
 @Composable
 private fun OtherVehicleAlertingPreview() {
     CurrentVehicleDropdown(
+        alerts = mapOf(previewOtherVehicle.uuid to CRIMSON),
         viewModel = MockCurrentVehicleDropdownViewModel(
-            State.Vehicles(previewVehicle, listOf(previewVehicle, previewOtherVehicle)),
-            mapOf(previewOtherVehicle.uuid to CRIMSON),
-        )
+            State.Vehicles(previewVehicle, listOf(previewVehicle, previewOtherVehicle))
+        ),
     )
 }
 
-private class MockCurrentVehicleDropdownViewModel(
-    state: State,
-    alerts: Map<UUID, AlertLevel> = emptyMap(),
-) : CurrentVehicleDropdownViewModel {
+private class MockCurrentVehicleDropdownViewModel(state: State) : CurrentVehicleDropdownViewModel {
     override val stateFlow: StateFlow<State> = MutableStateFlow(state)
     override val eventChannel: ReceiveChannel<Event> = Channel()
-    override val alerts: StateFlow<Map<UUID, AlertLevel>> = MutableStateFlow(alerts)
+    override suspend fun scanVehicles() = Unit
     override fun setCurrent(vehicle: Vehicle) = error("")
     override fun insert(carName: String, kind: Vehicle.Kind) = error("")
 }

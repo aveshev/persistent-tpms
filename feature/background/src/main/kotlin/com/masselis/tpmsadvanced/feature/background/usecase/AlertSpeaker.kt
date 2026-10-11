@@ -32,6 +32,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
@@ -61,6 +63,7 @@ import kotlin.time.TimeSource
  * loops stop with the tyre scans: no reading could clear their alerts any more. The reminders also
  * stop once [isRepeating] doesn't hold, see docs/alerts.md: an alert is then only said once, when
  * its notification sounds. [silenced] mutes the alerts up to its level, see [AlertSilenceUseCase].
+ * [ongoing] follows the loops whatever the speech.
  */
 internal class AlertSpeaker(
     private val appPreferences: AppPreferences,
@@ -127,6 +130,23 @@ internal class AlertSpeaker(
 
     private val queue = MutableStateFlow(Queue())
 
+    /** A red or crimson alert of [vehicle] which the loops would repeat */
+    data class Ongoing(val vehicle: UUID, val level: AlertLevel)
+
+    private val mutableOngoing = MutableStateFlow(emptyMap<String, Ongoing>())
+
+    /**
+     * The alerts the loops would repeat whatever the speech, by the tag of their notification: the
+     * same ones entering and leaving, but neither silenced nor turned off with the alert sound. What
+     * the vehicle picker blinks for, see docs/alerts.md.
+     */
+    val ongoing: StateFlow<Map<String, Ongoing>> = mutableOngoing.asStateFlow()
+
+    /** Only while the loops can go on, the alert is otherwise said once and forgotten */
+    private fun ongoing(tag: String, vehicle: UUID, level: AlertLevel) {
+        if (queue.value.isRepeating) mutableOngoing.update { it + (tag to Ongoing(vehicle, level)) }
+    }
+
     /**
      * The highest level the speech has yet to say: of the alerts waiting for their announcement or
      * repeated by the loops, null once there's nothing left. What the silence button silences.
@@ -143,7 +163,8 @@ internal class AlertSpeaker(
      * Says [alertClass]'s phrase twice, once, after the notification's sound if it [sounded], then
      * reminds of it. The alerts of a class announced together are said once.
      */
-    fun red(tag: String, alertClass: AlertClass, sounded: Boolean = true) {
+    fun red(tag: String, vehicle: UUID, alertClass: AlertClass, sounded: Boolean = true) {
+        ongoing(tag, vehicle, RED)
         if (appPreferences.alertSound.value != NONE && alertClass in SPOKEN) queue.update {
             it.copy(
                 announcements = it.announcements + Announcement(tag, alertClass, isCrimson = false),
@@ -158,7 +179,8 @@ internal class AlertSpeaker(
      * starting over that duration if [tag] is already in the crimson loop, then reminds of it. A
      * new one is said right away. Said once when the loops can't go on.
      */
-    fun crimson(tag: String, alertClass: AlertClass) {
+    fun crimson(tag: String, vehicle: UUID, alertClass: AlertClass) {
+        ongoing(tag, vehicle, CRIMSON)
         if (appPreferences.alertSound.value != NONE && alertClass in SPOKEN) queue.update { queue ->
             // Its red announcement yet to be said would only come before it
             queue
@@ -179,6 +201,7 @@ internal class AlertSpeaker(
      * [isDismissed]. A phrase being said is always said to the end.
      */
     fun stop(tag: String, isDismissed: Boolean = false) {
+        mutableOngoing.update { it - tag }
         queue.update { queue ->
             queue.copy(
                 repeated = queue.repeated - tag,
@@ -211,11 +234,13 @@ internal class AlertSpeaker(
         isScanningTyres
             .filter { it.not() }
             .onEach { queue.update { it.copy(repeated = emptyMap()).scheduled() } }
+            .onEach { mutableOngoing.value = emptyMap() }
             .launchIn(scope)
 
         // Coming back, they only start again from a new reading
         isRepeating
             .onEach { isRepeating -> queue.update { it.copy(isRepeating = isRepeating).scheduled() } }
+            .onEach { isRepeating -> if (isRepeating.not()) mutableOngoing.value = emptyMap() }
             .launchIn(scope)
 
         // Once it ends, only a new reading is said again

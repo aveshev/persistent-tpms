@@ -69,6 +69,7 @@ import com.masselis.tpmsadvanced.core.ui.LocalHomeNavController
 import com.masselis.tpmsadvanced.core.ui.isWideWindow
 import com.masselis.tpmsadvanced.core.ui.Spotlight
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.DetectedActivitiesIndicator
+import com.masselis.tpmsadvanced.feature.background.interfaces.ui.alertingVehicles
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.MonitoringButton
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.PersistentScanningHost
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.QuietScanStatusAnnouncementsEffect
@@ -455,6 +456,7 @@ private fun TopAppBar(
             when (currentPath) {
                 is Path.Home -> CurrentVehicleDropdown(
                     modifier = Modifier.testTag(carListDropdownMenu),
+                    alerts = alertingVehicles(),
                 )
 
                 is Path.Settings -> Text(
