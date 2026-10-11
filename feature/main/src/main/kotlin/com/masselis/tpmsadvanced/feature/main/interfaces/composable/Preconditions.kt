@@ -91,7 +91,7 @@ private fun ChipIsOff(
     ) {
         Text(
             @Suppress("MaxLineLength")
-            "Persistent TPMS needs you to enable the bluetooth chip.\nThis is required by the system in order to make BLE scan",
+            "Persistent TPMS needs the phone's Bluetooth to be enabled in order to listen to TPMS sensors.",
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth(0.7f)
