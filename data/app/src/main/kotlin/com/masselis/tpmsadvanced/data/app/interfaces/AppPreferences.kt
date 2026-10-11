@@ -72,14 +72,18 @@ public class AppPreferences internal constructor(
         sharedPreferences.edit { putBoolean("SHOW_BATTERY_VOLTAGE", newValue) }
     }
 
-    /**
-     * How long, in seconds, a tyre's reading is shown magnified once its part of the main screen is
-     * tapped, to read it on a shaking phone. 0 turns it off.
-     */
-    public val magnifierSeconds: MutableStateFlow<Int> = observableStateFlow(
-        sharedPreferences.getInt("MAGNIFIER_SECONDS", DEFAULT_MAGNIFIER_SECONDS)
+    /** Tapping a tyre's part of the main screen shows its reading magnified, to read it on a shaking phone */
+    public val magnifier: MutableStateFlow<Boolean> = observableStateFlow(
+        sharedPreferences.getBoolean("MAGNIFIER", true)
     ) { _, newValue ->
-        sharedPreferences.edit { putInt("MAGNIFIER_SECONDS", newValue) }
+        sharedPreferences.edit { putBoolean("MAGNIFIER", newValue) }
+    }
+
+    /** How long, in seconds, a reading stays magnified, see [magnifier] */
+    public val magnifierSeconds: MutableStateFlow<Int> = observableStateFlow(
+        sharedPreferences.getInt("MAGNIFIER_DURATION_SECONDS", DEFAULT_MAGNIFIER_SECONDS)
+    ) { _, newValue ->
+        sharedPreferences.edit { putInt("MAGNIFIER_DURATION_SECONDS", newValue) }
     }
 
     /**

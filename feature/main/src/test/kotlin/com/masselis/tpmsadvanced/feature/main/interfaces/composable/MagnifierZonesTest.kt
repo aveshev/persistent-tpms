@@ -19,10 +19,19 @@ import kotlin.test.assertNull
 internal class MagnifierZonesTest {
 
     private lateinit var centers: Map<Location, Offset>
+    private var spareTyre: Rect? = null
+    private lateinit var excluded: List<Rect>
     private lateinit var outlines: Map<Location, Rect>
     private lateinit var area: Rect
 
-    private fun test() = MagnifierZones(centers, outlines)
+    // Tyres 40 x 100 around their centers, but the spare's, drawn across
+    private fun test() = MagnifierZones(
+        tyres = centers
+            .mapValues { (_, center) -> Rect(center.x - 20f, center.y - 50f, center.x + 20f, center.y + 50f) }
+            .plus(listOfNotNull(spareTyre?.let { Location.Spare to it })),
+        outlines = outlines,
+        excluded = excluded,
+    )
 
     @Before
     fun setup() {
@@ -34,6 +43,8 @@ internal class MagnifierZonesTest {
             Location.Wheel(REAR_RIGHT) to Offset(300f, 500f),
         )
         outlines = emptyMap()
+        spareTyre = null
+        excluded = emptyList()
         area = Rect(0f, 0f, 400f, 800f)
     }
 
@@ -108,5 +119,40 @@ internal class MagnifierZonesTest {
         // And from (0, 800) to (125, 580)
         assertEquals(Location.Spare, zones.locationAt(Offset(62.5f, 691f), area))
         assertEquals(Location.Wheel(REAR_LEFT), zones.locationAt(Offset(62.5f, 689f), area))
+    }
+
+    @Test
+    fun `nothing is magnified on the top bar`() {
+        excluded = listOf(Rect(0f, 0f, 400f, 60f))
+        val zones = test()
+        assertNull(zones.locationAt(Offset(10f, 59f), area))
+        assertEquals(Location.Wheel(FRONT_LEFT), zones.locationAt(Offset(10f, 61f), area))
+    }
+
+    @Test
+    fun `the spare's readout beside the rear right one has what's past the middle between them, top to bottom`() {
+        // Landscape: a car between 100 and 300, its spare under it, its readout beside the rear
+        // right one, the rear outlines ending at 560
+        area = Rect(0f, 0f, 800f, 800f)
+        centers = centers + (Location.Spare to Offset(200f, 640f))
+        spareTyre = Rect(150f, 600f, 250f, 640f)
+        outlines = mapOf(
+            Location.Wheel(REAR_LEFT) to Rect(0f, 440f, 100f, 560f),
+            Location.Wheel(REAR_RIGHT) to Rect(300f, 440f, 400f, 560f),
+            Location.Spare to Rect(500f, 440f, 600f, 560f),
+        )
+        val zones = test()
+        // Past 450, from the top
+        assertEquals(Location.Spare, zones.locationAt(Offset(451f, 10f), area))
+        assertEquals(Location.Wheel(FRONT_RIGHT), zones.locationAt(Offset(449f, 10f), area))
+        assertEquals(Location.Spare, zones.locationAt(Offset(451f, 500f), area))
+        assertEquals(Location.Wheel(REAR_RIGHT), zones.locationAt(Offset(449f, 500f), area))
+        // Under the line through (125, 580) and (275, 580), level up to 450
+        assertEquals(Location.Spare, zones.locationAt(Offset(440f, 581f), area))
+        assertEquals(Location.Wheel(REAR_RIGHT), zones.locationAt(Offset(440f, 579f), area))
+        assertEquals(Location.Spare, zones.locationAt(Offset(200f, 581f), area))
+        // Down at 45° on the left of 125: 680 at 25
+        assertEquals(Location.Spare, zones.locationAt(Offset(25f, 681f), area))
+        assertEquals(Location.Wheel(REAR_LEFT), zones.locationAt(Offset(25f, 679f), area))
     }
 }

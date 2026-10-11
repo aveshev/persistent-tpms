@@ -171,7 +171,7 @@ public fun ManageSensors(
                         else
                             moving = MoveChain.from(location)
                     },
-                    onTyrePositioned = { location, center -> tyreCenters[location] = center },
+                    onTyrePositioned = { location, bounds -> tyreCenters[location] = bounds.center },
                     onOutlinePositioned = { location, outline -> outlines[location] = outline },
                     canMove = all.size > 1,
                 ),

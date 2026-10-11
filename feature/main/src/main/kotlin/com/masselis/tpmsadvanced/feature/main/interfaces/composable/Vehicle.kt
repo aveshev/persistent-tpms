@@ -213,31 +213,32 @@ public fun CurrentVehicle(
     // collects would keep the previous vehicle's values for a few frames, its size and place with
     // them
     key(component.vehicle.uuid) {
-        VehicleWithTopBar(
-            sizing = rememberVehicleSizing(component, isManaging = false),
-            navigationIcon = navigationIcon,
-            title = title,
-            actions = actions,
-            vehicle = { spareReadout ->
-                Magnifiable { onTyrePositioned, onOutlinePositioned ->
+        Magnifiable(modifier) { reports ->
+            VehicleWithTopBar(
+                sizing = rememberVehicleSizing(component, isManaging = false),
+                navigationIcon = navigationIcon,
+                title = title,
+                actions = actions,
+                vehicle = { spareReadout ->
                     Vehicle(
                         component = component,
                         snackbarHostState = snackbarHostState,
-                        modifier = Modifier.fillMaxSize(),
                         center = center,
                         taps = TyreTaps(
                             isManaging = false,
                             scanQrCode = scanQrCode,
                             scanBluetooth = scanBluetooth,
-                            onTyrePositioned = onTyrePositioned,
-                            onOutlinePositioned = onOutlinePositioned,
+                            onTyrePositioned = reports.onTyrePositioned,
+                            onOutlinePositioned = reports.onOutlinePositioned,
                         ),
                         spareReadout = spareReadout,
                     )
-                }
-            },
-            modifier = modifier,
-        )
+                },
+                // Fills the magnifier's box, its top bar is where the magnifier finds it
+                modifier = Modifier.fillMaxSize(),
+                onBarPositioned = reports.onBarPositioned,
+            )
+        }
     }
 }
 
@@ -391,15 +392,15 @@ public class TyreTaps internal constructor(
     internal val calibrate: (Int) -> Unit = {},
     /** A vehicle with a single location has nowhere to move a sensor to */
     internal val canMove: Boolean = true,
-    /** Where each location's tyre is centered in the window, to draw over the vehicle */
-    internal val onTyrePositioned: ((Location, Offset) -> Unit)? = null,
+    /** Where each location's tyre is in the window, to draw over the vehicle */
+    internal val onTyrePositioned: ((Location, Rect) -> Unit)? = null,
     /** Where each location's outline is in the window, for what's drawn over the vehicle to avoid it */
     internal val onOutlinePositioned: ((Location, Rect) -> Unit)? = null,
 )
 
-private fun Modifier.reportCenter(location: Location, taps: TyreTaps) = taps
+private fun Modifier.reportBounds(location: Location, taps: TyreTaps) = taps
     .onTyrePositioned
-    ?.let { report -> onGloballyPositioned { report(location, it.boundsInWindow().center) } }
+    ?.let { report -> onGloballyPositioned { report(location, it.boundsInWindow()) } }
     ?: this
 
 /** A sensor moving along [chain] on a vehicle with [all] these locations, [onTap] picking the next one */
@@ -660,7 +661,7 @@ private fun Car(
                     centerAround(track.start)
                     centerAround(frontAxle)
                     tyreSize(imageHeight)
-                }.reportCenter(this, taps)
+                }.reportBounds(this, taps)
             )
             TyreReadout(
                 location = this,
@@ -697,7 +698,7 @@ private fun Car(
                     centerAround(track.end)
                     centerAround(frontAxle)
                     tyreSize(imageHeight)
-                }.reportCenter(this, taps)
+                }.reportBounds(this, taps)
             )
             TyreReadout(
                 location = this,
@@ -734,7 +735,7 @@ private fun Car(
                     centerAround(track.start)
                     centerAround(rearAxle)
                     tyreSize(imageHeight)
-                }.reportCenter(this, taps)
+                }.reportBounds(this, taps)
             )
             TyreReadout(
                 location = this,
@@ -771,7 +772,7 @@ private fun Car(
                     centerAround(track.end)
                     centerAround(rearAxle)
                     tyreSize(imageHeight)
-                }.reportCenter(this, taps)
+                }.reportBounds(this, taps)
             )
             TyreReadout(
                 location = this,
@@ -871,7 +872,7 @@ private fun CarWithSpare(
                     centerAround(track.start)
                     centerAround(frontAxle)
                     tyreSize(imageHeight, SPARE_CAR_TYRE_HEIGHT)
-                }.reportCenter(this, taps)
+                }.reportBounds(this, taps)
             )
             TyreReadout(
                 location = this,
@@ -908,7 +909,7 @@ private fun CarWithSpare(
                     centerAround(track.end)
                     centerAround(frontAxle)
                     tyreSize(imageHeight, SPARE_CAR_TYRE_HEIGHT)
-                }.reportCenter(this, taps)
+                }.reportBounds(this, taps)
             )
             TyreReadout(
                 location = this,
@@ -945,7 +946,7 @@ private fun CarWithSpare(
                     centerAround(track.start)
                     centerAround(rearAxle)
                     tyreSize(imageHeight, SPARE_CAR_TYRE_HEIGHT)
-                }.reportCenter(this, taps)
+                }.reportBounds(this, taps)
             )
             TyreReadout(
                 location = this,
@@ -982,7 +983,7 @@ private fun CarWithSpare(
                     centerAround(track.end)
                     centerAround(rearAxle)
                     tyreSize(imageHeight, SPARE_CAR_TYRE_HEIGHT)
-                }.reportCenter(this, taps)
+                }.reportBounds(this, taps)
             )
             TyreReadout(
                 location = this,
@@ -1060,7 +1061,7 @@ private fun CarWithSpare(
                     centerHorizontallyTo(vehicleImage)
                     centerAround(spareAxle)
                     tyreSize(imageHeight, SPARE_CAR_TYRE_HEIGHT)
-                }.rotate(90f).reportCenter(this, taps)
+                }.rotate(90f).reportBounds(this, taps)
             )
             // Under the spare, past the bottom of the image, see spareRoom, or beside the rear right
             // one, as high
@@ -1156,7 +1157,7 @@ private fun Monowheel(
                     centerHorizontallyTo(vehicleImage)
                     centerAround(axle)
                     tyreSize(imageHeight, MONOWHEEL_TYRE_HEIGHT, MONOWHEEL_TYRE_RATIO)
-                }.reportCenter(this, taps)
+                }.reportBounds(this, taps)
             )
             // Past the foot rests
             TyreReadout(
@@ -1237,7 +1238,7 @@ private fun SingleAxleTrailer(
                     centerAround(track.start)
                     centerAround(axle)
                     tyreSize(imageHeight)
-                }.reportCenter(this, taps)
+                }.reportBounds(this, taps)
             )
             TyreReadout(
                 location = this,
@@ -1274,7 +1275,7 @@ private fun SingleAxleTrailer(
                     centerAround(track.end)
                     centerAround(axle)
                     tyreSize(imageHeight)
-                }.reportCenter(this, taps)
+                }.reportBounds(this, taps)
             )
             TyreReadout(
                 location = this,
@@ -1355,7 +1356,7 @@ private fun Motorcycle(
                     centerHorizontallyTo(vehicleImage)
                     centerAround(frontAxle)
                     tyreSize(imageHeight)
-                }.reportCenter(this, taps)
+                }.reportBounds(this, taps)
             )
             TyreReadout(
                 location = this,
@@ -1392,7 +1393,7 @@ private fun Motorcycle(
                     centerHorizontallyTo(vehicleImage)
                     centerAround(rearAxle)
                     tyreSize(imageHeight)
-                }.reportCenter(this, taps)
+                }.reportBounds(this, taps)
             )
             TyreReadout(
                 location = this,
@@ -1480,7 +1481,7 @@ private fun TadpoleThreadWheeler(
                     centerAround(frontTrack.start)
                     centerAround(frontAxle)
                     tyreSize(imageHeight)
-                }.reportCenter(this, taps)
+                }.reportBounds(this, taps)
             )
             TyreReadout(
                 location = this,
@@ -1517,7 +1518,7 @@ private fun TadpoleThreadWheeler(
                     centerAround(frontTrack.end)
                     centerAround(frontAxle)
                     tyreSize(imageHeight)
-                }.reportCenter(this, taps)
+                }.reportBounds(this, taps)
             )
             TyreReadout(
                 location = this,
@@ -1554,7 +1555,7 @@ private fun TadpoleThreadWheeler(
                     centerHorizontallyTo(vehicleImage)
                     centerAround(rearAxle)
                     tyreSize(imageHeight)
-                }.reportCenter(this, taps)
+                }.reportBounds(this, taps)
             )
             TyreReadout(
                 location = this,
@@ -1642,7 +1643,7 @@ private fun DeltaThreeWheeler(
                     centerHorizontallyTo(vehicleImage)
                     centerAround(frontAxle)
                     tyreSize(imageHeight)
-                }.reportCenter(this, taps)
+                }.reportBounds(this, taps)
             )
             TyreReadout(
                 location = this,
@@ -1679,7 +1680,7 @@ private fun DeltaThreeWheeler(
                     centerAround(rearTrack.start)
                     centerAround(rearAxle)
                     tyreSize(imageHeight)
-                }.reportCenter(this, taps)
+                }.reportBounds(this, taps)
             )
             TyreReadout(
                 location = this,
@@ -1716,7 +1717,7 @@ private fun DeltaThreeWheeler(
                     centerAround(rearTrack.end)
                     centerAround(rearAxle)
                     tyreSize(imageHeight)
-                }.reportCenter(this, taps)
+                }.reportBounds(this, taps)
             )
             TyreReadout(
                 location = this,

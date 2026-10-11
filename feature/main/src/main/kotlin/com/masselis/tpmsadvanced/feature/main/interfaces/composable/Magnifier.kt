@@ -66,30 +66,41 @@ import kotlin.time.TimeSource
 import kotlinx.coroutines.delay
 import com.masselis.tpmsadvanced.core.ui.viewModel as keyedViewModel
 
-/** Where taps magnify, away from the edges of the vehicle's area */
+/** Where taps magnify, away from the edges of the vehicle's area and from its top bar */
 private val TAPS_PADDING = 16.dp
 
 /**
- * Lays [content] out, a vehicle, over taps magnifying the reading of the location they're near,
- * see [MagnifierZones], for as long as the settings say. [content] tells where its tyres and
- * outlines are through the callbacks it's given, see [TyreTaps]. What the vehicle can be tapped
- * for itself, like assigning a sensor or its center's buttons, keeps its taps.
+ * Where what [MagnifierZones] needs is, reported as the vehicle is laid out: its tyres and outlines
+ * in the window, see [TyreTaps], and its top bar in the coordinates of what [Magnifiable] lays out,
+ * see [VehicleWithTopBar]
+ */
+internal class MagnifierReports(
+    val onTyrePositioned: (Location, Rect) -> Unit,
+    val onOutlinePositioned: (Location, Rect) -> Unit,
+    val onBarPositioned: (List<Rect>) -> Unit,
+)
+
+/**
+ * Lays [content] out, a vehicle and its top bar filling it, over taps magnifying the reading of
+ * the location they're near, see [MagnifierZones], for as long as the settings say. [content] tells
+ * where its tyres, outlines and top bar are through the [MagnifierReports] it's given. What can be
+ * tapped for itself, like assigning a sensor, the vehicle's center or the top bar's buttons, keeps
+ * its taps.
  */
 @Composable
 internal fun Magnifiable(
     modifier: Modifier = Modifier,
     vehicleComponent: VehicleComponent = LocalVehicleComponent.current,
     settings: TyreDisplaySettingsViewModel = viewModel { TyreDisplaySettingsViewModel() },
-    content: @Composable (
-        onTyrePositioned: (Location, Offset) -> Unit,
-        onOutlinePositioned: (Location, Rect) -> Unit,
-    ) -> Unit,
+    content: @Composable (MagnifierReports) -> Unit,
 ) {
+    val isEnabled by settings.magnifier.collectAsState()
     val seconds by settings.magnifierSeconds.collectAsState()
     // Only read once tapped: written on every layout, they don't recompose anything
-    val centers = remember(vehicleComponent) { mutableMapOf<Location, Offset>() }
+    val tyres = remember(vehicleComponent) { mutableMapOf<Location, Rect>() }
     val outlines = remember(vehicleComponent) { mutableMapOf<Location, Rect>() }
-    var area by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    val bar = remember(vehicleComponent) { mutableListOf<Rect>() }
+    var layer by remember { mutableStateOf<LayoutCoordinates?>(null) }
     var magnified by remember(vehicleComponent) { mutableStateOf<Location?>(null) }
     // A location without a sensor has nothing to magnify, tapping its outline assigns it one
     val magnifiable = vehicleComponent.vehicle.kind.locations.filter { location ->
@@ -101,17 +112,22 @@ internal fun Magnifiable(
             .value !is State.Unassigned
     }
     Box(modifier) {
-        if (seconds > 0) Box(
+        if (isEnabled) Box(
             Modifier
                 .matchParentSize()
-                .padding(TAPS_PADDING)
-                .onGloballyPositioned { area = it }
+                .onGloballyPositioned { layer = it }
                 .pointerInput(magnifiable) {
                     detectTapGestures { tap ->
-                        area
-                            ?.let { area ->
-                                MagnifierZones(centers.toMap(), outlines.toMap())
-                                    .locationAt(area.localToWindow(tap), area.boundsInWindow())
+                        layer
+                            ?.let { layer ->
+                                val padding = TAPS_PADDING.toPx()
+                                MagnifierZones(
+                                    tyres = tyres.toMap(),
+                                    outlines = outlines.toMap(),
+                                    excluded = bar.map {
+                                        it.translate(layer.localToWindow(Offset.Zero)).inflate(padding)
+                                    },
+                                ).locationAt(layer.localToWindow(tap), layer.boundsInWindow().deflate(padding))
                             }
                             ?.takeIf { it in magnifiable }
                             ?.also { magnified = it }
@@ -120,8 +136,13 @@ internal fun Magnifiable(
                 .testTag(MagnifierTags.taps)
         )
         content(
-            remember(centers) { { location, center -> centers[location] = center } },
-            remember(outlines) { { location, outline -> outlines[location] = outline } },
+            remember(tyres, outlines, bar) {
+                MagnifierReports(
+                    onTyrePositioned = { location, bounds -> tyres[location] = bounds },
+                    onOutlinePositioned = { location, outline -> outlines[location] = outline },
+                    onBarPositioned = { rects -> bar.apply { clear(); addAll(rects) } },
+                )
+            }
         )
         magnified?.also { location ->
             LaunchedEffect(location) {
@@ -229,22 +250,28 @@ private fun Magnifier(
                         maxWidth / reading.width.coerceAtLeast(1),
                         (maxHeight - rowHeight) / reading.height.coerceAtLeast(1),
                     )
-                    layout(constraints.maxWidth, (rowHeight + reading.height * readingScale).roundToInt()) {
+                    // As wide as what it shows rather than the screen, narrower when the height limits
+                    // it: the widest title and the close button, or the reading
+                    val cardWidth = maxOf(
+                        widestTitle * titleScale + CLOSE_GAP.toPx() + close.width,
+                        reading.width * readingScale,
+                    ).coerceAtMost(maxWidth)
+                    layout(cardWidth.roundToInt(), (rowHeight + reading.height * readingScale).roundToInt()) {
                         // Centered, unless that reaches the close button: then against it, as far as
                         // the gap
                         (title.width * titleScale).also { titleWidth ->
                             placeScaled(
                                 title,
                                 minOf(
-                                    (maxWidth - titleWidth) / 2,
-                                    maxWidth - close.width - CLOSE_GAP.toPx() - titleWidth,
+                                    (cardWidth - titleWidth) / 2,
+                                    cardWidth - close.width - CLOSE_GAP.toPx() - titleWidth,
                                 ),
                                 (rowHeight - title.height * titleScale) / 2,
                                 titleScale,
                             )
                         }
-                        close.place(constraints.maxWidth - close.width, ((rowHeight - close.height) / 2).roundToInt())
-                        placeScaled(reading, (maxWidth - reading.width * readingScale) / 2, rowHeight, readingScale)
+                        close.place(cardWidth.roundToInt() - close.width, ((rowHeight - close.height) / 2).roundToInt())
+                        placeScaled(reading, (cardWidth - reading.width * readingScale) / 2, rowHeight, readingScale)
                     }
                 }
             }
