@@ -199,9 +199,8 @@ public fun CurrentVehicle(
     scanQrCode: (Location) -> Unit = {},
     scanBluetooth: (Location) -> Unit = {},
     /**
-     * In a wide window, see [isWideWindow], the top bar makes way: its [navigationIcon] is drawn in
-     * the top left corner instead, its [title] then its [actions] in the top right one, beside the
-     * vehicle
+     * The top bar's, drawn with the vehicle, over it or beside it, whichever leaves the vehicle the
+     * most room, see [VehicleWithTopBar]
      */
     navigationIcon: @Composable () -> Unit = {},
     title: @Composable () -> Unit = {},
@@ -212,48 +211,21 @@ public fun CurrentVehicle(
     // collects would keep the previous vehicle's values for a few frames, its size and place with
     // them
     key(component.vehicle.uuid) {
-        if (isWideWindow()) VehicleBetweenCorners(
-            // As tall as the top bar's
-            start = {
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.height(TOP_BAR_HEIGHT)) {
-                    navigationIcon()
-                }
-            },
-            end = {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .height(TOP_BAR_HEIGHT)
-                        .padding(end = 4.dp),
-                ) {
-                    // Gives way to the actions when it's too long
-                    Box(
-                        Modifier
-                            .weight(1f, fill = false)
-                            .padding(start = 16.dp, end = 8.dp)
-                    ) {
-                        ProvideTextStyle(MaterialTheme.typography.titleLarge, title)
-                    }
-                    actions()
-                }
-            },
-            vehicle = { vehicleModifier ->
+        VehicleWithTopBar(
+            sizing = rememberVehicleSizing(component, isManaging = false),
+            navigationIcon = navigationIcon,
+            title = title,
+            actions = actions,
+            vehicle = { spareReadout ->
                 Vehicle(
                     component = component,
                     snackbarHostState = snackbarHostState,
-                    modifier = vehicleModifier,
                     center = center,
                     taps = TyreTaps(isManaging = false, scanQrCode = scanQrCode, scanBluetooth = scanBluetooth),
-                    spareBeside = true,
+                    spareReadout = spareReadout,
                 )
             },
             modifier = modifier,
-        ) else Vehicle(
-            component = component,
-            snackbarHostState = snackbarHostState,
-            modifier = modifier,
-            center = center,
-            taps = TyreTaps(isManaging = false, scanQrCode = scanQrCode, scanBluetooth = scanBluetooth),
         )
     }
 }
@@ -267,54 +239,18 @@ public fun Vehicle(
     /** Placed over the vehicle, between its axles or in the middle of a single axle one */
     center: @Composable (Modifier) -> Unit = {},
     taps: TyreTaps = TyreTaps(),
-    /**
-     * The spare's readout beside the rear right one rather than under the spare, a line leading to
-     * it, for a wide window where height is short. The vehicle is then sized and centered without
-     * it, room being kept on both sides for it to fit.
-     */
-    spareBeside: Boolean = false,
+    /** Where a vehicle with a spare shows the spare's readout */
+    spareReadout: SpareReadout = SpareReadout.UNDER,
 ) {
     KeepScreenOn()
-    val settings = component.viewModel(component.key()) { it.VehicleSettingsViewModel() }
-    val pressureUnit by settings.pressureUnit.collectAsState()
-    // Outlines only show around locations to tap, see TyreTapArea: without any, the readouts
-    // need no room for them and the image grows by as much
-    val isOutlined = taps.isManaging || settings.isFullyAssigned.collectAsState().value.not()
-    // Every readout as wide, so the outlines around them are too
-    val readoutSlotWidth = rememberWidestReadoutWidth(pressureUnit, isOutlined)
-        .plus(OUTLINE_PADDING.takeIf { isOutlined } ?: 0.dp)
-    // The outline reaches past the readout, it must stay off the screen's edge too
-    val readoutWidth = readoutSlotWidth + READOUT_GAP + (OUTLINE_OUTSET.takeIf { isOutlined } ?: 0.dp)
-    val basicReadoutHeight = rememberBasicReadoutHeight()
-    // The spare's readout is under the image, not next to it
-    val readoutSides = component.vehicle.kind.locations.minus(Location.Spare).map { it.readoutSide }.toSet()
-    // The spare's readout under its tyre, as tall as its usual pressure, temperature and time since
-    // update, and its outline's edge. Extra lines turned on in the settings go past the bottom,
-    // there's room for them while the screen is taller than wide, where the width decides of the
-    // image's height.
-    val hasSpare = Location.Spare in component.vehicle.kind.locations
-    val spareRoom = (SPARE_READOUT_GAP + basicReadoutHeight + OUTLINE_OUTSET)
-        .takeIf { hasSpare && spareBeside.not() }
-    // Past the rear right readout, kept on both sides since the vehicle is centered without it
-    val spareBesideWidth = (SPARE_BESIDE_GAP + readoutSlotWidth + (OUTLINE_OUTSET.takeIf { isOutlined } ?: 0.dp))
-        .takeIf { hasSpare && spareBeside }
-        ?: 0.dp
+    val sizing = rememberVehicleSizing(component, taps.isManaging)
+    val readoutSlotWidth = sizing.readoutSlotWidth
+    val basicReadoutHeight = sizing.basicReadoutHeight
+    val readoutWidth = sizing.readoutWidth
+    val readoutSides = sizing.readoutSides
+    val spareRoom = sizing.spareRoom(spareReadout)
     BoxWithConstraints(modifier) {
-        val imageHeight = maxWidth
-            .minus(readoutWidth * readoutSides.size)
-            .minus(spareBesideWidth * 2)
-            .minus(SCREEN_MARGIN * 2)
-            .div(1 - component.vehicle.kind.readoutInset * readoutSides.size)
-            .div(maxHeight * component.vehicle.kind.imageRatio)
-            // (imageHeight * maxHeight)² * imageRatio <= MAX_IMAGE_AREA * maxWidth * maxHeight
-            .coerceAtMost(sqrt(MAX_IMAGE_AREA * maxWidth.value / (component.vehicle.kind.imageRatio * maxHeight.value)))
-            .coerceAtLeast(MIN_IMAGE_HEIGHT)
-            // Down to the spare's readout rather than to the image's bottom, see the offset below
-            .coerceAtMost(
-                spareRoom
-                    ?.let { (maxHeight - VERTICAL_MARGIN * 2 - it) / (maxHeight * SPARE_BOTTOM) }
-                    ?: ((maxHeight - VERTICAL_MARGIN * 2) / maxHeight)
-            )
+        val imageHeight = sizing.imageHeight(maxWidth, maxHeight, spareReadout)
         // How far the spare's readout goes past the image's bottom
         val spareOverflow = spareRoom
             ?.minus(maxHeight * imageHeight * (1 - SPARE_BOTTOM))
@@ -327,6 +263,8 @@ public fun Vehicle(
                 x = listOfNotNull(
                     readoutWidth.takeIf { LEFT in readoutSides },
                     readoutWidth.takeIf { RIGHT in readoutSides }?.unaryMinus(),
+                    // Left of the spare's readout beside it, see SpareReadout.BESIDE
+                    sizing.spareBesideWidth(spareReadout).takeIf { spareReadout == SpareReadout.BESIDE }?.unaryMinus(),
                 ).fold(0.dp, Dp::plus) / 2,
                 // Up by half of what the spare's readout adds, it's centered with the image
                 y = -spareOverflow / 2,
@@ -343,10 +281,86 @@ public fun Vehicle(
             Kind.DELTA_THREE_WHEELER ->
                 DeltaThreeWheeler(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, fill)
             Kind.CAR_WITH_SPARE ->
-                CarWithSpare(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, spareBeside, fill)
+                CarWithSpare(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, spareReadout != SpareReadout.UNDER, fill)
             Kind.MONOWHEEL ->
                 Monowheel(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, fill)
         }
+    }
+}
+
+/** What sizes a vehicle's image and its readouts, see [Vehicle] */
+internal class VehicleSizing(
+    private val kind: Kind,
+    /** Every readout as wide, so the outlines around them are too */
+    val readoutSlotWidth: Dp,
+    /** A readout's usual pressure, temperature and time since update */
+    val basicReadoutHeight: Dp,
+    /** Outlines only show around locations to tap, see TyreTapArea */
+    private val isOutlined: Boolean,
+) {
+    private val outset = OUTLINE_OUTSET.takeIf { isOutlined } ?: 0.dp
+
+    /** The outline reaches past the readout, it must stay off the screen's edge too */
+    val readoutWidth: Dp = readoutSlotWidth + READOUT_GAP + outset
+
+    /** The spare's readout is under the image or beside the rear right one, not next to its tyre */
+    val readoutSides: Set<SensorLocation.Side> = kind.locations.minus(Location.Spare).map { it.readoutSide }.toSet()
+
+    private val hasSpare = Location.Spare in kind.locations
+
+    /**
+     * The spare's readout under its tyre, as tall as its usual pressure, temperature and time since
+     * update, and its outline's edge. Extra lines turned on in the settings go past the bottom,
+     * there's room for them while the screen is taller than wide, where the width decides of the
+     * image's height.
+     */
+    fun spareRoom(spareReadout: SpareReadout): Dp? = (SPARE_READOUT_GAP + basicReadoutHeight + OUTLINE_OUTSET)
+        .takeIf { hasSpare && spareReadout == SpareReadout.UNDER }
+
+    /** Past the rear right readout, the spare's readout beside it */
+    fun spareBesideWidth(spareReadout: SpareReadout): Dp = (SPARE_BESIDE_GAP + readoutSlotWidth + outset)
+        .takeIf { hasSpare && spareReadout != SpareReadout.UNDER }
+        ?: 0.dp
+
+    /**
+     * The image's height, as a share of [maxHeight], in a box this size. Down to [atLeast] when
+     * the width is short, which lets the readouts go past the box's sides.
+     */
+    fun imageHeight(
+        maxWidth: Dp,
+        maxHeight: Dp,
+        spareReadout: SpareReadout,
+        atLeast: Float = MIN_IMAGE_HEIGHT,
+    ): Float = maxWidth
+        .minus(readoutWidth * readoutSides.size)
+        // Kept on both sides when the vehicle is centered without it
+        .minus(spareBesideWidth(spareReadout) * if (spareReadout == SpareReadout.BESIDE_CENTERED) 2 else 1)
+        .minus(SCREEN_MARGIN * 2)
+        .div(1 - kind.readoutInset * readoutSides.size)
+        .div(maxHeight * kind.imageRatio)
+        // (imageHeight * maxHeight)² * imageRatio <= MAX_IMAGE_AREA * maxWidth * maxHeight
+        .coerceAtMost(sqrt(MAX_IMAGE_AREA * maxWidth.value / (kind.imageRatio * maxHeight.value)))
+        .coerceAtLeast(atLeast)
+        // Down to the spare's readout rather than to the image's bottom, see Vehicle's offset
+        .coerceAtMost(
+            spareRoom(spareReadout)
+                ?.let { (maxHeight - VERTICAL_MARGIN * 2 - it) / (maxHeight * SPARE_BOTTOM) }
+                ?: ((maxHeight - VERTICAL_MARGIN * 2) / maxHeight)
+        )
+}
+
+/** Sizes [component]'s vehicle as its settings and the text size have it, see [VehicleSizing] */
+@Composable
+internal fun rememberVehicleSizing(component: VehicleComponent, isManaging: Boolean): VehicleSizing {
+    val settings = component.viewModel(component.key()) { it.VehicleSettingsViewModel() }
+    val pressureUnit by settings.pressureUnit.collectAsState()
+    // Without any outline, the readouts need no room for them and the image grows by as much
+    val isOutlined = isManaging || settings.isFullyAssigned.collectAsState().value.not()
+    val readoutSlotWidth = rememberWidestReadoutWidth(pressureUnit, isOutlined)
+        .plus(OUTLINE_PADDING.takeIf { isOutlined } ?: 0.dp)
+    val basicReadoutHeight = rememberBasicReadoutHeight()
+    return remember(component.vehicle.kind, readoutSlotWidth, basicReadoutHeight, isOutlined) {
+        VehicleSizing(component.vehicle.kind, readoutSlotWidth, basicReadoutHeight, isOutlined)
     }
 }
 

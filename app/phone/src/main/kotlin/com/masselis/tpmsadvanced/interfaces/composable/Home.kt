@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -25,6 +26,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -59,6 +61,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavGraph
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -148,10 +151,18 @@ internal fun VehicleHome(
                 }
                 ?.also { offsetToFocus = it }
         }
+        val isWide = isWideWindow()
+        val visiblePaths = navController.visibleEntries
+            .collectAsState()
+            .value
+            .filter { it.destination !is NavGraph }
+            .mapNotNull { entry -> entry.destination.route?.let { Path.from(it) } }
         Scaffold(
             topBar = {
-                // The main screen and Manage sensors show theirs beside the vehicle, see isWideWindow
-                if (((currentPath is Path.Home || currentPath is Path.ManageSensors) && isWideWindow()).not())
+                // The main screen draws its own, see CurrentVehicle, and Manage sensors its own beside
+                // the vehicle in a wide window, see isWideWindow. Kept while another screen shows
+                // too, so it doesn't move while it leaves or comes.
+                if (visiblePaths.all { it is Path.Home || (it is Path.ManageSensors && isWide) }.not())
                     TopAppBar(manualBackgroundButtonModifier = manualBackgroundButtonModifier)
             },
             content = { paddingValues ->
@@ -170,7 +181,10 @@ internal fun VehicleHome(
                         QuietScanStatusAnnouncementsEffect()
                         CurrentVehicle(
                             snackbarHostState = snackbarHostState,
-                            modifier = modifier,
+                            // Without the top bar's room, it's never shown with its own, see topBar
+                            modifier = Modifier
+                                .windowInsetsPadding(ScaffoldDefaults.contentWindowInsets)
+                                .fillMaxSize(),
                             center = { SilenceAlertsButton(it) },
                             scanQrCode = {
                                 navController.navigate("${Path.QrCode(vehicleUuid, locations.indexOf(it))}")

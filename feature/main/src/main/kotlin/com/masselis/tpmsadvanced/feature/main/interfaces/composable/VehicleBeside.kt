@@ -79,48 +79,6 @@ internal fun VehicleBeside(
     }
 }
 
-/**
- * In a wide window, see [isWideWindow], the vehicle needs all the height: the top bar's [start] and
- * [end] stay in the top corners, the [vehicle] beside them rather than under them, centered in the
- * room they leave. [end] takes up to [MAX_END_SHARE] of the width, the vehicle keeps the rest.
- */
-@Composable
-internal fun VehicleBetweenCorners(
-    start: @Composable () -> Unit,
-    end: @Composable () -> Unit,
-    vehicle: @Composable (Modifier) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Layout(
-        contents = listOf(start, end, { vehicle(Modifier.fillMaxSize()) }),
-        modifier = modifier,
-    ) { (starts, ends, vehicles), constraints ->
-        val corner = Constraints(maxWidth = constraints.maxWidth, maxHeight = constraints.maxHeight)
-        val startPlaceables = starts.map { it.measure(corner) }
-        val startWidth = startPlaceables.maxOfOrNull { it.width } ?: 0
-        val endPlaceables = ends.map {
-            it.measure(corner.copy(maxWidth = (constraints.maxWidth * MAX_END_SHARE).roundToInt()))
-        }
-        val endWidth = endPlaceables.maxOfOrNull { it.width } ?: 0
-        // The vehicle draws itself centered in the box it's given
-        val vehiclePlaceables = vehicles.map {
-            it.measure(
-                Constraints.fixed(
-                    width = (constraints.maxWidth - startWidth - endWidth).coerceAtLeast(0),
-                    height = constraints.maxHeight,
-                )
-            )
-        }
-        layout(constraints.maxWidth, constraints.maxHeight) {
-            vehiclePlaceables.forEach { it.place(startWidth, 0) }
-            startPlaceables.forEach { it.place(0, 0) }
-            endPlaceables.forEach { it.place(constraints.maxWidth - it.width, 0) }
-        }
-    }
-}
-
-private const val MAX_END_SHARE = 1f / 3
-
 /** From the left of the outlines to their right, relative to [x], none until they're placed */
 private fun Map<Location, Rect>.spanFrom(x: Float): Pair<Float, Float>? = values
     .takeIf { it.isNotEmpty() }

@@ -44,6 +44,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.createSavedStateHandle
@@ -133,7 +134,15 @@ private fun CurrentVehicleDropdown(
             verticalAlignment = Alignment.Bottom,
             modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
         ) {
-            Text(text = shown.name, Modifier.testTag(currentVehicleTest))
+            // On one line, giving way to the arrow when the room's short
+            Text(
+                text = shown.name,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .weight(1f, fill = false)
+                    .testTag(currentVehicleTest),
+            )
             // Another vehicle alerting is told before the list is opened, by a red disc behind the
             // arrow, the list's entries telling which once open. Drawn behind the icon, nothing
             // moves while it blinks; the padding keeps it off the name.
