@@ -61,7 +61,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.navigation.NavGraph
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -151,19 +150,23 @@ internal fun VehicleHome(
                 }
                 ?.also { offsetToFocus = it }
         }
-        val isWide = isWideWindow()
-        val visiblePaths = navController.visibleEntries
-            .collectAsState()
-            .value
-            .filter { it.destination !is NavGraph }
-            .mapNotNull { entry -> entry.destination.route?.let { Path.from(it) } }
+        // The main screen draws its own, see CurrentVehicle, and Manage sensors its own beside the
+        // vehicle in a wide window, see isWideWindow
+        val barPath = currentPath?.takeIf {
+            (it is Path.Home || (it is Path.ManageSensors && isWideWindow())).not()
+        }
+        // Kept while the bar fades out with the screen it was on
+        var lastBarPath by remember { mutableStateOf(barPath) }
+        if (barPath != null && barPath != lastBarPath) lastBarPath = barPath
         Scaffold(
             topBar = {
-                // The main screen draws its own, see CurrentVehicle, and Manage sensors its own beside
-                // the vehicle in a wide window, see isWideWindow. Kept while another screen shows
-                // too, so it doesn't move while it leaves or comes.
-                if (visiblePaths.all { it is Path.Home || (it is Path.ManageSensors && isWide) }.not())
-                    TopAppBar(manualBackgroundButtonModifier = manualBackgroundButtonModifier)
+                // Fades with the screens, still taking its room until it's gone so the screen
+                // leaving doesn't move
+                AnimatedVisibility(visible = barPath != null, enter = fadeIn(), exit = fadeOut()) {
+                    lastBarPath?.also {
+                        TopAppBar(path = it, manualBackgroundButtonModifier = manualBackgroundButtonModifier)
+                    }
+                }
             },
             content = { paddingValues ->
                 NavHost(
@@ -466,15 +469,11 @@ internal fun VehicleHome(
 @Suppress("LongMethod", "CyclomaticComplexMethod")
 @Composable
 private fun TopAppBar(
+    path: Path,
     modifier: Modifier = Modifier,
     manualBackgroundButtonModifier: Modifier = Modifier
 ) {
-    val navController = LocalHomeNavController.current
-    val currentPath = navController.currentBackStackEntryAsState()
-        .value
-        ?.destination
-        ?.route
-        ?.let { Path.from(it) }
+    val currentPath: Path? = path
     CenterAlignedTopAppBar(
         title = {
             when (currentPath) {
