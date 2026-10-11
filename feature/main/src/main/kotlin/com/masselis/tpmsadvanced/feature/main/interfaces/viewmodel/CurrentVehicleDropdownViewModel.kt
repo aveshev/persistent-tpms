@@ -28,8 +28,8 @@ internal interface CurrentVehicleDropdownViewModel {
     val stateFlow: StateFlow<State>
     val eventChannel: ReceiveChannel<Event>
 
-    /** The red or crimson alert of each vehicle other than the current one, by its uuid */
-    val otherAlerts: StateFlow<Map<UUID, AlertLevel>>
+    /** The red or crimson alert of each vehicle alerting, the current one included, by its uuid */
+    val alerts: StateFlow<Map<UUID, AlertLevel>>
 
     fun setCurrent(vehicle: Vehicle)
 

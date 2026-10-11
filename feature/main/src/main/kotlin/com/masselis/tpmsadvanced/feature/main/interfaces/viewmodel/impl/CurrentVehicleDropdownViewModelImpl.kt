@@ -20,7 +20,6 @@ import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -52,14 +51,10 @@ internal class CurrentVehicleDropdownViewModelImpl(
     override val eventChannel: ReceiveChannel<Event> = mutableEventChannel
 
     // Only while shown, as the current vehicle's tyres: listening to the others' scans them too
-    override val otherAlerts = combine(
-        currentVehicleUseCase
-            .map { it.vehicle.uuid }
-            .distinctUntilChanged(),
-        vehicleAlertLevelsUseCase.levels,
-    ) { current, levels ->
-        levels.filter { (uuid, level) -> uuid != current && level >= RED }
-    }.stateIn(viewModelScope, WhileSubscribed(), emptyMap())
+    override val alerts = vehicleAlertLevelsUseCase
+        .levels
+        .map { levels -> levels.filterValues { it >= RED } }
+        .stateIn(viewModelScope, WhileSubscribed(), emptyMap())
 
     init {
         combine(

@@ -103,7 +103,7 @@ private fun CurrentVehicleDropdown(
         }
     }
     val vehicles = viewModel.stateFlow.collectAsState().value as? State.Vehicles ?: return
-    val otherAlerts by viewModel.otherAlerts.collectAsState()
+    val alerts by viewModel.alerts.collectAsState()
     var expanded by remember { mutableStateOf(false) }
     var askNewVehicle by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(
@@ -117,16 +117,17 @@ private fun CurrentVehicleDropdown(
         ) {
             Text(text = vehicles.current.name, Modifier.testTag(currentVehicleTest))
             // Another vehicle alerting is told before the list is opened, by a red disc behind the
-            // arrow, the list's entries telling which once open. Drawn over the icon's bounds,
-            // nothing moves while it blinks; the padding keeps it off the name.
-            val isAlertOn = expanded.not() && isAlertBlinkOn(otherAlerts.values.maxOrNull())
+            // arrow, the list's entries telling which once open. Drawn behind the icon, nothing
+            // moves while it blinks; the padding keeps it off the name.
+            val isAlertOn = expanded.not() &&
+                isAlertBlinkOn(alerts.filterKeys { it != vehicles.current.uuid }.values.maxOrNull())
             val discColor = MaterialTheme.colorScheme.error
             val arrowColor = if (isAlertOn) MaterialTheme.colorScheme.onError else LocalContentColor.current
             CompositionLocalProvider(LocalContentColor provides arrowColor) {
                 ExposedDropdownMenuDefaults.TrailingIcon(
                     expanded = expanded,
                     modifier = Modifier
-                        .padding(start = 4.dp)
+                        .padding(start = 2.dp)
                         .drawBehind { if (isAlertOn) drawCircle(discColor, radius = ALERT_DISC_RADIUS.toPx()) }
                 )
             }
@@ -134,7 +135,7 @@ private fun CurrentVehicleDropdown(
         VehicleListDropdownMenu(
             isExpanded = expanded,
             vehicleList = vehicles.list.toImmutableList(),
-            alerts = otherAlerts.toImmutableMap(),
+            alerts = alerts.toImmutableMap(),
             onDismissRequest = { expanded = false },
             onNewCurrent = { viewModel.setCurrent(it) },
             onAskNewVehicle = { askNewVehicle = true }
@@ -320,11 +321,11 @@ private fun OtherVehicleAlertingPreview() {
 
 private class MockCurrentVehicleDropdownViewModel(
     state: State,
-    otherAlerts: Map<UUID, AlertLevel> = emptyMap(),
+    alerts: Map<UUID, AlertLevel> = emptyMap(),
 ) : CurrentVehicleDropdownViewModel {
     override val stateFlow: StateFlow<State> = MutableStateFlow(state)
     override val eventChannel: ReceiveChannel<Event> = Channel()
-    override val otherAlerts: StateFlow<Map<UUID, AlertLevel>> = MutableStateFlow(otherAlerts)
+    override val alerts: StateFlow<Map<UUID, AlertLevel>> = MutableStateFlow(alerts)
     override fun setCurrent(vehicle: Vehicle) = error("")
     override fun insert(carName: String, kind: Vehicle.Kind) = error("")
 }
