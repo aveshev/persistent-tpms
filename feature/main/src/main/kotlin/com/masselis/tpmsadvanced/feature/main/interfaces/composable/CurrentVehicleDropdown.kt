@@ -86,16 +86,22 @@ public fun CurrentVehicleDropdown(
     onVehicleAdded: (UUID) -> Unit = {},
 ) {
     CurrentVehicleDropdown(
-        modifier,
-        alerts,
-        onVehicleAdded,
-        viewModel { CurrentVehicleDropdownViewModel(createSavedStateHandle()) }
+        shown = LocalVehicleComponent.current.vehicleStateFlow.collectAsState().value,
+        modifier = modifier,
+        alerts = alerts,
+        onVehicleAdded = onVehicleAdded,
+        viewModel = viewModel { CurrentVehicleDropdownViewModel(createSavedStateHandle()) },
     )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CurrentVehicleDropdown(
+    /**
+     * The vehicle the screen shows, named from the start rather than once the list is loaded, and
+     * until the screen is gone rather than once another one is picked: nothing moves around it
+     */
+    shown: Vehicle,
     modifier: Modifier = Modifier,
     alerts: Map<UUID, AlertLevel> = emptyMap(),
     onVehicleAdded: (UUID) -> Unit = {},
@@ -112,7 +118,7 @@ private fun CurrentVehicleDropdown(
         }
     }
     LaunchedEffect(viewModel) { viewModel.scanVehicles() }
-    val vehicles = viewModel.stateFlow.collectAsState().value as? State.Vehicles ?: return
+    val vehicles = viewModel.stateFlow.collectAsState().value as? State.Vehicles
     var expanded by remember { mutableStateOf(false) }
     var askNewVehicle by remember { mutableStateOf(false) }
     ExposedDropdownMenuBox(
@@ -124,12 +130,12 @@ private fun CurrentVehicleDropdown(
             verticalAlignment = Alignment.Bottom,
             modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
         ) {
-            Text(text = vehicles.current.name, Modifier.testTag(currentVehicleTest))
+            Text(text = shown.name, Modifier.testTag(currentVehicleTest))
             // Another vehicle alerting is told before the list is opened, by a red disc behind the
             // arrow, the list's entries telling which once open. Drawn behind the icon, nothing
             // moves while it blinks; the padding keeps it off the name.
             val isAlertOn = expanded.not() &&
-                isAlertBlinkOn(alerts.filterKeys { it != vehicles.current.uuid }.values.maxOrNull())
+                isAlertBlinkOn(alerts.filterKeys { it != shown.uuid }.values.maxOrNull())
             val discColor = MaterialTheme.colorScheme.error
             val arrowColor = if (isAlertOn) MaterialTheme.colorScheme.onError else LocalContentColor.current
             CompositionLocalProvider(LocalContentColor provides arrowColor) {
@@ -141,14 +147,17 @@ private fun CurrentVehicleDropdown(
                 )
             }
         }
-        VehicleListDropdownMenu(
-            isExpanded = expanded,
-            vehicleList = vehicles.list.toImmutableList(),
-            alerts = alerts.toImmutableMap(),
-            onDismissRequest = { expanded = false },
-            onNewCurrent = { viewModel.setCurrent(it) },
-            onAskNewVehicle = { askNewVehicle = true }
-        )
+        // Once the list is loaded
+        vehicles?.also {
+            VehicleListDropdownMenu(
+                isExpanded = expanded,
+                vehicleList = it.list.toImmutableList(),
+                alerts = alerts.toImmutableMap(),
+                onDismissRequest = { expanded = false },
+                onNewCurrent = { viewModel.setCurrent(it) },
+                onAskNewVehicle = { askNewVehicle = true }
+            )
+        }
     }
     if (askNewVehicle)
         AddVehicle(
@@ -321,6 +330,7 @@ private val previewOtherVehicle = previewVehicle.copy(
 @Composable
 private fun CurrentVehicleDropdownPreview() {
     CurrentVehicleDropdown(
+        shown = previewVehicle,
         viewModel = MockCurrentVehicleDropdownViewModel(
             State.Vehicles(previewVehicle, listOf(previewVehicle, previewOtherVehicle))
         )
@@ -331,6 +341,7 @@ private fun CurrentVehicleDropdownPreview() {
 @Composable
 private fun OtherVehicleAlertingPreview() {
     CurrentVehicleDropdown(
+        shown = previewVehicle,
         alerts = mapOf(previewOtherVehicle.uuid to CRIMSON),
         viewModel = MockCurrentVehicleDropdownViewModel(
             State.Vehicles(previewVehicle, listOf(previewVehicle, previewOtherVehicle))
