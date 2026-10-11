@@ -83,7 +83,7 @@ Each column applies when the more severe one doesn't.
   out of range. A leaking tyre reaching its minimum gets a separate red pressure notification.
   The tracker is experimental and off by default, this class only exists while it's on.
 - **Sensor alarm stays amber**: the sensor still reports pressure and temperature, which raise
-  their own alerts. It's still shown as "Leaking?" in the app.
+  their own alerts. It's still shown as "Leak?" in the app.
 - Fast leaks don't escalate to crimson. That's left out on purpose, to avoid false positives.
 
 ### No sensor removed detection
@@ -104,7 +104,7 @@ pumping up, which the silence button or a dismiss quiets.
 - **Except a leak while the pressure is red or crimson**: a pressure loss or the sensor's own
   alarm isn't notified on its own then, its notification going at once if it was shown. It's told
   in the pressure's notification instead ("Rear left wheel: 21.0 psi, minimum 30.0 psi, down
-  3.0 psi in 5 min"), and the main screen still shows "Leaking?". The pressure already says more
+  3.0 psi in 5 min"), and the main screen still shows "Leak?". The pressure already says more
   than the leak's amber: another notification would only be one more sound and one more thing to
   dismiss. While the pressure is fine or amber, a leak is the earliest warning, notified on its
   own.
@@ -335,16 +335,17 @@ condition, its pressure and temperature: a low battery blinks its voltage, not t
 | Level | Tyre icon | Tyre stats |
 |---|---|---|
 | Amber | Unchanged (no blinking) | The offending value in the theme's warning orange, as the battery's "getting low" is today |
-| Red | Blinks red, in 400 ms phases | The offending value blinks red, in 400 ms phases |
-| Crimson | Blinks red, in 200 ms phases | The offending value in red, alternating with "CRITICAL" in 800 ms phases |
+| Red | Blinks red, shown 600 ms then hidden 200 ms | The offending value blinks red, shown 600 ms then hidden 200 ms |
+| Crimson | Blinks red, in 200 ms phases | The offending value in red, alternating with "LOW!" or "HIGH!" in 800 ms phases |
 
 The tyre blinks in 300 ms phases today. Halving that would make about 3.3 flashes a second, above
-the usual photosensitivity limit of 3 (WCAG): red slows down to 400 ms instead, and crimson stays
-under the limit at 2.5 flashes a second.
+the usual photosensitivity limit of 3 (WCAG): red slows down to an 800 ms cycle instead, shown for
+three quarters of it so the tyre and its values stay readable, and crimson stays under the limit at
+2.5 flashes a second.
 
 Everything blinking on every screen, tyres, values and the battery settings' samples, follows one
-clock: each phase starts on a multiple of its length since the epoch, so the 200, 400 and 800 ms
-phases switch together and two tyres at the same level are never out of step.
+clock: each cycle starts on a multiple of its length since the epoch, so the 400, 800 and 1600 ms
+cycles start together and two tyres at the same level are never out of step.
 
 The normal tyre colour already fades from green to red as the temperature nears the hot threshold,
 so a tyre at amber temperature is already reddish: the orange value in the stats is what marks it

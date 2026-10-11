@@ -14,7 +14,9 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Temperature.CREATOR.celsius
 import com.masselis.tpmsadvanced.data.vehicle.model.Voltage.CREATOR.volts
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 @Suppress("MaxLineLength")
 internal class AlertThresholdsTest {
@@ -36,6 +38,14 @@ internal class AlertThresholdsTest {
         assertEquals(RED, thresholds.pressureLevel(150.1f.kpa))
         assertEquals(CRIMSON, thresholds.pressureLevel(150f.kpa))
         assertEquals(CRIMSON, thresholds.pressureLevel(0f.kpa))
+    }
+
+    @Test
+    fun `a pressure from the middle of the range up is on its high side`() {
+        assertFalse(thresholds.isHighPressure(0f.kpa))
+        assertFalse(thresholds.isHighPressure(249.9f.kpa))
+        assertTrue(thresholds.isHighPressure(250f.kpa))
+        assertTrue(thresholds.isHighPressure(400f.kpa))
     }
 
     @Test

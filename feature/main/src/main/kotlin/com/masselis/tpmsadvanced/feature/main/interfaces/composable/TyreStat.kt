@@ -128,6 +128,7 @@ private fun TyreStat(
             Modifier.align(alignment),
             // Still on the sensors' page, where they're only checked
             blinks = isBasic.not(),
+            criticalLabel = if (detected?.isHighPressure == true) "HIGH!" else "LOW!",
         )
 
         Reading(
@@ -136,6 +137,8 @@ private fun TyreStat(
             Modifier.align(alignment),
             fontSize = 16.sp,
             blinks = isBasic.not(),
+            // Only a high temperature alerts
+            criticalLabel = "HIGH!",
         )
 
         if (showTimeSinceUpdate && detected != null) {
@@ -153,7 +156,7 @@ private fun TyreStat(
         // pressure and temperature above stay as the sensor read them. The same goes for the
         // pressure falling while riding.
         if (isBasic.not() && (PRESSURE_LOSS in levels || SENSOR_ALARM in levels)) {
-            Reading("Leaking?", AMBER, Modifier.align(alignment), fontSize = 16.sp)
+            Reading("Leak?", AMBER, Modifier.align(alignment), fontSize = 16.sp)
         }
 
         // A battery getting low shows whatever the setting
@@ -196,8 +199,9 @@ private fun TyreStat(
 }
 
 /**
- * A value in the colour of its alert [level]: blinking while red, alternating with "CRITICAL"
- * while crimson, in sync with the tyres, when it [blinks]
+ * A value in the colour of its alert [level]: blinking while red, alternating with [criticalLabel]
+ * while crimson, in sync with the tyres, when it [blinks]. The label is a short word, such as
+ * "LOW!", which fits beside the tyre where "CRITICAL" didn't.
  */
 @Composable
 private fun Reading(
@@ -206,8 +210,9 @@ private fun Reading(
     modifier: Modifier = Modifier,
     fontSize: TextUnit = TextUnit.Unspecified,
     blinks: Boolean = true,
+    criticalLabel: String = "",
 ) = Text(
-    if (blinks && level == CRIMSON && isFirstBlinkPhase(CRITICAL_LABEL_BLINK).not()) "CRITICAL" else text,
+    if (blinks && level == CRIMSON && isFirstBlinkPhase(CRITICAL_LABEL_BLINK).not()) criticalLabel else text,
     fontWeight = FontWeight.SemiBold,
     maxLines = 1,
     fontSize = fontSize,

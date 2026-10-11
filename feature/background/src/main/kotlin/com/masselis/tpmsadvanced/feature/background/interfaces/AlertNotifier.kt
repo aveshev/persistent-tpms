@@ -416,7 +416,7 @@ internal class AlertNotifier(
             }
         }
 
-        /** What tells the tyre may be leaking, "Leaking?" on the main screen */
+        /** What tells the tyre may be leaking, "Leak?" on the main screen */
         private val LEAKS = setOf(PRESSURE_LOSS, SENSOR_ALARM)
 
         /**
