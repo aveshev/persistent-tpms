@@ -21,6 +21,10 @@ import androidx.core.app.ServiceCompat.stopForeground
 import co.touchlab.kermit.Logger
 import com.masselis.tpmsadvanced.core.common.appContext
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.Failure
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.Retrying
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.Scanning
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.WaitingForBluetooth
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import com.masselis.tpmsadvanced.feature.background.R
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.Active
@@ -41,24 +45,18 @@ import com.masselis.tpmsadvanced.feature.main.usecase.VehicleListUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
-import kotlinx.coroutines.flow.retryWhen
-import kotlin.time.Duration.Companion.minutes
-import kotlin.time.Duration.Companion.seconds
-import kotlin.time.TimeSource
 
 /**
  * The monitor service's notification, telling the status of the scan. The tyres' alerts are
@@ -72,7 +70,7 @@ internal class ServiceNotifier(
     service: Service,
     vehicleListUseCase: VehicleListUseCase,
     scanPolicyUseCase: ScanPolicyUseCase,
-    isBluetoothOn: Flow<Boolean>,
+    tyreScanStatus: Flow<ScanStatus?>,
 ) {
     private val logger = Logger.withTag("ServiceNotifier")
     private val notificationManager = NotificationManagerCompat.from(appContext)
@@ -98,7 +96,7 @@ internal class ServiceNotifier(
         scanPolicyUseCase
             .decision
             // Listening to the tyres is what scans them, and stores their readings for the alerts
-            .serviceStates(isBluetoothOn) { decision ->
+            .serviceStates(tyreScanStatus) { decision ->
                 vehicleListUseCase
                     .vehicleListFlow
                     // Editing a vehicle (ranges, name...) re-emits the list; only a change in the
@@ -281,15 +279,14 @@ internal class ServiceNotifier(
 }
 
 /**
- * What the service shows for each decision: the [active] states while active and Bluetooth is on,
- * the scanning status otherwise. Bluetooth being turned on again, and a scan refused for a reason
- * that can go away, start the [active] states over by themselves. Only the failures nothing can
- * recover from end the flow, with the state telling which. Each state differs from the previous one.
+ * What the service shows for each decision: the [active] states while active, unless the
+ * [tyreScanStatus] tells the scan waits for Bluetooth or retries a refused start. The scanner
+ * starts the scan over by itself then. Only the failures nothing can recover from end the flow,
+ * with the state telling which. Each state differs from the previous one.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 internal fun Flow<ScanDecision>.serviceStates(
-    isBluetoothOn: Flow<Boolean>,
-    timeSource: TimeSource = TimeSource.Monotonic,
+    tyreScanStatus: Flow<ScanStatus?>,
     active: (ScanDecision.Active) -> Flow<ServiceNotifier.State>,
 ): Flow<ServiceNotifier.State> = flatMapLatest { decision ->
     when (decision) {
@@ -298,9 +295,13 @@ internal fun Flow<ScanDecision>.serviceStates(
         // that call if the app launches already suspended (e.g. opened while already in Doze).
         is ScanDecision.Suspended -> flowOf(Suspended(decision))
         ScanDecision.Idle -> flowOf(Idle)
-        is ScanDecision.Active -> isBluetoothOn
-            .distinctUntilChanged()
-            .flatMapLatest { on -> if (on) active(decision).retryingScan(timeSource) else flowOf(BluetoothOff) }
+        is ScanDecision.Active -> combine(active(decision), tyreScanStatus) { state, status ->
+            when (status) {
+                WaitingForBluetooth -> BluetoothOff
+                is Retrying -> ScanRetrying(status.reason)
+                Scanning, null -> state
+            }
+        }
     }
 }
     // The service must call startForeground() shortly after being started, before the database
@@ -310,35 +311,4 @@ internal fun Flow<ScanDecision>.serviceStates(
         Logger.withTag("ServiceNotifier").e(cause) { "Monitoring stopped" }
         emit(if (cause is Failure.Scan) ScanFailure(cause.reason) else MonitoringFailure)
     }
-    // A failure and the broadcast both tell Bluetooth being turned off, for instance
     .distinctUntilChanged()
-
-/**
- * Starts the scan over after a failure that can go away, waiting longer after each one in a row,
- * up to [MAX_RETRY_DELAY]. A scan that ran for [RETRY_DELAY_RESET] before failing waits the
- * shortest delay again. Bluetooth being turned off is told meanwhile: the broadcast saying it may
- * come after the scan noticed.
- */
-private fun Flow<ServiceNotifier.State>.retryingScan(timeSource: TimeSource) = flow {
-    var startedAt = timeSource.markNow()
-    var retryDelay = FIRST_RETRY_DELAY
-    emitAll(
-        onStart { startedAt = timeSource.markNow() }
-            .retryWhen { cause, _ ->
-                when {
-                    cause is Failure.BluetoothOff -> emit(BluetoothOff)
-                    cause is Failure.Scan && cause.isRecoverable -> emit(ScanRetrying(cause.reason))
-                    else -> return@retryWhen false
-                }
-                if (startedAt.elapsedNow() >= RETRY_DELAY_RESET) retryDelay = FIRST_RETRY_DELAY
-                Logger.withTag("ServiceNotifier").w(cause) { "Scan failed, retrying in $retryDelay" }
-                delay(retryDelay)
-                retryDelay = (retryDelay * 2).coerceAtMost(MAX_RETRY_DELAY)
-                true
-            }
-    )
-}
-
-private val FIRST_RETRY_DELAY = 5.seconds
-private val MAX_RETRY_DELAY = 1.minutes
-private val RETRY_DELAY_RESET = 2.minutes

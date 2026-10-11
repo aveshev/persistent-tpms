@@ -183,17 +183,15 @@ internal class BeaconPresenceUseCaseTest {
     }
 
     @Test
-    fun `a failed scan is tried again later`() = runTest {
-        var attempts = 0
+    fun `a scan that can't go on leaves the beacons going away`() = runTest {
         every { scanner.advertisements(any(), any()) } returns flow {
-            attempts++
-            if (attempts == 1) error("Scanning too frequently")
             repeat(2) { emit(advertisement(BIKE.address, rssi = -70)) }
+            error("Feature unsupported")
         }
         test().nearby(listOf(BIKE), LOW_POWER).test {
             assertEquals(emptyMap(), awaitItem())
             assertEquals(mapOf(BIKE.address to -70), awaitItem())
-            assertEquals(2, attempts)
+            assertEquals(emptyMap(), awaitItem())
         }
     }
 
