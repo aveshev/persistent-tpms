@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 
 /**
- * The tyre's atmosphere, its pressure being corrected by the vehicle's calibration so the display,
+ * The tyre's atmosphere, its pressure being corrected by its sensor's calibration so the display,
  * the alerts and the background monitoring all agree on it.
  */
 public class TyreAtmosphereUseCase internal constructor(
@@ -15,7 +15,7 @@ public class TyreAtmosphereUseCase internal constructor(
 ) {
     public fun listen(): Flow<TyreAtmosphere> = listenTyreUseCase
         .listen()
-        .combine(calibrationUseCase.calibration) { record, calibration ->
-            record.toAtmosphere(calibration)
+        .combine(calibrationUseCase.calibrations) { record, calibrations ->
+            record.toAtmosphere(calibrations)
         }
 }

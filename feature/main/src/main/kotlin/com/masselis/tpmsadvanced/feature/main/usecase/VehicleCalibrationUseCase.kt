@@ -1,57 +1,72 @@
 package com.masselis.tpmsadvanced.feature.main.usecase
 
-import com.masselis.tpmsadvanced.data.vehicle.interfaces.VehicleDatabase
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.ReadingDatabase
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorDatabase
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure
-import com.masselis.tpmsadvanced.data.vehicle.model.PressureCalibration
+import com.masselis.tpmsadvanced.data.vehicle.model.PressureCalibrations
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorCalibration
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.FlowPreview
+import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
-import kotlin.time.Duration.Companion.milliseconds
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 
 /**
- * The vehicle's pressure calibration. Turning it off keeps [offset] and [multiplier], so turning it
- * back on restores them.
+ * The pressure calibration of each of the vehicle's sensors. Turning a calibration off keeps its
+ * values, so turning it back on restores them.
  */
-@OptIn(FlowPreview::class)
 public class VehicleCalibrationUseCase internal constructor(
-    vehicle: Vehicle,
-    scope: CoroutineScope,
-    database: VehicleDatabase,
+    private val vehicle: Vehicle,
+    private val sensorDatabase: SensorDatabase,
+    private val readingDatabase: ReadingDatabase,
 ) {
 
-    public val isEnabled: MutableStateFlow<Boolean> =
-        MutableStateFlow(database.selectPressureCalibration(vehicle.uuid))
-    public val offset: MutableStateFlow<Pressure> =
-        MutableStateFlow(database.selectPressureOffset(vehicle.uuid))
-    public val multiplier: MutableStateFlow<Float> =
-        MutableStateFlow(database.selectPressureMultiplier(vehicle.uuid))
-
-    /** The calibration to apply to the read pressures, null while it's off */
-    public val calibration: Flow<PressureCalibration?> =
-        combine(isEnabled, offset, multiplier) { enabled, offset, multiplier ->
-            PressureCalibration(offset, multiplier).takeIf { enabled }
+    /** The calibration to apply to each sensor's read pressures */
+    public val calibrations: Flow<PressureCalibrations> = sensorDatabase
+        .selectCalibrations(vehicle.uuid)
+        .asFlow()
+        .map { all ->
+            all
+                .mapNotNull { (id, calibration) -> calibration.applied?.let { id to it } }
+                .toMap()
+                .let(::PressureCalibrations)
         }
 
-    init {
-        isEnabled
-            .debounce(100.milliseconds)
-            .onEach { database.updatePressureCalibration(it, vehicle.uuid) }
-            .launchIn(scope)
+    public fun of(sensorId: Int): Flow<SensorCalibration> = sensorDatabase
+        .selectCalibration(sensorId)
+        .asFlow()
+        .map { it ?: SensorCalibration.None }
 
-        offset
-            .debounce(100.milliseconds)
-            .onEach { database.updatePressureOffset(it, vehicle.uuid) }
-            .launchIn(scope)
+    /** The calibration of the vehicle's sensors other than [sensorId] */
+    public fun othersThan(sensorId: Int): Flow<List<SensorCalibration>> = sensorDatabase
+        .selectCalibrations(vehicle.uuid)
+        .asFlow()
+        .map { all -> all.mapNotNull { (id, calibration) -> calibration.takeIf { id != sensorId } } }
 
-        multiplier
-            .debounce(100.milliseconds)
-            .onEach { database.updatePressureMultiplier(it, vehicle.uuid) }
-            .launchIn(scope)
-    }
+    /** Where [sensorId] is on the vehicle, null once it's no longer assigned */
+    public fun locationOf(sensorId: Int): Flow<Location?> = sensorDatabase
+        .selectById(sensorId)
+        .asFlow()
+        .map { it?.location }
+
+    /** The pressure [sensorId] read last, as it sent it: before its calibration */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    public fun latestRead(sensorId: Int): Flow<Pressure?> = sensorDatabase
+        .selectById(sensorId)
+        .asFlow()
+        .flatMapLatest { sensor ->
+            sensor
+                ?.let { readingDatabase.latestBySensorByLocation(sensorId, it.location, vehicle.uuid).asFlow() }
+                ?.map { it?.pressure }
+                ?: flowOf(null)
+        }
+
+    public suspend fun set(sensorId: Int, calibration: SensorCalibration): Unit =
+        sensorDatabase.updateCalibration(sensorId, calibration)
+
+    /** Gives every sensor of the vehicle [calibration], once: the ones assigned later have none */
+    public suspend fun applyToAll(calibration: SensorCalibration): Unit =
+        sensorDatabase.updateCalibrations(vehicle.uuid, calibration)
 }

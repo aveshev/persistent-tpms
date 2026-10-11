@@ -15,7 +15,12 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -41,18 +46,14 @@ import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.masselis.tpmsadvanced.core.ui.isWideWindow
 import com.masselis.tpmsadvanced.core.ui.viewModel
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation
-import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.FRONT_LEFT
-import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.FRONT_RIGHT
-import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.REAR_LEFT
-import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.REAR_RIGHT
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location
 import com.masselis.tpmsadvanced.feature.main.R
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.ManageSensorsViewModel
@@ -73,6 +74,8 @@ public fun ManageSensors(
     snackbarHostState: SnackbarHostState,
     scanQrCode: (Location) -> Unit,
     scanBluetooth: (Location) -> Unit,
+    /** Opens the calibration of the sensor with this id */
+    calibrate: (Int) -> Unit,
     modifier: Modifier = Modifier,
     /** In a wide window, see [isWideWindow], the top bar makes way: the page shows its own */
     navigationIcon: @Composable () -> Unit = {},
@@ -86,7 +89,7 @@ public fun ManageSensors(
     var moving by rememberSaveable { mutableStateOf<MoveChain?>(null) }
     // Its last location has a sensor too: just swap them, or continue the chain
     var asking by rememberSaveable { mutableStateOf<MoveChain?>(null) }
-    // Ready, waiting for the user to confirm it
+    // Ready, its arrows shown until the user applies or cancels it
     var confirming by rememberSaveable { mutableStateOf<MoveChain?>(null) }
     // Where each tyre is in the window, for the arrows of the moves
     val tyreCenters = remember { mutableStateMapOf<Location, Offset>() }
@@ -96,7 +99,7 @@ public fun ManageSensors(
         asking = null
         confirming = null
     }
-    BackHandler(enabled = moving != null, onBack = ::stop)
+    BackHandler(enabled = moving != null || confirming != null, onBack = ::stop)
     val name: @Composable () -> Unit = {
         Text(
             text = vehicle.name,
@@ -105,20 +108,45 @@ public fun ManageSensors(
             overflow = TextOverflow.Ellipsis,
         )
     }
-    val prompt: @Composable (Modifier) -> Unit = { modifier ->
-        Text(
-            text = if (moving != null) MOVE_PROMPT else MANAGE_PROMPT,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = modifier.padding(vertical = 4.dp),
-        )
-    }
-    val cancel: @Composable () -> Unit = {
-        TextButton(
-            onClick = ::stop,
-            modifier = Modifier.testTag(ManageSensorsTags.cancelMove),
-        ) { Text("Cancel") }
+    // At the bottom like the calibration's and the Bluetooth assignment's: what to tap, then what
+    // the move needs. Always as tall, so the vehicle doesn't resize from one to the other.
+    val actions: @Composable (Modifier) -> Unit = { modifier ->
+        val prompt: @Composable (String) -> Unit = { text ->
+            Text(
+                text = text,
+                style = promptStyle,
+                textAlign = TextAlign.Center,
+            )
+        }
+        val cancel: @Composable () -> Unit = {
+            OutlinedButton(
+                onClick = ::stop,
+                modifier = Modifier.fillMaxWidth().testTag(ManageSensorsTags.cancelMove),
+            ) { Text("Cancel") }
+        }
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
+            modifier = modifier.height(ACTIONS_HEIGHT),
+        ) {
+            val chain = confirming
+            when {
+                chain != null -> {
+                    cancel()
+                    Button(
+                        onClick = { viewModel.apply(chain); stop() },
+                        modifier = Modifier.fillMaxWidth().testTag(ManageSensorsTags.confirmMove),
+                    ) { Text("Move as shown") }
+                }
+
+                moving != null -> {
+                    prompt(MOVE_PROMPT)
+                    cancel()
+                }
+
+                else -> prompt(MANAGE_PROMPT)
+            }
+        }
     }
     val vehicleWithArrows: @Composable (Modifier) -> Unit = { modifier ->
         Box(modifier) {
@@ -129,7 +157,9 @@ public fun ManageSensors(
                     isManaging = true,
                     scanQrCode = scanQrCode,
                     scanBluetooth = scanBluetooth,
-                    move = moving?.let { chain ->
+                    calibrate = calibrate,
+                    // Once complete, the tyres show as usual: the arrows tell what's going to happen
+                    move = moving?.takeIf { confirming == null }?.let { chain ->
                         TyreMove(chain, all) { target ->
                             when (val step = chain.tap(target, occupied, all)) {
                                 is Step.Done -> confirming = step.chain
@@ -160,6 +190,12 @@ public fun ManageSensors(
                 outlines = outlines,
                 modifier = Modifier.fillMaxSize(),
             )
+            // Nothing to tap until it's applied or cancelled
+            if (confirming != null) Box(
+                Modifier
+                    .fillMaxSize()
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+            )
         }
     }
     Box(modifier.testTag(ManageSensorsTags.root)) {
@@ -180,12 +216,12 @@ public fun ManageSensors(
             // As wide as its widest text, whichever prompt it shows, so nothing moves with it
             val measurer = rememberTextMeasurer()
             val nameStyle = MaterialTheme.typography.titleLarge
-            val promptStyle = MaterialTheme.typography.bodyMedium
-            val textWidth = remember(measurer, vehicle.name, nameStyle, promptStyle, density) {
+            val sidePromptStyle = promptStyle
+            val textWidth = remember(measurer, vehicle.name, nameStyle, sidePromptStyle, density) {
                 listOf(
                     measurer.measure(vehicle.name, nameStyle),
-                    measurer.measure(MANAGE_PROMPT, promptStyle),
-                    measurer.measure(MOVE_PROMPT, promptStyle),
+                    measurer.measure(MANAGE_PROMPT, sidePromptStyle),
+                    measurer.measure(MOVE_PROMPT, sidePromptStyle),
                 ).maxOf { it.size.width }.let { with(density) { it.toDp() } }
             }
             // The text then the vehicle, the room left split evenly: as much from the screen's left
@@ -226,27 +262,16 @@ public fun ManageSensors(
                     .width(sideWidth),
             ) {
                 name()
-                prompt(Modifier)
-                // Its room kept while hidden, so nothing shifts when it shows
-                Box(Modifier.height(PROMPT_HEIGHT)) { if (moving != null) cancel() }
+                actions(Modifier.fillMaxWidth().padding(top = 16.dp))
             }
         } else Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.fillMaxSize(),
         ) {
             Box(Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp)) { name() }
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .padding(horizontal = 16.dp)
-                    // As tall as the Cancel button shown while moving, with its touch target, so
-                    // nothing shifts when it shows
-                    .height(PROMPT_HEIGHT),
-            ) {
-                prompt(Modifier.weight(1f, fill = false))
-                if (moving != null) cancel()
-            }
             vehicleWithArrows(Modifier.weight(1f))
+            HorizontalDivider()
+            actions(Modifier.fillMaxWidth().padding(16.dp))
         }
     }
     asking?.also { chain ->
@@ -263,15 +288,6 @@ public fun ManageSensors(
                 }
             },
             onDismissRequest = { asking = null },
-        )
-    }
-    confirming?.also { chain ->
-        MoveConfirmation(
-            chain = chain,
-            occupied = occupied,
-            isTwoLocations = all.size <= 2,
-            onConfirm = { viewModel.apply(chain); stop() },
-            onDismissRequest = ::stop,
         )
     }
 }
@@ -423,72 +439,14 @@ private val SensorLocation.Side.x get() = if (this == SensorLocation.Side.LEFT) 
 private val SensorLocation.Axle.y get() = if (this == SensorLocation.Axle.FRONT) -1 else 1
 
 /**
- * Asks to apply [chain]: a vehicle with two locations only says whether it's a swap or a move,
- * the others list each sensor's move
+ * The most the actions show: two buttons with their touch targets, or a prompt of two lines and a
+ * button. Always this tall, so nothing moves when they change.
  */
-@Composable
-private fun MoveConfirmation(
-    chain: MoveChain,
-    occupied: Set<Location>,
-    isTwoLocations: Boolean,
-    onConfirm: () -> Unit,
-    onDismissRequest: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val moves = chain.moves(occupied)
-    OptionsDialog(
-        onDismissRequest = onDismissRequest,
-        title = {
-            Text(
-                when {
-                    isTwoLocations.not() -> "Move the sensors?"
-                    moves.size > 1 -> "Swap the sensors?"
-                    else -> "Move the sensor to the other wheel?"
-                }
-            )
-        },
-        text = {
-            Column {
-                // A swap of two locations reads better as a single line
-                if (isTwoLocations && moves.size == 2) Text(
-                    buildString {
-                        appendLoc(moves.first().first, withType = false, capitalized = true)
-                        append(" ⇄ ")
-                        appendLoc(moves.first().second, withType = false, capitalized = true)
-                    }
-                )
-                else moves.forEach { (from, to) ->
-                    Text(
-                        buildString {
-                            appendLoc(from, withType = false, capitalized = true)
-                            append(" → ")
-                            appendLoc(to, withType = false, capitalized = true)
-                        }
-                    )
-                }
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismissRequest) { Text("Cancel") }
-        },
-        confirmButton = {
-            TextButton(
-                onClick = onConfirm,
-                modifier = Modifier.testTag(ManageSensorsTags.confirmMove),
-            ) { Text(if (isTwoLocations) "Yes" else "OK") }
-        },
-        modifier = modifier.testTag(ManageSensorsTags.confirmDialog),
-    )
-}
+private val ACTIONS_HEIGHT = 104.dp
 
-@Preview
-@Composable
-internal fun MoveConfirmationPreview() {
-    val car = listOf(FRONT_LEFT, FRONT_RIGHT, REAR_RIGHT, REAR_LEFT).map { Location.Wheel(it) }
-    MoveConfirmation(MoveChain(car), car.toSet(), isTwoLocations = false, {}, {})
-}
-
-private val PROMPT_HEIGHT = 48.dp
+/** Larger than a hint: it's what the page asks the user to do */
+private val promptStyle: TextStyle
+    @Composable get() = MaterialTheme.typography.titleMedium
 
 /**
  * The name and prompt's column, next to the vehicle while the screen is wider than tall, until the
@@ -511,6 +469,5 @@ internal object ManageSensorsTags {
     const val askDialog = "ManageSensorsTags_askDialog"
     const val justSwap = "ManageSensorsTags_justSwap"
     const val multiWheel = "ManageSensorsTags_multiWheel"
-    const val confirmDialog = "ManageSensorsTags_confirmDialog"
     const val confirmMove = "ManageSensorsTags_confirmMove"
 }

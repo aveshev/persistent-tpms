@@ -17,6 +17,8 @@ import com.masselis.tpmsadvanced.data.vehicle.model.AlertLevel.RED
 import com.masselis.tpmsadvanced.data.vehicle.model.AlertThresholds
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.bar
+import com.masselis.tpmsadvanced.data.vehicle.model.PressureCalibration
+import com.masselis.tpmsadvanced.data.vehicle.model.PressureCalibrations
 import com.masselis.tpmsadvanced.data.vehicle.model.PressureLoss
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.FRONT_LEFT
 import com.masselis.tpmsadvanced.data.vehicle.model.Temperature
@@ -28,6 +30,7 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Voltage.CREATOR.volts
 import com.masselis.tpmsadvanced.feature.main.usecase.TyreStatsStateFlow.State
 import io.mockk.every
 import io.mockk.mockk
+import kotlin.test.assertFalse
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
@@ -64,7 +67,7 @@ internal class TyreStatsStateFlowTest {
                 flowOf(AlertThresholds(1f.bar, 3f.bar, 90f.celsius, 2.6f.volts))
         }
         vehicleCalibrationUseCase = mockk {
-            every { isEnabled } returns MutableStateFlow(false)
+            every { calibrations } returns MutableStateFlow(PressureCalibrations.None)
         }
         unitPreferences = mockk {
             every { pressure } returns MutableStateFlow(BAR)
@@ -147,10 +150,14 @@ internal class TyreStatsStateFlowTest {
     }
 
     @Test
-    fun `marks the pressure as calibrated`() = runTest {
-        every { vehicleCalibrationUseCase.isEnabled } returns MutableStateFlow(true)
-        setAtmosphere(2f.bar, 45f.celsius)
+    fun `marks the pressure of a calibrated sensor`() = runTest {
+        every { vehicleCalibrationUseCase.calibrations } returns MutableStateFlow(
+            PressureCalibrations(mapOf(0x562D00 to PressureCalibration(0.1f.bar, 1f)))
+        )
+        setAtmosphere(2f.bar, 45f.celsius, sensorId = 0x562D00)
         assertTrue(firstDetected().isPressureCalibrated)
+        setAtmosphere(2f.bar, 45f.celsius, sensorId = 0x562E00)
+        assertFalse(firstDetected().isPressureCalibrated)
     }
 
     @Test

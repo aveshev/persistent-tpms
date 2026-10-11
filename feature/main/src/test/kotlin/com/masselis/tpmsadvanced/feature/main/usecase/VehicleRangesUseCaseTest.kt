@@ -8,6 +8,7 @@ import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.REAR_LEFT
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.Side.LEFT
 import com.masselis.tpmsadvanced.data.vehicle.model.Temperature.CREATOR.celsius
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
+import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location.Side
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location.Wheel
 import com.masselis.tpmsadvanced.data.vehicle.model.Voltage.CREATOR.volts
@@ -50,6 +51,9 @@ internal class VehicleRangesUseCaseTest {
             every { selectRearLowPressure(uuid) } returns null
             every { selectRearHighPressure(uuid) } returns null
             every { selectSeparateRearPressure(uuid) } returns false
+            every { selectSpareLowPressure(uuid) } returns null
+            every { selectSpareHighPressure(uuid) } returns null
+            every { selectSeparateSparePressure(uuid) } returns false
             every { selectLowBatteryVoltage(uuid) } returns 2.6f.volts
             every { selectLowBatteryPercent(uuid) } returns 10
             coEvery { updateLowPressure(any(), any()) } returns Unit
@@ -60,6 +64,9 @@ internal class VehicleRangesUseCaseTest {
             coEvery { updateRearLowPressure(any(), any()) } returns Unit
             coEvery { updateRearHighPressure(any(), any()) } returns Unit
             coEvery { updateSeparateRearPressure(any(), any()) } returns Unit
+            coEvery { updateSpareLowPressure(any(), any()) } returns Unit
+            coEvery { updateSpareHighPressure(any(), any()) } returns Unit
+            coEvery { updateSeparateSparePressure(any(), any()) } returns Unit
             coEvery { updateLowBatteryVoltage(any(), any()) } returns Unit
             coEvery { updateLowBatteryPercent(any(), any()) } returns Unit
         }
@@ -107,6 +114,35 @@ internal class VehicleRangesUseCaseTest {
         }
         useCase.resolvedHighPressure(Wheel(REAR_LEFT)).test {
             assertEquals(3.5f.bar, awaitItem())
+        }
+    }
+
+    @Test
+    fun `the spare resolves to the front range until its own is set`() = runTest {
+        val useCase = test()
+        useCase.resolvedLowPressure(Location.Spare).test {
+            assertEquals(1f.bar, awaitItem())
+        }
+        useCase.setSpareOverrideEnabled(true)
+        assertEquals(1f.bar, useCase.spareLowPressure.value)
+        assertEquals(3f.bar, useCase.spareHighPressure.value)
+        useCase.spareLowPressure.value = 2f.bar
+        useCase.spareHighPressure.value = 4f.bar
+        useCase.resolvedLowPressure(Location.Spare).test {
+            assertEquals(2f.bar, awaitItem())
+        }
+        useCase.resolvedHighPressure(Location.Spare).test {
+            assertEquals(4f.bar, awaitItem())
+        }
+    }
+
+    @Test
+    fun `the spare ignores the rear range`() = runTest {
+        val useCase = test()
+        useCase.setRearOverrideEnabled(true)
+        useCase.rearLowPressure.value = 1.5f.bar
+        useCase.resolvedLowPressure(Location.Spare).test {
+            assertEquals(1f.bar, awaitItem())
         }
     }
 

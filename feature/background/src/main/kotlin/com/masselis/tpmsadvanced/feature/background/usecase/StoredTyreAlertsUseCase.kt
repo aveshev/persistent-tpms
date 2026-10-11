@@ -1,6 +1,7 @@
 package com.masselis.tpmsadvanced.feature.background.usecase
 
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.ReadingDatabase
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorDatabase
 import com.masselis.tpmsadvanced.data.vehicle.model.AlertThresholds
 import com.masselis.tpmsadvanced.data.vehicle.model.PressureLoss
 import com.masselis.tpmsadvanced.data.vehicle.model.TyreAlerts
@@ -28,12 +29,15 @@ import kotlin.time.Duration.Companion.seconds
  * screen or the monitor service: this never scans by itself. Only the readings stored after it
  * started listening are emitted, the ones stored before set the tyres' history up (see
  * docs/alerts.md, "Only new readings alert"). A change of a tyre's thresholds re-evaluates its
- * latest reading, emitted as a [Update.isReevaluation].
+ * latest reading, emitted as a [Update.isReevaluation]. A tyre whose sensor changes (moved, bound
+ * or unbound) starts its history over: the readings moved in with a sensor were stored before, even
+ * if they're newer than the tyre's.
  */
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 internal class StoredTyreAlertsUseCase(
     vehicleListUseCase: VehicleListUseCase,
     private val readingDatabase: ReadingDatabase,
+    private val sensorDatabase: SensorDatabase,
 ) {
 
     /**
@@ -56,16 +60,25 @@ internal class StoredTyreAlertsUseCase(
         .distinctUntilChanged { old, new -> old.map(Vehicle::uuid) == new.map(Vehicle::uuid) }
         .flatMapLatest { vehicles ->
             vehicles
-                .flatMap { vehicle -> vehicle.kind.locations.map { location -> updates(vehicle, location) } }
+                .flatMap { vehicle ->
+                    vehicle.kind.locations.map { location ->
+                        sensorDatabase
+                            .selectByVehicleAndLocation(vehicle.uuid, location)
+                            .asFlow()
+                            .map { it?.id }
+                            .distinctUntilChanged()
+                            .flatMapLatest { sensorId -> updates(vehicle, location, sensorId) }
+                    }
+                }
                 .merge()
         }
 
     @Suppress("LongMethod", "CyclomaticComplexMethod")
-    private fun updates(vehicle: Vehicle, location: Location): Flow<Update> = flow {
+    private fun updates(vehicle: Vehicle, location: Location, sensorId: Int?): Flow<Update> = flow {
         val component = VehicleComponent(vehicle)
         // The leak is followed with the calibration and the rule it started with, both changing
         // starts it over from the stored readings, as TyrePressureLossStateFlow does
-        var calibration = component.vehicleCalibrationUseCase.calibration.first()
+        var calibration = component.vehicleCalibrationUseCase.calibrations.first()
         var rule = component.vehiclePressureLossUseCase.rule.first()
         val stored = readingDatabase.allByLocation(location, vehicle.uuid).execute()
         // The thresholds the latest reading went through with
@@ -102,8 +115,12 @@ internal class StoredTyreAlertsUseCase(
             } else readingDatabase
                 .afterByLocation(location, vehicle.uuid, since)
                 .execute()
+                // Moved in with another sensor, in the same transaction: the history starting over
+                // with this sensor holds them, see updates
+                .takeIf { sensorDatabase.selectByVehicleAndLocation(vehicle.uuid, location).execute()?.id == sensorId }
+                .orEmpty()
                 .forEach { record ->
-                    val newCalibration = component.vehicleCalibrationUseCase.calibration.first()
+                    val newCalibration = component.vehicleCalibrationUseCase.calibrations.first()
                     val newRule = component.vehiclePressureLossUseCase.rule.first()
                     if (newCalibration != calibration || newRule != rule) {
                         calibration = newCalibration

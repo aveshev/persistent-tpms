@@ -2,6 +2,7 @@ package com.masselis.tpmsadvanced.feature.main.ioc.vehicle
 
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
 import com.masselis.tpmsadvanced.data.unit.interfaces.UnitPreferences
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.ReadingDatabase
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorDatabase
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.VehicleDatabase
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
@@ -47,9 +48,9 @@ public interface VehicleBindings {
     @Provides
     private fun vehicleCalibrationUseCase(
         vehicle: Vehicle,
-        @VehicleLifecycle scope: CoroutineScope,
-        database: VehicleDatabase
-    ): VehicleCalibrationUseCase = VehicleCalibrationUseCase(vehicle, scope, database)
+        sensorDatabase: SensorDatabase,
+        readingDatabase: ReadingDatabase,
+    ): VehicleCalibrationUseCase = VehicleCalibrationUseCase(vehicle, sensorDatabase, readingDatabase)
 
     @SingleIn(VehicleComponent.Scope::class)
     @Provides
@@ -59,14 +60,12 @@ public interface VehicleBindings {
     @Provides
     private fun vehicleSettingsViewModelImpl(
         vehicleRangesUseCase: VehicleRangesUseCase,
-        vehicleCalibrationUseCase: VehicleCalibrationUseCase,
         renameVehicleUseCase: RenameVehicleUseCase,
         vehicleStateFlow: StateFlow<Vehicle>,
         unitPreferences: UnitPreferences,
         sensorDatabase: SensorDatabase,
     ): VehicleSettingsViewModelImpl = VehicleSettingsViewModelImpl(
         vehicleRangesUseCase,
-        vehicleCalibrationUseCase,
         renameVehicleUseCase,
         vehicleStateFlow,
         unitPreferences,

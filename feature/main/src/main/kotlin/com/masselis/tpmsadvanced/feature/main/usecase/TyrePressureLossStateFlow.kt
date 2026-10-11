@@ -39,24 +39,24 @@ public class TyrePressureLossStateFlow internal constructor(
     pressureLossUseCase: VehiclePressureLossUseCase,
     scope: CoroutineScope,
     stateFlow: StateFlow<PressureLoss?> = combine(
-        calibrationUseCase.calibration,
+        calibrationUseCase.calibrations,
         pressureLossUseCase.rule,
-    ) { calibration, rule -> calibration to rule }
-        .flatMapLatest { (calibration, rule) ->
+    ) { calibrations, rule -> calibrations to rule }
+        .flatMapLatest { (calibrations, rule) ->
             rule
                 ?.let {
                     flow { emit(readingDatabase.allByLocation(location, vehicle.uuid).execute()) }
                         .flowOn(Dispatchers.IO)
                         .map { stored ->
                             stored.fold(PressureLoss.Tracker()) { tracker, record ->
-                                tracker.next(record.toAtmosphere(calibration), rule)
+                                tracker.next(record.toAtmosphere(calibrations), rule)
                             }
                         }
                         .flatMapLatest { tracker ->
                             listenTyreUseCase
                                 .listen()
                                 .runningFold(tracker) { tracker, record ->
-                                    tracker.next(record.toAtmosphere(calibration), rule)
+                                    tracker.next(record.toAtmosphere(calibrations), rule)
                                 }
                         }
                         .map { it.loss }

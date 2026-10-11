@@ -26,11 +26,6 @@ internal sealed interface Path {
     }
 
     @JvmInline
-    value class CalibrationSettings(val vehicleUUID: UUID) : Path {
-        override fun toString(): String = "vehicle/$vehicleUUID/settings_calibration"
-    }
-
-    @JvmInline
     value class TemperatureSettings(val vehicleUUID: UUID) : Path {
         override fun toString(): String = "vehicle/$vehicleUUID/settings_temperature"
     }
@@ -114,6 +109,15 @@ internal sealed interface Path {
         }
     }
 
+    /** Calibrates the sensor [sensorId] of the vehicle */
+    data class Calibration(val vehicleUUID: UUID, val sensorId: Int) : Path {
+        override fun toString(): String = "vehicle/$vehicleUUID/calibration/$sensorId"
+
+        companion object {
+            fun route(vehicleUUID: UUID) = "vehicle/$vehicleUUID/calibration/{sensorId}"
+        }
+    }
+
     companion object {
         /** Pages that don't depend on a vehicle, their route is fixed */
         private val appPages
@@ -142,18 +146,19 @@ internal sealed interface Path {
                     val (host, uuidString, screen) = segments
                     assert(host == "vehicle")
                     val uuid = UUID.fromString(uuidString)
-                    // A route's pattern, as a destination has it, has no location
-                    val location = segments.getOrNull(3)?.toIntOrNull() ?: 0
+                    // The location's index, or the sensor's id. A route's pattern, as a destination
+                    // has it, has none.
+                    val argument = segments.getOrNull(3)?.toIntOrNull() ?: 0
                     when (screen) {
                         "home" -> Home(uuid)
                         "settings" -> Settings(uuid)
                         "manage_sensors" -> ManageSensors(uuid)
                         "settings_pressure" -> PressureSettings(uuid)
                         "settings_temperature" -> TemperatureSettings(uuid)
-                        "settings_calibration" -> CalibrationSettings(uuid)
                         "settings_battery" -> BatterySettings(uuid)
-                        "qrcode" -> QrCode(uuid, location)
-                        "bluetooth_assign" -> BluetoothAssign(uuid, location)
+                        "qrcode" -> QrCode(uuid, argument)
+                        "bluetooth_assign" -> BluetoothAssign(uuid, argument)
+                        "calibration" -> Calibration(uuid, argument)
                         else -> error("Unrecognized route: \"$route\"")
                     }
                 }

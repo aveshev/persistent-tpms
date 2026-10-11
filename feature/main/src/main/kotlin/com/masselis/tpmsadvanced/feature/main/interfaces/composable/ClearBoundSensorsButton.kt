@@ -39,7 +39,7 @@ internal fun ClearBoundSensorsButton(
     val vehicle by component.vehicleStateFlow.collectAsState()
     var confirmClear by rememberSaveable { mutableStateOf(false) }
     TextSettingsItem(
-        headline = "Delete all sensors",
+        headline = "Clear all sensors",
         supporting = when (state) {
             State.ClearingPossible -> "Removes every sensor assigned to this vehicle"
             State.AlreadyCleared -> "No sensor is assigned to this vehicle"
@@ -54,7 +54,7 @@ internal fun ClearBoundSensorsButton(
         text = {
             Text(
                 buildAnnotatedString {
-                    append("Delete every sensor assigned to ")
+                    append("Clear all sensors from ")
                     appendBold(vehicle.name)
                     append("?\nThis cannot be undone.")
                 }
@@ -70,7 +70,7 @@ internal fun ClearBoundSensorsButton(
             TextButton(
                 onClick = { viewModel.clear(); confirmClear = false },
                 modifier = Modifier.testTag(confirm),
-            ) { Text("Delete all") }
+            ) { Text("Clear all") }
         },
     )
 }

@@ -96,28 +96,28 @@ public class VehicleDatabase internal constructor(database: Database) {
             queries.updateSeparateRearPressure(separate, uuid)
         }
 
-    public fun selectPressureCalibration(vehicleId: UUID): Boolean =
-        queries.selectPressureCalibrationByVehicleId(vehicleId).executeAsOne()
+    public fun selectSpareLowPressure(vehicleId: UUID): Pressure? =
+        queries.selectSpareLowPressureByVehicleId(vehicleId).executeAsOne().spareLowPressure
 
-    public suspend fun updatePressureCalibration(enabled: Boolean, uuid: UUID): Unit =
+    public suspend fun updateSpareLowPressure(spareLowPressure: Pressure?, uuid: UUID): Unit =
         withContext(IO) {
-            queries.updatePressureCalibration(enabled, uuid)
+            queries.updateSpareLowPressure(spareLowPressure, uuid)
         }
 
-    public fun selectPressureOffset(vehicleId: UUID): Pressure =
-        queries.selectPressureOffsetByVehicleId(vehicleId).executeAsOne()
+    public fun selectSpareHighPressure(vehicleId: UUID): Pressure? =
+        queries.selectSpareHighPressureByVehicleId(vehicleId).executeAsOne().spareHighPressure
 
-    public suspend fun updatePressureOffset(offset: Pressure, uuid: UUID): Unit =
+    public suspend fun updateSpareHighPressure(spareHighPressure: Pressure?, uuid: UUID): Unit =
         withContext(IO) {
-            queries.updatePressureOffset(offset, uuid)
+            queries.updateSpareHighPressure(spareHighPressure, uuid)
         }
 
-    public fun selectPressureMultiplier(vehicleId: UUID): Float =
-        queries.selectPressureMultiplierByVehicleId(vehicleId).executeAsOne().toFloat()
+    public fun selectSeparateSparePressure(vehicleId: UUID): Boolean =
+        queries.selectSeparateSparePressureByVehicleId(vehicleId).executeAsOne()
 
-    public suspend fun updatePressureMultiplier(multiplier: Float, uuid: UUID): Unit =
+    public suspend fun updateSeparateSparePressure(separate: Boolean, uuid: UUID): Unit =
         withContext(IO) {
-            queries.updatePressureMultiplier(multiplier.toDouble(), uuid)
+            queries.updateSeparateSparePressure(separate, uuid)
         }
 
     public fun selectLowBatteryVoltage(vehicleId: UUID): Voltage =
@@ -209,11 +209,14 @@ public class VehicleDatabase internal constructor(database: Database) {
             Double,
             Voltage,
             Int,
+            Pressure?,
+            Pressure?,
+            Boolean,
         ) -> Vehicle =
-            // The pressure calibration and the low battery alarms are only read by the vehicle
-            // scope's own queries
+            // The unused pressure calibration, the low battery alarms and the spare's range are
+            // only read by the vehicle scope's own queries
             { uuid, name, _, lowPressure, highPressure, lowTemp, normalTemp, highTemp, kind, _,
-              rearLowPressure, rearHighPressure, separateRearPressure, _, _, _, _, _ ->
+              rearLowPressure, rearHighPressure, separateRearPressure, _, _, _, _, _, _, _, _ ->
                 Vehicle(
                     uuid,
                     kind,

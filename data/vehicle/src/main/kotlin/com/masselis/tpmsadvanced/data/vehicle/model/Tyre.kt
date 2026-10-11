@@ -118,3 +118,7 @@ public fun Tyre.toAtmosphere(calibration: PressureCalibration?): TyreAtmosphere 
         ?.let { atmosphere.copy(pressure = it.applyTo(atmosphere.pressure)) }
         ?: atmosphere
 }
+
+/** The atmosphere shown for this record, corrected by the calibration of the sensor which sent it */
+public fun Tyre.toAtmosphere(calibrations: PressureCalibrations): TyreAtmosphere =
+    toAtmosphere(calibrations.of(sensorId))

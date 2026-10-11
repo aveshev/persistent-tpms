@@ -389,7 +389,7 @@ public fun SettingsIntro(
     modifier = modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
 )
 
-/** A short explanation between a [SettingsSectionHeader] and its [SettingsGroup] */
+/** A short explanation between a [SettingsSectionHeader] and its [SettingsGroup], or under a group */
 @Composable
 public fun SettingsSectionNote(
     text: String,

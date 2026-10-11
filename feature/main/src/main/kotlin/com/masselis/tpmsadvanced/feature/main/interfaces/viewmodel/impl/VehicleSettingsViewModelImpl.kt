@@ -4,13 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.masselis.tpmsadvanced.data.unit.interfaces.UnitPreferences
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorDatabase
-import com.masselis.tpmsadvanced.data.vehicle.model.PressureCalibration
 import com.masselis.tpmsadvanced.data.vehicle.model.Sensor
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.BatteryKinds
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.VehicleSettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.usecase.RenameVehicleUseCase
-import com.masselis.tpmsadvanced.feature.main.usecase.VehicleCalibrationUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.VehicleRangesUseCase
 import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +19,6 @@ import kotlinx.coroutines.launch
 
 internal class VehicleSettingsViewModelImpl(
     private val vehicleRangesUseCase: VehicleRangesUseCase,
-    vehicleCalibrationUseCase: VehicleCalibrationUseCase,
     private val renameVehicleUseCase: RenameVehicleUseCase,
     override val vehicle: StateFlow<Vehicle>,
     unitPreferences: UnitPreferences,
@@ -33,12 +30,11 @@ internal class VehicleSettingsViewModelImpl(
     override val rearLowPressure = vehicleRangesUseCase.rearLowPressure
     override val rearHighPressure = vehicleRangesUseCase.rearHighPressure
     override val separateRearPressure = vehicleRangesUseCase.separateRearPressure.asStateFlow()
+    override val spareLowPressure = vehicleRangesUseCase.spareLowPressure
+    override val spareHighPressure = vehicleRangesUseCase.spareHighPressure
+    override val separateSparePressure = vehicleRangesUseCase.separateSparePressure.asStateFlow()
 
     override val pressureUnit = unitPreferences.pressure.asStateFlow()
-
-    override val pressureCalibration = vehicleCalibrationUseCase.isEnabled
-    override val pressureOffset = vehicleCalibrationUseCase.offset
-    override val pressureMultiplier = vehicleCalibrationUseCase.multiplier
 
     override val highTemp = vehicleRangesUseCase.highTemp
     override val normalTemp = vehicleRangesUseCase.normalTemp
@@ -72,12 +68,8 @@ internal class VehicleSettingsViewModelImpl(
     override fun setRearOverrideEnabled(enabled: Boolean): Unit =
         vehicleRangesUseCase.setRearOverrideEnabled(enabled)
 
-    override fun disableCalibrationIfNoAdjustment() {
-        PressureCalibration(pressureOffset.value, pressureMultiplier.value)
-            .adjusts
-            .not()
-            .also { if (it) pressureCalibration.value = false }
-    }
+    override fun setSpareOverrideEnabled(enabled: Boolean): Unit =
+        vehicleRangesUseCase.setSpareOverrideEnabled(enabled)
 
     override fun rename(name: String) {
         viewModelScope.launch { renameVehicleUseCase.rename(name) }

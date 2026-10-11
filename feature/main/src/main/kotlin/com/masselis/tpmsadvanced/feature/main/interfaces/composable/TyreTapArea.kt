@@ -66,6 +66,7 @@ internal fun TyreTapArea(
     startMove: (Location) -> Unit,
     canMove: Boolean,
     modifier: Modifier = Modifier,
+    calibrate: (Int) -> Unit = {},
     onOutlinePositioned: ((Location, Rect) -> Unit)? = null,
     vehicleComponent: VehicleComponent = LocalVehicleComponent.current,
     viewModel: TyreActionsViewModel = vehicleComponent
@@ -112,6 +113,7 @@ internal fun TyreTapArea(
                 sensor = assigned.sensor,
                 move = { isOpen = false; startMove(location) },
                 canMove = canMove,
+                calibrate = { isOpen = false; calibrate(assigned.sensor.id) },
                 delete = { isOpen = false; confirmDelete = true },
                 onDismissRequest = { isOpen = false },
             )
@@ -178,6 +180,7 @@ private fun ManageSensorDialog(
     sensor: Sensor,
     move: () -> Unit,
     canMove: Boolean,
+    calibrate: () -> Unit,
     delete: () -> Unit,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
@@ -204,13 +207,12 @@ private fun ManageSensorDialog(
                     isEnabled = canMove,
                     modifier = Modifier.testTag(TyreTapAreaTags.move),
                 )
-                // Coming next
                 DialogOption(
                     icon = { Icon(ImageVector.vectorResource(R.drawable.tune_24px), null) },
                     title = "Calibrate",
                     subtitle = "Correct this sensor's pressure readings",
-                    onClick = {},
-                    isEnabled = false,
+                    onClick = calibrate,
+                    modifier = Modifier.testTag(TyreTapAreaTags.calibrate),
                 )
                 DialogOption(
                     icon = { Icon(ImageVector.vectorResource(R.drawable.delete_24px), null) },
@@ -243,6 +245,7 @@ internal fun ManageSensorDialogPreview() {
         Sensor(0x0A0B0C, Location.Wheel(FRONT_RIGHT), PECHAM),
         move = {},
         canMove = true,
+        calibrate = {},
         delete = {},
         onDismissRequest = {},
     )
@@ -253,6 +256,7 @@ internal object TyreTapAreaTags {
     fun root(location: Location) = "TyreTapAreaTags_root_$location"
     const val manageDialog = "TyreTapAreaTags_manageDialog"
     const val move = "TyreTapAreaTags_move"
+    const val calibrate = "TyreTapAreaTags_calibrate"
     const val delete = "TyreTapAreaTags_delete"
     const val manageCancel = "TyreTapAreaTags_manageCancel"
     const val deleteDialog = "TyreTapAreaTags_deleteDialog"

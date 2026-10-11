@@ -199,8 +199,16 @@ public interface Bindings {
             pressureAdapter,
             voltageAdapter,
             IntColumnAdapter,
+            pressureAdapter,
+            pressureAdapter,
         ),
-        SensorAdapter = Sensor.Adapter(IntColumnAdapter, sensorLocationAdapter, uuidAdapter, brandAdapter),
+        SensorAdapter = Sensor.Adapter(
+            IntColumnAdapter,
+            sensorLocationAdapter,
+            uuidAdapter,
+            brandAdapter,
+            pressureAdapter,
+        ),
         ReadingAdapter = Reading.Adapter(
             uuidAdapter,
             sensorLocationAdapter,

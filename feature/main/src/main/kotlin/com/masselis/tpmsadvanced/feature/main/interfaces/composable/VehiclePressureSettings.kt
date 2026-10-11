@@ -25,6 +25,7 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Pressure
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.bar
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.psi
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.toPressure
+import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.PressureBound.MAX
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.PressureBound.MIN
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.VehicleSettingsViewModel
@@ -47,6 +48,9 @@ public fun VehiclePressureSettings(
     val rearLow by viewModel.rearLowPressure.collectAsState()
     val rearHigh by viewModel.rearHighPressure.collectAsState()
     val separateRear by viewModel.separateRearPressure.collectAsState()
+    val spareLow by viewModel.spareLowPressure.collectAsState()
+    val spareHigh by viewModel.spareHighPressure.collectAsState()
+    val separateSpare by viewModel.separateSparePressure.collectAsState()
     VehiclePressureSettings(
         unit = unit,
         front = low..high,
@@ -54,6 +58,10 @@ public fun VehiclePressureSettings(
             ?.takeIf { separateRear }
             ?.let { start -> rearHigh?.let { start..it } },
         canSeparateRear = component.vehicle.kind.hasFrontRearAxles,
+        spare = spareLow
+            ?.takeIf { separateSpare }
+            ?.let { start -> spareHigh?.let { start..it } },
+        canSeparateSpare = Location.Spare in component.vehicle.kind.locations,
         onFront = {
             viewModel.lowPressure.value = it.start
             viewModel.highPressure.value = it.endInclusive
@@ -63,11 +71,16 @@ public fun VehiclePressureSettings(
             viewModel.rearHighPressure.value = it.endInclusive
         },
         onSeparateRear = viewModel::setRearOverrideEnabled,
+        onSpare = {
+            viewModel.spareLowPressure.value = it.start
+            viewModel.spareHighPressure.value = it.endInclusive
+        },
+        onSeparateSpare = viewModel::setSpareOverrideEnabled,
         modifier = modifier,
     )
 }
 
-@Suppress("MaxLineLength")
+@Suppress("MaxLineLength", "LongParameterList", "LongMethod")
 @Composable
 private fun VehiclePressureSettings(
     unit: PressureUnit,
@@ -78,6 +91,10 @@ private fun VehiclePressureSettings(
     onRear: (ClosedFloatingPointRange<Pressure>) -> Unit,
     onSeparateRear: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    spare: ClosedFloatingPointRange<Pressure>? = null,
+    canSeparateSpare: Boolean = false,
+    onSpare: (ClosedFloatingPointRange<Pressure>) -> Unit = {},
+    onSeparateSpare: (Boolean) -> Unit = {},
 ) = Column(modifier) {
     TyreLegend(
         text = "While the pressure stays in range, the tyre's colour shows its temperature. Within 3% of the minimum or of the maximum, its reading turns orange. At or below the minimum, or at or above the maximum, it blinks red to alert you, and faster from 25% below the minimum or 20% above the maximum.\n\nSet the minimum to the pressure the manufacturer recommends: critical then comes where a car's own tyre pressure warning light turns on, 25% below it. Set the maximum to the maximum inflation pressure marked on the tyre's sidewall.",
@@ -87,26 +104,42 @@ private fun VehiclePressureSettings(
             State.Alerting(isCritical = true) to "Critical",
         ),
     )
-    if (canSeparateRear) SettingsGroup(Modifier.padding(top = 24.dp)) {
-        SwitchSettingsItem(
+    if (canSeparateRear || canSeparateSpare) SettingsGroup(Modifier.padding(top = 24.dp)) {
+        if (canSeparateRear) SwitchSettingsItem(
             headline = "Set rear pressure separately",
             // Static on purpose: the section headers below already show which state is active
             supporting = "Turn on if the rear tyres need a different pressure than the front ones",
             checked = rear != null,
             onCheckedChange = onSeparateRear,
         )
+        if (canSeparateSpare) SwitchSettingsItem(
+            headline = "Set spare pressure separately",
+            supporting = "Turn on if the spare needs a different pressure than the front tyres",
+            checked = spare != null,
+            onCheckedChange = onSeparateSpare,
+        )
     }
+    // Every location the front range applies to: "Front, rear & spare", "Front & spare", "Front"…
     SettingsSectionHeader(
-        when {
-            canSeparateRear.not() -> "Expected range"
-            rear == null -> "Front & rear"
-            else -> "Front"
-        }
+        listOfNotNull(
+            "Front",
+            "rear".takeIf { canSeparateRear && rear == null },
+            "spare".takeIf { canSeparateSpare && spare == null },
+        )
+            .takeIf { canSeparateRear || canSeparateSpare }
+            ?.let { names -> listOf(names.dropLast(1).joinToString(", "), names.last()) }
+            ?.filter { it.isNotEmpty() }
+            ?.joinToString(" & ")
+            ?: "Expected range"
     )
     PressureRangeGroup(front, unit, onFront)
     rear?.also {
         SettingsSectionHeader("Rear")
         PressureRangeGroup(it, unit, onRear)
+    }
+    spare?.also {
+        SettingsSectionHeader("Spare")
+        PressureRangeGroup(it, unit, onSpare)
     }
 }
 
@@ -205,6 +238,22 @@ internal fun VehiclePressureSettingsSharedPreview() {
         onFront = {},
         onRear = {},
         onSeparateRear = {},
+    )
+}
+
+@Preview
+@Composable
+internal fun VehiclePressureSettingsSparePreview() {
+    VehiclePressureSettings(
+        unit = BAR,
+        front = 2.2f.bar..2.6f.bar,
+        rear = null,
+        canSeparateRear = true,
+        onFront = {},
+        onRear = {},
+        onSeparateRear = {},
+        spare = 2.8f.bar..3.2f.bar,
+        canSeparateSpare = true,
     )
 }
 

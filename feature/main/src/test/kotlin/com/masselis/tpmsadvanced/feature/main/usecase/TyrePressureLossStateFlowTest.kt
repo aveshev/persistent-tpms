@@ -1,5 +1,6 @@
 package com.masselis.tpmsadvanced.feature.main.usecase
 
+import com.masselis.tpmsadvanced.data.vehicle.model.PressureCalibrations
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.PECHAM
 import com.masselis.tpmsadvanced.core.test.MainDispatcherRule
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.ReadingDatabase
@@ -17,6 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
@@ -60,7 +62,12 @@ internal class TyrePressureLossStateFlowTest {
         },
         mockk<ListenTyreUseCase> { every { listen() } returns flowOf(*listened.toTypedArray()) },
         mockk<VehicleCalibrationUseCase> {
-            every { calibration } returns this@TyrePressureLossStateFlowTest.calibration
+            every { calibrations } returns this@TyrePressureLossStateFlowTest
+                .calibration
+                // Every sensor of the records below
+                .map { calibration ->
+                    PressureCalibrations(listOf(1, 2).mapNotNull { id -> calibration?.let { id to it } }.toMap())
+                }
         },
         mockk<VehiclePressureLossUseCase> {
             every { rule } returns this@TyrePressureLossStateFlowTest.rule

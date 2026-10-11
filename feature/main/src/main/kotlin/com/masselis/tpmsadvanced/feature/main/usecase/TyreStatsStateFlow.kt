@@ -36,8 +36,8 @@ public class TyreStatsStateFlow internal constructor(
             alertsUseCase.listen(),
             unitPreferences.pressure,
             unitPreferences.temperature,
-            calibrationUseCase.isEnabled,
-        ) { alerts, pressureUnit, temperatureUnit, isCalibrated ->
+            calibrationUseCase.calibrations,
+        ) { alerts, pressureUnit, temperatureUnit, calibrations ->
         requireNotNull(alerts.latest).let<TyreAtmosphere, State> { atmosphere ->
             State.Detected(
                 atmosphere.timestamp,
@@ -46,7 +46,7 @@ public class TyreStatsStateFlow internal constructor(
                 pressureUnit,
                 atmosphere.temperature,
                 temperatureUnit,
-                isCalibrated,
+                calibrations.of(atmosphere.sensorId) != null,
                 atmosphere.batteryVoltage,
                 atmosphere.flags,
                 alerts.levels,

@@ -1,0 +1,18 @@
+-- Per-sensor calibration and the spare's own pressure range.
+--
+-- The calibration is each sensor's from now on: the vehicle's is copied to its sensors, which
+-- read the same as before, and its own columns are left unused. The spare's range is used once
+-- separateSparePressure is on, like the rear's.
+
+ALTER TABLE Vehicle ADD spareLowPressure REAL;
+ALTER TABLE Vehicle ADD spareHighPressure REAL;
+ALTER TABLE Vehicle ADD separateSparePressure INTEGER NOT NULL DEFAULT 0;
+
+ALTER TABLE Sensor ADD pressureCalibration INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE Sensor ADD pressureOffset REAL NOT NULL DEFAULT 0;
+ALTER TABLE Sensor ADD pressureMultiplier REAL NOT NULL DEFAULT 1;
+
+UPDATE Sensor SET
+    pressureCalibration = (SELECT pressureCalibration FROM Vehicle WHERE Vehicle.uuid = Sensor.vehicleId),
+    pressureOffset = (SELECT pressureOffset FROM Vehicle WHERE Vehicle.uuid = Sensor.vehicleId),
+    pressureMultiplier = (SELECT pressureMultiplier FROM Vehicle WHERE Vehicle.uuid = Sensor.vehicleId);

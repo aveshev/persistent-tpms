@@ -174,6 +174,9 @@ What this costs:
   level at once. A notification already shown is brought down to it, see
   [Changing a threshold](#changing-a-threshold).
 - Readings stored while nothing was evaluating them never alert.
+- Moving sensors between tyres moves their readings along, and a tyre whose sensor changes starts
+  its history over from them: a moved reading never alerts at its new tyre, even if it's newer than
+  the readings that tyre had.
 - Force-stopping the app clears its notifications. An ongoing alert then stays silent until the
   next reading. The process being killed also forgets the loops, the same way.
 

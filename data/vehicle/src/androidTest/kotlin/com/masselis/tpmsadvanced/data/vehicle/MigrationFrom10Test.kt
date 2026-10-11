@@ -12,9 +12,12 @@ import com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorDatabase
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.VehicleDatabase
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.afterVersion10
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure
+import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.kpa
+import com.masselis.tpmsadvanced.data.vehicle.model.PressureCalibration
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.PECHAM
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.SYSGRATION
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorCalibration
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.Axle.FRONT
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.Axle.REAR
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.FRONT_LEFT
@@ -30,6 +33,7 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.UUID
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
@@ -68,7 +72,14 @@ internal class MigrationFrom10Test {
         // Its own connection: the app's may already be open on the database another test left
         val driver = AndroidSqliteDriver(SQLiteDatabase.openDatabase(dbFile.absolutePath, null, OPEN_READWRITE))
         driver.execute(null, "PRAGMA foreign_keys = ON", 0)
-        Database.Schema.migrate(driver, 10, 11, Database.afterVersion10())
+        // A calibrated car, which 11.sqm moves to its sensors
+        driver.execute(
+            null,
+            "UPDATE Vehicle SET pressureCalibration = 1, pressureOffset = 10, pressureMultiplier = 1.05 WHERE name = 'Car'",
+            0,
+        )
+        // Through every later migration too, the queries below are the latest schema's
+        Database.Schema.migrate(driver, 10, Database.Schema.version, Database.afterVersion10())
         val database = with(appGraph as Extractor) {
             Database(
                 driver,
@@ -85,8 +96,10 @@ internal class MigrationFrom10Test {
                     pressureAdapter,
                     voltageAdapter,
                     IntColumnAdapter,
+                    pressureAdapter,
+                    pressureAdapter,
                 ),
-                SensorAdapter = Sensor.Adapter(IntColumnAdapter, locationAdapter, uuidAdapter, brandAdapter),
+                SensorAdapter = Sensor.Adapter(IntColumnAdapter, locationAdapter, uuidAdapter, brandAdapter, pressureAdapter),
                 ReadingAdapter = Reading.Adapter(uuidAdapter, locationAdapter, IntColumnAdapter, IntColumnAdapter, hexAdapter),
             )
         }
@@ -124,5 +137,21 @@ internal class MigrationFrom10Test {
             90,
             assertNotNull(readingDatabase.latestByLocation(Location.Wheel(FRONT_LEFT), car).execute()).batteryPercent,
         )
+    }
+
+    // 11.sqm: the calibration is each sensor's, they keep reading as their vehicle corrected them
+    @Test
+    fun sensorsTakeTheirVehicleCalibrationAndTheSpareUsesTheFrontRange() {
+        assertEquals(
+            SensorCalibration(true, PressureCalibration(10f.kpa, 1.05f)),
+            assertNotNull(sensorDatabase.selectCalibration(1192960).execute()),
+        )
+        assertEquals(
+            SensorCalibration.None,
+            assertNotNull(sensorDatabase.selectCalibration(1734484831).execute()),
+        )
+        assertFalse(vehicleDatabase.selectSeparateSparePressure(car))
+        assertNull(vehicleDatabase.selectSpareLowPressure(car))
+        assertNull(vehicleDatabase.selectSpareHighPressure(car))
     }
 }

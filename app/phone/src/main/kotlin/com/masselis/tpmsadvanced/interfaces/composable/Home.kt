@@ -1,5 +1,7 @@
 package com.masselis.tpmsadvanced.interfaces.composable
 
+import com.masselis.tpmsadvanced.feature.main.interfaces.composable.SensorCalibrationSettings
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
@@ -189,9 +191,6 @@ internal fun VehicleHome(
                             openManageSensors = {
                                 navController.navigate("${Path.ManageSensors(vehicleComponent.vehicle.uuid)}")
                             },
-                            openCalibration = {
-                                navController.navigate("${Path.CalibrationSettings(vehicleComponent.vehicle.uuid)}")
-                            },
                             modifier = modifier
                         )
                     }
@@ -204,6 +203,7 @@ internal fun VehicleHome(
                             scanBluetooth = {
                                 navController.navigate("${Path.BluetoothAssign(vehicleUuid, locations.indexOf(it))}")
                             },
+                            calibrate = { navController.navigate("${Path.Calibration(vehicleUuid, it)}") },
                             modifier = modifier,
                             navigationIcon = { BackButton() },
                         )
@@ -213,8 +213,14 @@ internal fun VehicleHome(
                             modifier = modifier
                         )
                     }
-                    composable("${Path.CalibrationSettings(vehicleComponent.vehicle.uuid)}") {
-                        CalibrationSettings(
+                    composable(
+                        route = Path.Calibration.route(vehicleUuid),
+                        arguments = listOf(navArgument("sensorId") { type = NavType.IntType }),
+                    ) { entry ->
+                        // Its own page, not a settings one: its actions stay at the bottom
+                        SensorCalibrationSettings(
+                            sensorId = requireNotNull(entry.arguments).getInt("sensorId"),
+                            onLeave = { navController.popBackStack() },
                             modifier = modifier
                         )
                     }
@@ -460,7 +466,7 @@ private fun TopAppBar(
                 is Path.ManageSensors -> Text(text = "Manage sensors")
                 is Path.PressureSettings -> Text(text = "Pressure")
                 is Path.TemperatureSettings -> Text(text = "Temperature")
-                is Path.CalibrationSettings -> Text(text = "Pressure calibration")
+                is Path.Calibration -> Text(text = "Calibrate sensor")
                 is Path.BatterySettings -> Text(text = "Battery")
                 is Path.PressureLoss -> Text(text = "Pressure loss")
                 is Path.AppSettings -> Text(text = "App settings")
@@ -486,7 +492,7 @@ private fun TopAppBar(
                 is Path.ManageSensors,
                 is Path.PressureSettings,
                 is Path.TemperatureSettings,
-                is Path.CalibrationSettings,
+                is Path.Calibration,
                 is Path.BatterySettings,
                 is Path.PressureLoss,
                 is Path.AppSettings,
@@ -566,7 +572,7 @@ private fun TopAppBar(
                 is Path.ManageSensors,
                 is Path.PressureSettings,
                 is Path.TemperatureSettings,
-                is Path.CalibrationSettings,
+                is Path.Calibration,
                 is Path.BatterySettings,
                 is Path.PressureLoss,
                 is Path.AppSettings,
@@ -689,9 +695,10 @@ internal object HomeTags {
 
 @Composable
 private fun BackButton() {
-    val navController = LocalHomeNavController.current
+    // As the system's back does, so a page asking before leaving asks here too
+    val dispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
     IconButton(
-        onClick = { navController.popBackStack() },
+        onClick = { dispatcher?.onBackPressed() },
         content = {
             Icon(
                 imageVector = ImageVector.vectorResource(R.drawable.arrow_back_24px),

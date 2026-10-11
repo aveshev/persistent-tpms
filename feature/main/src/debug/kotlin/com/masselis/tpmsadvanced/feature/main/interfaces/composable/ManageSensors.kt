@@ -38,11 +38,11 @@ public class ManageSensors private constructor(
         onNodeWithTag(ManageSensorsTags.multiWheel).performClick()
     }
 
-    /** Applies the moves listed once the move is complete */
+    /** Moves the sensors as the arrows show once the move is complete */
     public fun confirmMove() {
-        waitUntilExactlyOneExists(hasTestTag(ManageSensorsTags.confirmDialog))
+        waitUntilExactlyOneExists(hasTestTag(ManageSensorsTags.confirmMove))
         onNodeWithTag(ManageSensorsTags.confirmMove).performClick()
-        waitUntilDoesNotExist(hasTestTag(ManageSensorsTags.confirmDialog))
+        waitUntilDoesNotExist(hasTestTag(ManageSensorsTags.confirmMove))
     }
 
     public fun leave(): ExitToken<ManageSensors> {

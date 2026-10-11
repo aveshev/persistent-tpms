@@ -7,13 +7,17 @@ import com.masselis.tpmsadvanced.core.database.QueryOne.Companion.asOne
 import com.masselis.tpmsadvanced.core.database.QueryOneOrNull
 import com.masselis.tpmsadvanced.core.database.QueryOneOrNull.Companion.asOneOrNull
 import com.masselis.tpmsadvanced.data.vehicle.Database
+import com.masselis.tpmsadvanced.data.vehicle.model.Pressure
+import com.masselis.tpmsadvanced.data.vehicle.model.PressureCalibration
 import com.masselis.tpmsadvanced.data.vehicle.model.Sensor
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorCalibration
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
+@Suppress("TooManyFunctions")
 public class SensorDatabase internal constructor(
     private val database: Database,
 ) {
@@ -54,15 +58,24 @@ public class SensorDatabase internal constructor(
     public suspend fun move(vehicleId: UUID, moves: List<Pair<Location, Location>>): Unit = withContext(IO) {
         database.transaction {
             moves
-                .map { (from, to) ->
-                    queries.selectByVehicleAndLocation(vehicleId, from, mapper).executeAsOne() to to
-                }
+                // The whole row, the sensor keeps its calibration
+                .map { (from, to) -> queries.selectByVehicleAndLocation(vehicleId, from).executeAsOne() to to }
                 // All freed first, a sensor can take a location another one is leaving
                 .onEach { (sensor, _) -> queries.deleteByVehicleAndLocation(vehicleId, sensor.location) }
                 .forEach { (sensor, to) ->
-                    queries.upsert(sensor.id, to, vehicleId, sensor.brand)
-                    database.readingQueries.moveSensor(to, vehicleId, sensor.location, sensor.id)
+                    queries.insertMoved(
+                        sensor.id,
+                        to,
+                        vehicleId,
+                        sensor.brand,
+                        sensor.pressureCalibration,
+                        sensor.pressureOffset,
+                        sensor.pressureMultiplier,
+                    )
+                    database.readingQueries.parkSensor(to, vehicleId, sensor.location, sensor.id)
                 }
+            database.readingQueries.unparkSensors(vehicleId)
+            database.readingQueries.dropParked(vehicleId)
         }
     }
 
@@ -99,13 +112,50 @@ public class SensorDatabase internal constructor(
         .selectListExcludingVehicleId(uuid, mapper)
         .asList()
 
+    /** Each sensor's calibration, on or off */
+    public fun selectCalibrations(vehicleId: UUID): QueryList<Pair<Int, SensorCalibration>> = queries
+        .selectCalibrationsByVehicleId(vehicleId) { id, enabled, offset, multiplier ->
+            id to SensorCalibration(enabled, PressureCalibration(offset, multiplier.toFloat()))
+        }
+        .asList()
+
+    public fun selectCalibration(id: Int): QueryOneOrNull<SensorCalibration> = queries
+        .selectCalibrationById(id) { enabled, offset, multiplier ->
+            SensorCalibration(enabled, PressureCalibration(offset, multiplier.toFloat()))
+        }
+        .asOneOrNull()
+
+    public suspend fun updateCalibration(id: Int, calibration: SensorCalibration): Unit = withContext(IO) {
+        queries.updateCalibration(
+            calibration.isEnabled,
+            calibration.calibration.offset,
+            calibration.calibration.multiplier.toDouble(),
+            id,
+        )
+    }
+
+    /** Gives every sensor of the vehicle the same calibration, see `VehicleCalibrationUseCase.applyToAll` */
+    public suspend fun updateCalibrations(vehicleId: UUID, calibration: SensorCalibration): Unit = withContext(IO) {
+        queries.updateCalibrationsByVehicleId(
+            calibration.isEnabled,
+            calibration.calibration.offset,
+            calibration.calibration.multiplier.toDouble(),
+            vehicleId,
+        )
+    }
+
     private companion object {
+        // Its calibration is read on its own, see selectCalibrations
+        @Suppress("LongParameterList")
         private val mapper: (
             id: Int,
             location: Location,
             vehicleId: UUID,
             brand: SensorBrand,
-        ) -> Sensor = { id, location, _, brand ->
+            pressureCalibration: Boolean,
+            pressureOffset: Pressure,
+            pressureMultiplier: Double,
+        ) -> Sensor = { id, location, _, brand, _, _, _ ->
             Sensor(id, location, brand)
         }
     }

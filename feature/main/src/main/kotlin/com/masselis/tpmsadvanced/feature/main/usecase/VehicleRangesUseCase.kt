@@ -42,6 +42,13 @@ public class VehicleRangesUseCase internal constructor(
         MutableStateFlow(database.selectRearHighPressure(vehicle.uuid))
     public val separateRearPressure: MutableStateFlow<Boolean> =
         MutableStateFlow(database.selectSeparateRearPressure(vehicle.uuid))
+    /** Only used while [separateSparePressure] is on, but kept when it's turned off */
+    public val spareLowPressure: MutableStateFlow<Pressure?> =
+        MutableStateFlow(database.selectSpareLowPressure(vehicle.uuid))
+    public val spareHighPressure: MutableStateFlow<Pressure?> =
+        MutableStateFlow(database.selectSpareHighPressure(vehicle.uuid))
+    public val separateSparePressure: MutableStateFlow<Boolean> =
+        MutableStateFlow(database.selectSeparateSparePressure(vehicle.uuid))
     /** A sensor's battery alarms at this voltage or below, and is shown as getting low 0.1 V above */
     public val lowBatteryVoltage: MutableStateFlow<Voltage> =
         MutableStateFlow(database.selectLowBatteryVoltage(vehicle.uuid))
@@ -61,25 +68,43 @@ public class VehicleRangesUseCase internal constructor(
         separateRearPressure.value = enabled
     }
 
-    public fun resolvedLowPressure(location: Location): Flow<Pressure> = location
-        .toAxleOrNull()
-        ?.takeIf { it.axle == REAR }
-        ?.let {
+    /** Like [setRearOverrideEnabled], the spare's range starting from the front's */
+    public fun setSpareOverrideEnabled(enabled: Boolean) {
+        if (enabled && (spareLowPressure.value == null || spareHighPressure.value == null)) {
+            spareLowPressure.value = lowPressure.value
+            spareHighPressure.value = highPressure.value
+        }
+        separateSparePressure.value = enabled
+    }
+
+    /** The spare's and the rear's own range while they have one, the front's otherwise */
+    public fun resolvedLowPressure(location: Location): Flow<Pressure> = when {
+        location == Location.Spare ->
+            combine(separateSparePressure, spareLowPressure, lowPressure) { separate, spare, front ->
+                spare?.takeIf { separate } ?: front
+            }
+
+        location.toAxleOrNull()?.axle == REAR ->
             combine(separateRearPressure, rearLowPressure, lowPressure) { separate, rear, front ->
                 rear?.takeIf { separate } ?: front
             }
-        }
-        ?: lowPressure
 
-    public fun resolvedHighPressure(location: Location): Flow<Pressure> = location
-        .toAxleOrNull()
-        ?.takeIf { it.axle == REAR }
-        ?.let {
+        else -> lowPressure
+    }
+
+    public fun resolvedHighPressure(location: Location): Flow<Pressure> = when {
+        location == Location.Spare ->
+            combine(separateSparePressure, spareHighPressure, highPressure) { separate, spare, front ->
+                spare?.takeIf { separate } ?: front
+            }
+
+        location.toAxleOrNull()?.axle == REAR ->
             combine(separateRearPressure, rearHighPressure, highPressure) { separate, rear, front ->
                 rear?.takeIf { separate } ?: front
             }
-        }
-        ?: highPressure
+
+        else -> highPressure
+    }
 
     public fun alertThresholds(location: Location): Flow<AlertThresholds> = combine(
         resolvedLowPressure(location),
@@ -138,6 +163,21 @@ public class VehicleRangesUseCase internal constructor(
         separateRearPressure
             .debounce(100.milliseconds)
             .onEach { database.updateSeparateRearPressure(it, vehicle.uuid) }
+            .launchIn(scope)
+
+        spareLowPressure
+            .debounce(100.milliseconds)
+            .onEach { database.updateSpareLowPressure(it, vehicle.uuid) }
+            .launchIn(scope)
+
+        spareHighPressure
+            .debounce(100.milliseconds)
+            .onEach { database.updateSpareHighPressure(it, vehicle.uuid) }
+            .launchIn(scope)
+
+        separateSparePressure
+            .debounce(100.milliseconds)
+            .onEach { database.updateSeparateSparePressure(it, vehicle.uuid) }
             .launchIn(scope)
 
         lowBatteryVoltage

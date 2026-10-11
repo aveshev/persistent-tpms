@@ -1,6 +1,8 @@
+import com.masselis.tpmsadvanced.data.vehicle.model.Pressure;
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand;
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle;
 import java.util.UUID;
+import kotlin.Boolean;
 import kotlin.Int;
 
 CREATE TABLE Sensor(
@@ -8,19 +10,36 @@ CREATE TABLE Sensor(
     location INTEGER AS Vehicle.Kind.Location NOT NULL,
     vehicleId BLOB AS UUID NOT NULL,
     brand INTEGER AS SensorBrand NOT NULL,
+    -- Its calibration, it's the sensor which reads too high or too low. Kept when it's moved or
+    -- swapped on its vehicle, deleted with it.
+    pressureCalibration INTEGER AS Boolean NOT NULL DEFAULT 0,
+    pressureOffset REAL AS Pressure NOT NULL DEFAULT 0,
+    pressureMultiplier REAL NOT NULL DEFAULT 1,
     FOREIGN KEY(vehicleId) REFERENCES Vehicle(uuid) ON DELETE CASCADE,
     UNIQUE(location, vehicleId)
 );
 
 /**
 Insert the sensor. If the sensor already exists in the database, this instruction moves the sensor
-from the previous car and set it into the new car.
+from the previous car and set it into the new car. Its own calibration was made for the previous
+car's wheels, it's dropped there.
 */
 upsert:
 INSERT INTO Sensor (id, location, vehicleId, brand)
 VALUES (?, ?, ?, ?)
 ON CONFLICT(id) DO
-UPDATE SET location=excluded.location, vehicleId=excluded.vehicleId, brand=excluded.brand;
+UPDATE SET
+    location=excluded.location,
+    brand=excluded.brand,
+    pressureCalibration=CASE WHEN vehicleId = excluded.vehicleId THEN pressureCalibration ELSE 0 END,
+    pressureOffset=CASE WHEN vehicleId = excluded.vehicleId THEN pressureOffset ELSE 0 END,
+    pressureMultiplier=CASE WHEN vehicleId = excluded.vehicleId THEN pressureMultiplier ELSE 1 END,
+    vehicleId=excluded.vehicleId;
+
+-- A sensor moved on its vehicle, with the calibration it had: it's the sensor's
+insertMoved:
+INSERT INTO Sensor (id, location, vehicleId, brand, pressureCalibration, pressureOffset, pressureMultiplier)
+VALUES (?, ?, ?, ?, ?, ?, ?);
 
 deleteByVehicle:
 DELETE FROM Sensor WHERE rowid IN (
@@ -54,3 +73,17 @@ SELECT * FROM Sensor WHERE Sensor.vehicleId != ?;
 -- What the vehicle's battery alarms apply to, see SensorBrand.batteryUnit
 brandsByVehicleId:
 SELECT DISTINCT brand FROM Sensor WHERE vehicleId = ?;
+
+-- The calibrations of a vehicle's sensors
+selectCalibrationsByVehicleId:
+SELECT id, pressureCalibration, pressureOffset, pressureMultiplier FROM Sensor WHERE vehicleId = ?;
+
+selectCalibrationById:
+SELECT pressureCalibration, pressureOffset, pressureMultiplier FROM Sensor WHERE id = ?;
+
+updateCalibration:
+UPDATE Sensor SET pressureCalibration = ?, pressureOffset = ?, pressureMultiplier = ? WHERE id = ?;
+
+-- Sets every sensor of a vehicle to the same calibration, see SensorDatabase.updateCalibrations
+updateCalibrationsByVehicleId:
+UPDATE Sensor SET pressureCalibration = ?, pressureOffset = ?, pressureMultiplier = ? WHERE vehicleId = ?;

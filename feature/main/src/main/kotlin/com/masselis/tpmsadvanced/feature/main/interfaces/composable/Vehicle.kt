@@ -246,6 +246,8 @@ public class TyreTaps internal constructor(
     internal val scanBluetooth: (Location) -> Unit = {},
     internal val move: TyreMove? = null,
     internal val startMove: (Location) -> Unit = {},
+    /** Opens the calibration of the sensor with this id */
+    internal val calibrate: (Int) -> Unit = {},
     /** A vehicle with a single location has nowhere to move a sensor to */
     internal val canMove: Boolean = true,
     /** Where each location's tyre is centered in the window, to draw over the vehicle */
@@ -534,6 +536,7 @@ private fun Car(
                 scanBluetooth = taps.scanBluetooth,
                 move = taps.move,
                 startMove = taps.startMove,
+                calibrate = taps.calibrate,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -570,6 +573,7 @@ private fun Car(
                 scanBluetooth = taps.scanBluetooth,
                 move = taps.move,
                 startMove = taps.startMove,
+                calibrate = taps.calibrate,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -606,6 +610,7 @@ private fun Car(
                 scanBluetooth = taps.scanBluetooth,
                 move = taps.move,
                 startMove = taps.startMove,
+                calibrate = taps.calibrate,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -642,6 +647,7 @@ private fun Car(
                 scanBluetooth = taps.scanBluetooth,
                 move = taps.move,
                 startMove = taps.startMove,
+                calibrate = taps.calibrate,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -727,6 +733,7 @@ private fun CarWithSpare(
                 scanBluetooth = taps.scanBluetooth,
                 move = taps.move,
                 startMove = taps.startMove,
+                calibrate = taps.calibrate,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -763,6 +770,7 @@ private fun CarWithSpare(
                 scanBluetooth = taps.scanBluetooth,
                 move = taps.move,
                 startMove = taps.startMove,
+                calibrate = taps.calibrate,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -799,6 +807,7 @@ private fun CarWithSpare(
                 scanBluetooth = taps.scanBluetooth,
                 move = taps.move,
                 startMove = taps.startMove,
+                calibrate = taps.calibrate,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -835,6 +844,7 @@ private fun CarWithSpare(
                 scanBluetooth = taps.scanBluetooth,
                 move = taps.move,
                 startMove = taps.startMove,
+                calibrate = taps.calibrate,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -878,6 +888,7 @@ private fun CarWithSpare(
                 scanBluetooth = taps.scanBluetooth,
                 move = taps.move,
                 startMove = taps.startMove,
+                calibrate = taps.calibrate,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 // Around the spare as drawn across, rather than its tyre's upright layout, and
@@ -951,6 +962,7 @@ private fun Monowheel(
                 scanBluetooth = taps.scanBluetooth,
                 move = taps.move,
                 startMove = taps.startMove,
+                calibrate = taps.calibrate,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1030,6 +1042,7 @@ private fun SingleAxleTrailer(
                 scanBluetooth = taps.scanBluetooth,
                 move = taps.move,
                 startMove = taps.startMove,
+                calibrate = taps.calibrate,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1066,6 +1079,7 @@ private fun SingleAxleTrailer(
                 scanBluetooth = taps.scanBluetooth,
                 move = taps.move,
                 startMove = taps.startMove,
+                calibrate = taps.calibrate,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1146,6 +1160,7 @@ private fun Motorcycle(
                 scanBluetooth = taps.scanBluetooth,
                 move = taps.move,
                 startMove = taps.startMove,
+                calibrate = taps.calibrate,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1182,6 +1197,7 @@ private fun Motorcycle(
                 scanBluetooth = taps.scanBluetooth,
                 move = taps.move,
                 startMove = taps.startMove,
+                calibrate = taps.calibrate,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1269,6 +1285,7 @@ private fun TadpoleThreadWheeler(
                 scanBluetooth = taps.scanBluetooth,
                 move = taps.move,
                 startMove = taps.startMove,
+                calibrate = taps.calibrate,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1305,6 +1322,7 @@ private fun TadpoleThreadWheeler(
                 scanBluetooth = taps.scanBluetooth,
                 move = taps.move,
                 startMove = taps.startMove,
+                calibrate = taps.calibrate,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1341,6 +1359,7 @@ private fun TadpoleThreadWheeler(
                 scanBluetooth = taps.scanBluetooth,
                 move = taps.move,
                 startMove = taps.startMove,
+                calibrate = taps.calibrate,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1428,6 +1447,7 @@ private fun DeltaThreeWheeler(
                 scanBluetooth = taps.scanBluetooth,
                 move = taps.move,
                 startMove = taps.startMove,
+                calibrate = taps.calibrate,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1464,6 +1484,7 @@ private fun DeltaThreeWheeler(
                 scanBluetooth = taps.scanBluetooth,
                 move = taps.move,
                 startMove = taps.startMove,
+                calibrate = taps.calibrate,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1500,6 +1521,7 @@ private fun DeltaThreeWheeler(
                 scanBluetooth = taps.scanBluetooth,
                 move = taps.move,
                 startMove = taps.startMove,
+                calibrate = taps.calibrate,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
