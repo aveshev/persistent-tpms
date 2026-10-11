@@ -4,6 +4,7 @@ package com.masselis.tpmsadvanced.feature.main.interfaces.composable
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
@@ -131,6 +132,9 @@ private const val SPARE_BOTTOM = SPARE_Y + SPARE_HALF_HEIGHT
 /** Between the spare's tyre and its readout, under it */
 private val SPARE_READOUT_GAP = 4.dp
 
+/** Between the rear right readout and the spare's, beside it, see [Vehicle]'s spareBeside */
+private val SPARE_BESIDE_GAP = 24.dp
+
 
 /** A mono-wheel's tyre is drawn much taller and narrower than the others, its width following [MONOWHEEL_TYRE_RATIO] */
 private const val MONOWHEEL_TYRE_HEIGHT = .377f
@@ -216,6 +220,7 @@ public fun CurrentVehicle(
                     modifier = vehicleModifier,
                     center = center,
                     taps = TyreTaps(isManaging = false, scanQrCode = scanQrCode, scanBluetooth = scanBluetooth),
+                    spareBeside = true,
                 )
             },
             modifier = modifier,
@@ -229,7 +234,7 @@ public fun CurrentVehicle(
     }
 }
 
-@Suppress("MaxLineLength")
+@Suppress("MaxLineLength", "CyclomaticComplexMethod")
 @Composable
 public fun Vehicle(
     component: VehicleComponent,
@@ -238,6 +243,12 @@ public fun Vehicle(
     /** Placed over the vehicle, between its axles or in the middle of a single axle one */
     center: @Composable (Modifier) -> Unit = {},
     taps: TyreTaps = TyreTaps(),
+    /**
+     * The spare's readout beside the rear right one rather than under the spare, a line leading to
+     * it, for a wide window where height is short. The vehicle is then sized and centered without
+     * it, room being kept on both sides for it to fit.
+     */
+    spareBeside: Boolean = false,
 ) {
     KeepScreenOn()
     val settings = component.viewModel(component.key()) { it.VehicleSettingsViewModel() }
@@ -257,11 +268,17 @@ public fun Vehicle(
     // update, and its outline's edge. Extra lines turned on in the settings go past the bottom,
     // there's room for them while the screen is taller than wide, where the width decides of the
     // image's height.
+    val hasSpare = Location.Spare in component.vehicle.kind.locations
     val spareRoom = (SPARE_READOUT_GAP + basicReadoutHeight + OUTLINE_OUTSET)
-        .takeIf { Location.Spare in component.vehicle.kind.locations }
+        .takeIf { hasSpare && spareBeside.not() }
+    // Past the rear right readout, kept on both sides since the vehicle is centered without it
+    val spareBesideWidth = (SPARE_BESIDE_GAP + readoutSlotWidth + (OUTLINE_OUTSET.takeIf { isOutlined } ?: 0.dp))
+        .takeIf { hasSpare && spareBeside }
+        ?: 0.dp
     BoxWithConstraints(modifier) {
         val imageHeight = maxWidth
             .minus(readoutWidth * readoutSides.size)
+            .minus(spareBesideWidth * 2)
             .minus(SCREEN_MARGIN * 2)
             .div(1 - component.vehicle.kind.readoutInset * readoutSides.size)
             .div(maxHeight * IMAGE_RATIO)
@@ -302,7 +319,7 @@ public fun Vehicle(
             Kind.DELTA_THREE_WHEELER ->
                 DeltaThreeWheeler(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, fill)
             Kind.CAR_WITH_SPARE ->
-                CarWithSpare(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, fill)
+                CarWithSpare(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, spareBeside, fill)
             Kind.MONOWHEEL ->
                 Monowheel(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, fill)
         }
@@ -751,6 +768,7 @@ private fun CarWithSpare(
     taps: TyreTaps,
     readoutSlotWidth: Dp,
     basicReadoutHeight: Dp,
+    spareBeside: Boolean,
     modifier: Modifier = Modifier,
 ) {
     ConstraintLayout(modifier = modifier) {
@@ -930,6 +948,23 @@ private fun CarWithSpare(
         // Lying flat behind the car, its tyre is drawn across
         val (spare, spareSpan, spareStats, spareTap) = createRefs()
         ImageSpan(spareSpan, .34f, imageHeight)
+        // Beside, a line leads from the spare to under its readout
+        if (spareBeside) createRefs().let { (tyreSpan, line) ->
+            // As wide as the spare's tyre drawn across
+            ImageSpan(tyreSpan, TYRE_HEIGHT / IMAGE_RATIO, imageHeight)
+            val axle = imageGuideline(SPARE_Y, imageHeight)
+            Box(
+                Modifier
+                    .constrainAs(line) {
+                        start.linkTo(tyreSpan.end)
+                        end.linkTo(spareStats.end)
+                        centerAround(axle)
+                        width = Dimension.fillToConstraints
+                        height = Dimension.value(1.dp)
+                    }
+                    .background(MaterialTheme.colorScheme.onBackground)
+            )
+        }
         val spareAxle = imageGuideline(SPARE_Y, imageHeight)
         // Drawn across, the spare's tyre is as tall as a tyre is wide
         val spareTop = imageGuideline(SPARE_Y - SPARE_HALF_HEIGHT, imageHeight)
@@ -945,11 +980,21 @@ private fun CarWithSpare(
                     tyreSize(imageHeight)
                 }.rotate(90f).reportCenter(this, taps)
             )
-            // Under the spare, past the bottom of the image, see spareRoom
+            // Under the spare, past the bottom of the image, see spareRoom, or beside the rear right
+            // one, as high
             TyreReadout(
                 location = this,
                 isBasic = taps.isManaging,
-                modifier = Modifier.constrainAs(spareStats) {
+                modifier = if (spareBeside) Modifier
+                    .constrainAs(spareStats) {
+                        top.linkTo(vehicleImage.top)
+                        bottom.linkTo(vehicleImage.bottom)
+                        height = Dimension.fillToConstraints
+                        width = Dimension.value(readoutSlotWidth)
+                        start.linkTo(rearRightStats.end, SPARE_BESIDE_GAP)
+                    }
+                    .verticallyCenteredOn(rearY, basicReadoutHeight to rearBottom)
+                else Modifier.constrainAs(spareStats) {
                     top.linkTo(spareBottom, SPARE_READOUT_GAP)
                     centerHorizontallyTo(vehicleImage)
                     width = Dimension.value(readoutSlotWidth)
@@ -965,9 +1010,20 @@ private fun CarWithSpare(
                 calibrate = taps.calibrate,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
-                // Around the spare as drawn across, rather than its tyre's upright layout, and
-                // its readings under it
-                modifier = Modifier.constrainAs(spareTap) {
+                // Around its readings beside, as tall as the rear right one's. Otherwise around the
+                // spare as drawn across, rather than its tyre's upright layout, and its readings
+                // under it.
+                modifier = if (spareBeside) Modifier
+                    .constrainAs(spareTap) {
+                        top.linkTo(spareStats.top)
+                        bottom.linkTo(spareStats.bottom)
+                        start.linkTo(spareStats.start)
+                        end.linkTo(spareStats.end)
+                        width = Dimension.fillToConstraints
+                        height = Dimension.fillToConstraints
+                    }
+                    .outlineCenteredOn(rearY, basicReadoutHeight, bottomAt = rearBottom)
+                else Modifier.constrainAs(spareTap) {
                     top.linkTo(spareTop)
                     bottom.linkTo(spareStats.bottom)
                     start.linkTo(spareStats.start)
