@@ -19,8 +19,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.transformLatest
 import kotlinx.parcelize.Parcelize
@@ -37,7 +35,10 @@ public class TyreIconStateFlow internal constructor(
     sensorBindingUseCase: SensorBindingUseCase,
     scope: CoroutineScope,
     // Starts over with the sensor bound, moved or swapped here, see TyreStatsStateFlow
-    stateFlow: StateFlow<State> = sensorBindingUseCase.boundSensor().boundIds().flatMapLatest {
+    stateFlow: StateFlow<State> = sensorBindingUseCase
+        .boundSensor()
+        .boundIds()
+        .flatMapLatestBound<State>(State.NotDetected) {
         combine(
         alertsUseCase.listen(),
         rangeUseCase.highTemp,
@@ -94,7 +95,6 @@ public class TyreIconStateFlow internal constructor(
                 .also { delay(it) }
             emit(State.NotDetected)
         }
-            .onStart { emit(State.NotDetected) }
     }
         .catch {
             Logger.withTag("TyreIconStateFlow").e("Failed to listen for atmosphere", it)

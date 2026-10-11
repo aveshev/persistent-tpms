@@ -20,6 +20,8 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.bar
 import com.masselis.tpmsadvanced.data.vehicle.model.PressureCalibration
 import com.masselis.tpmsadvanced.data.vehicle.model.PressureCalibrations
 import com.masselis.tpmsadvanced.data.vehicle.model.PressureLoss
+import com.masselis.tpmsadvanced.data.vehicle.model.Sensor
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.PECHAM
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.FRONT_LEFT
 import com.masselis.tpmsadvanced.data.vehicle.model.Temperature
 import com.masselis.tpmsadvanced.data.vehicle.model.Temperature.CREATOR.celsius
@@ -36,6 +38,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.TestScope
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Rule
@@ -56,6 +59,7 @@ internal class TyreStatsStateFlowTest {
     private lateinit var vehicleCalibrationUseCase: VehicleCalibrationUseCase
     private lateinit var unitPreferences: UnitPreferences
     private lateinit var pressureLoss: MutableStateFlow<PressureLoss?>
+    private lateinit var sensorBindingUseCase: SensorBindingUseCase
 
     @Before
     fun setup() {
@@ -74,6 +78,7 @@ internal class TyreStatsStateFlowTest {
             every { temperature } returns MutableStateFlow(CELSIUS)
         }
         pressureLoss = MutableStateFlow(null)
+        sensorBindingUseCase = SensorBindingUseCase.NoOp
     }
 
     context(scope: TestScope)
@@ -81,7 +86,7 @@ internal class TyreStatsStateFlowTest {
         TyreAlertsUseCase(tyreAtmosphereUseCase, vehicleRangesUseCase, pressureLoss, Wheel(FRONT_LEFT)),
         vehicleCalibrationUseCase,
         unitPreferences,
-        SensorBindingUseCase.NoOp,
+        sensorBindingUseCase,
         scope.backgroundScope,
     )
 
@@ -220,5 +225,43 @@ internal class TyreStatsStateFlowTest {
         assertEquals(listOf<UByte>(0x83u), firstDetected().flags)
         setAtmosphere(0.5f.bar, 25f.celsius, flags = listOf(0xACu, 0x00u, 0x00u, 0x08u))
         assertEquals(listOf<UByte>(0xACu, 0x00u, 0x00u, 0x08u), firstDetected().flags)
+    }
+
+    @Test
+    fun `a screen coming back keeps the last reading rather than none until it's read again`() = runTest {
+        val bound = MutableStateFlow<Sensor?>(Sensor(1, Wheel(FRONT_LEFT), PECHAM))
+        sensorBindingUseCase = mockk { every { boundSensor() } returns bound }
+        setAtmosphere(2f.bar, 25f.celsius, sensorId = 1)
+        val stats = test()
+        stats.test {
+            assertIs<State.NotDetected>(awaitItem())
+            assertIs<State.Detected>(awaitItem())
+        }
+        runCurrent()
+        stats.test {
+            assertIs<State.Detected>(awaitItem())
+            runCurrent()
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun `another sensor bound while away starts over`() = runTest {
+        val bound = MutableStateFlow<Sensor?>(Sensor(1, Wheel(FRONT_LEFT), PECHAM))
+        sensorBindingUseCase = mockk { every { boundSensor() } returns bound }
+        setAtmosphere(2f.bar, 25f.celsius, sensorId = 1)
+        val stats = test()
+        stats.test {
+            assertIs<State.NotDetected>(awaitItem())
+            assertIs<State.Detected>(awaitItem())
+        }
+        runCurrent()
+        bound.value = Sensor(2, Wheel(FRONT_LEFT), PECHAM)
+        every { tyreAtmosphereUseCase.listen() } returns emptyFlow()
+        stats.test {
+            // Kept until the binding is known again
+            assertIs<State.Detected>(awaitItem())
+            assertIs<State.NotDetected>(awaitItem())
+        }
     }
 }
