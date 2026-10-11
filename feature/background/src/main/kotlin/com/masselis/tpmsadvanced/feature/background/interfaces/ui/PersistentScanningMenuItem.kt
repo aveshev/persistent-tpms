@@ -30,7 +30,7 @@ import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision
 /**
  * The line of the main screen's menu for persistent scanning, with the top bar's bell in the same
  * colour while it is on. Laid out like the settings items that both open a page and toggle: the
- * text and the chevron run [onClick], which opens the settings that explain it, the switch toggles.
+ * text and the chevron run [onClick], which opens the persistent mode settings, the switch toggles.
  * The switch is only offered once those settings turned it on.
  *
  * Must be under the [PersistentScanningHost], which starts the service once the switch turns it on.
@@ -73,7 +73,7 @@ private fun PersistentScanningMenuItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) = DropdownMenuItem(
-    text = { Text("Persistent") },
+    text = { Text("Persistent mode") },
     onClick = onClick,
     leadingIcon = {
         Icon(
@@ -90,7 +90,7 @@ private fun PersistentScanningMenuItem(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = ImageVector.vectorResource(CoreUiR.drawable.chevron_right_24px),
-                contentDescription = "Open the background monitoring settings",
+                contentDescription = "Open the persistent mode settings",
             )
             VerticalDivider(
                 Modifier

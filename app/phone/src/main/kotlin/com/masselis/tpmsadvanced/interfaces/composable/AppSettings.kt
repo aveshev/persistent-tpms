@@ -2,34 +2,22 @@
 
 package com.masselis.tpmsadvanced.interfaces.composable
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.layout.onPlaced
-import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.masselis.tpmsadvanced.BuildConfig
 import com.masselis.tpmsadvanced.R
 import com.masselis.tpmsadvanced.core.ui.SettingsGroup
+import com.masselis.tpmsadvanced.core.ui.SettingsIntro
 import com.masselis.tpmsadvanced.core.ui.SettingsSectionHeader
 import com.masselis.tpmsadvanced.core.ui.TextSettingsItem
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.ActivateBluetoothDevices
@@ -56,111 +44,95 @@ import com.masselis.tpmsadvanced.feature.main.interfaces.composable.TimeSinceUpd
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.TyreDisplaySettings
 import com.masselis.tpmsadvanced.feature.unit.interfaces.UnitsSettingsItems
 import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.alerts
+import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.persistentMode
 import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.developerOptions
 import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.persistentScanning
 import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.tyreDisplay
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
 import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
-@Suppress("LongMethod")
 @Composable
 internal fun AppSettings(
     openTimeSinceUpdate: () -> Unit,
     openAlertSound: () -> Unit,
-    openPersistentScanning: () -> Unit,
-    openActivateScanConditions: () -> Unit,
-    openSuspendScanConditions: () -> Unit,
+    openPersistentMode: () -> Unit,
     openDebug: () -> Unit,
     openPressureLoss: () -> Unit,
     openLicenses: () -> Unit,
     modifier: Modifier = Modifier,
-    // Opened from the main screen's menu, on its persistent scanning line
-    scrollToBackgroundMonitoring: Boolean = false,
-    onScrolledToBackgroundMonitoring: () -> Unit = {},
-) = rememberScrollState().let { scrollState ->
-    // Where the background monitoring section starts, once laid out
-    var backgroundMonitoringTop by remember { mutableStateOf<Int?>(null) }
-    // Flashed on the section once scrolled to, like the Android settings app does for the setting
-    // it opens on: it tells why the page doesn't start at its top
-    val highlight = remember { Animatable(0f) }
-    val scope = rememberCoroutineScope()
-    LaunchedEffect(scrollToBackgroundMonitoring, backgroundMonitoringTop) {
-        backgroundMonitoringTop
-            ?.takeIf { scrollToBackgroundMonitoring }
-            ?.also { scrollState.scrollTo(it) }
-            // Out of this effect, which restarts once told about the scroll
-            ?.also {
-                scope.launch {
-                    highlight.animateTo(1f, tween(durationMillis = 200))
-                    delay(600)
-                    highlight.animateTo(0f, tween(durationMillis = 800))
-                }
-            }
-            ?.also { onScrolledToBackgroundMonitoring() }
+) = SettingsPage(modifier) {
+    SettingsSectionHeader("Display")
+    TyreDisplaySettings(
+        openTimeSinceUpdate = openTimeSinceUpdate,
+        modifier = Modifier.testTag(tyreDisplay),
+        additionalItems = { UnitsSettingsItems() },
+    )
+    SettingsSectionHeader("Alerts")
+    AlertsSettings(openAlertSound, Modifier.testTag(alerts))
+    SettingsSectionHeader("Background monitoring")
+    // A page of its own, also opened from the main screen's menu
+    SettingsGroup {
+        TextSettingsItem(
+            headline = "Persistent mode",
+            supporting = "Persistent scanning and its scan conditions",
+            onClick = openPersistentMode,
+            opensPage = true,
+            modifier = Modifier.testTag(persistentMode),
+        )
     }
-    val highlightColor = MaterialTheme.colorScheme.primary
-    SettingsPage(modifier, scrollState) {
-        SettingsSectionHeader("Display")
-        TyreDisplaySettings(
-            openTimeSinceUpdate = openTimeSinceUpdate,
-            modifier = Modifier.testTag(tyreDisplay),
-            additionalItems = { UnitsSettingsItems() },
-        )
-        SettingsSectionHeader("Alerts")
-        AlertsSettings(openAlertSound, Modifier.testTag(alerts))
-        SettingsSectionHeader(
-            "Background monitoring",
-            Modifier.onPlaced { backgroundMonitoringTop = it.positionInParent().y.toInt() },
-        )
-        PersistentScanningSettings(
-            openPersistentScanning = openPersistentScanning,
-            openActivateConditions = openActivateScanConditions,
-            openSuspendConditions = openSuspendScanConditions,
-            modifier = Modifier
-                .testTag(persistentScanning)
-                .drawWithContent {
-                    drawContent()
-                    // The corners of a SettingsGroup
-                    drawRoundRect(
-                        color = highlightColor.copy(alpha = 0.24f * highlight.value),
-                        cornerRadius = CornerRadius(24.dp.toPx()),
-                    )
-                },
-        )
-        SettingsSectionHeader("Developer options")
-        DeveloperOptionsSettings(
-            openDebug = openDebug,
-            openPressureLoss = openPressureLoss,
-            modifier = Modifier.testTag(developerOptions),
-        )
-        SettingsSectionHeader("About")
-        LocalUriHandler.current.also { uriHandler ->
-            SettingsGroup {
-                TextSettingsItem(headline = "Version", supporting = BuildConfig.VERSION_NAME)
-                TextSettingsItem(
-                    headline = "Based on TPMS Advanced",
-                    supporting = "By Vincent Masselis, under the Apache License 2.0",
-                    onClick = { uriHandler.openUri("https://github.com/VincentMasselis/TPMS-advanced") },
-                )
-                TextSettingsItem(
-                    headline = "Source code",
-                    supporting = "github.com/aveshev/persistent-tpms",
-                    onClick = { uriHandler.openUri("https://github.com/aveshev/persistent-tpms") },
-                )
-                TextSettingsItem(
-                    headline = "Privacy policy",
-                    onClick = { uriHandler.openUri("https://aveshev.com/persistent-tpms/privacy/") },
-                )
-                TextSettingsItem(
-                    headline = "Open-source licenses",
-                    onClick = openLicenses,
-                    opensPage = true,
-                )
-            }
+    SettingsSectionHeader("Developer options")
+    DeveloperOptionsSettings(
+        openDebug = openDebug,
+        openPressureLoss = openPressureLoss,
+        modifier = Modifier.testTag(developerOptions),
+    )
+    SettingsSectionHeader("About")
+    LocalUriHandler.current.also { uriHandler ->
+        SettingsGroup {
+            TextSettingsItem(headline = "Version", supporting = BuildConfig.VERSION_NAME)
+            TextSettingsItem(
+                headline = "Based on TPMS Advanced",
+                supporting = "By Vincent Masselis, under the Apache License 2.0",
+                onClick = { uriHandler.openUri("https://github.com/VincentMasselis/TPMS-advanced") },
+            )
+            TextSettingsItem(
+                headline = "Source code",
+                supporting = "github.com/aveshev/persistent-tpms",
+                onClick = { uriHandler.openUri("https://github.com/aveshev/persistent-tpms") },
+            )
+            TextSettingsItem(
+                headline = "Privacy policy",
+                onClick = { uriHandler.openUri("https://aveshev.com/persistent-tpms/privacy/") },
+            )
+            TextSettingsItem(
+                headline = "Open-source licenses",
+                onClick = openLicenses,
+                opensPage = true,
+            )
         }
     }
+}
+
+/** Persistent scanning and its scan conditions, opened from the app settings or the main screen's menu */
+@Composable
+internal fun PersistentModeSettings(
+    openPersistentScanning: () -> Unit,
+    openActivateScanConditions: () -> Unit,
+    openSuspendScanConditions: () -> Unit,
+    modifier: Modifier = Modifier,
+) = SettingsPage(modifier) {
+    @Suppress("MaxLineLength")
+    SettingsIntro(
+        "Automatically starts monitoring your tyres when you're riding your vehicle, and stops when you leave it, without the need to manually launch the app each ride to make it happen."
+    )
+    PersistentScanningSettings(
+        openPersistentScanning = openPersistentScanning,
+        openActivateConditions = openActivateScanConditions,
+        openSuspendConditions = openSuspendScanConditions,
+        modifier = Modifier
+            .padding(top = 16.dp)
+            .testTag(persistentScanning),
+    )
 }
 
 @Composable
@@ -279,11 +251,10 @@ internal fun BeaconScanSettings(
 @Composable
 internal fun SettingsPage(
     modifier: Modifier = Modifier,
-    scrollState: ScrollState = rememberScrollState(),
     content: @Composable ColumnScope.() -> Unit,
 ) = Column(
     modifier = modifier
-        .verticalScroll(scrollState)
+        .verticalScroll(rememberScrollState())
         .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
     content = content,
 )
@@ -292,5 +263,6 @@ internal object AppSettingsTag {
     const val tyreDisplay = "AppSettingsTag_tyreDisplay"
     const val alerts = "AppSettingsTag_alerts"
     const val persistentScanning = "AppSettingsTag_persistentScanning"
+    const val persistentMode = "AppSettingsTag_persistentMode"
     const val developerOptions = "AppSettingsTag_developerOptions"
 }
