@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlin.time.Duration
+import kotlin.time.TimeMark
 
 public interface BluetoothLeScanner {
 
@@ -35,8 +36,12 @@ public interface BluetoothLeScanner {
         /** Bluetooth is off, the scan starts again once it's turned on */
         public data object WaitingForBluetooth : ScanStatus
 
-        /** The system refused the scan for a [reason] that can go away, it's started again shortly */
-        public data class Retrying(val reason: Int) : ScanStatus
+        /**
+         * The system refused the scan for a [reason] that can go away, it's started again shortly.
+         * [since] is when the starts began failing: a start that didn't hold in between doesn't
+         * count as scanning.
+         */
+        public data class Retrying(val reason: Int, val since: TimeMark) : ScanStatus
     }
 
     /** How much the radio listens, from a small part of the time to all the time */

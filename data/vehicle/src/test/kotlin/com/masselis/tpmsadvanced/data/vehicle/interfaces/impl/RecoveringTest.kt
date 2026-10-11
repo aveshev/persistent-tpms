@@ -97,13 +97,57 @@ internal class RecoveringTest {
             skipItems(1)
             listOf(5, 10, 20, 40, 60, 60).forEach { seconds ->
                 failures.emit(Failure.Scan(SCAN_FAILED_APPLICATION_REGISTRATION_FAILED))
-                assertEquals(Retrying(SCAN_FAILED_APPLICATION_REGISTRATION_FAILED), statuses.last())
+                assertEquals(SCAN_FAILED_APPLICATION_REGISTRATION_FAILED, assertIs<Retrying>(statuses.last()).reason)
                 val failedAt = elapsed()
                 awaitItem()
                 assertEquals(seconds.seconds, elapsed() - failedAt)
-                assertEquals(Scanning, statuses.last())
             }
             assertEquals(7, scans)
+        }
+    }
+
+    @Test
+    fun `after a refused start, scanning is only told once a start held`() = runTest {
+        test().test {
+            skipItems(1)
+            failures.emit(Failure.Scan(SCAN_FAILED_INTERNAL_ERROR))
+            awaitItem()
+            assertIs<Retrying>(statuses.last())
+            delay(9.seconds)
+            assertIs<Retrying>(statuses.last())
+            delay(1.seconds)
+            assertEquals(Scanning, statuses.last())
+        }
+    }
+
+    @Test
+    fun `the starts refused in a row keep when they began failing`() = runTest {
+        test().test {
+            skipItems(1)
+            delay(1.minutes)
+            val firstStart = elapsed()
+            failures.emit(Failure.Scan(SCAN_FAILED_INTERNAL_ERROR))
+            awaitItem()
+            failures.emit(Failure.Scan(SCAN_FAILED_INTERNAL_ERROR))
+            awaitItem()
+            val retries = statuses.filterIsInstance<Retrying>()
+            assertEquals(2, retries.size)
+            assertEquals(retries[0], retries[1])
+            assertEquals(elapsed() - firstStart, retries[1].since.elapsedNow())
+        }
+    }
+
+    @Test
+    fun `a start that held begins a new run of refused ones`() = runTest {
+        test().test {
+            skipItems(1)
+            failures.emit(Failure.Scan(SCAN_FAILED_INTERNAL_ERROR))
+            awaitItem()
+            delay(10.seconds)
+            failures.emit(Failure.Scan(SCAN_FAILED_INTERNAL_ERROR))
+            val (first, second) = statuses.filterIsInstance<Retrying>()
+            // Restarted after 5 s, held for 10 s
+            assertEquals(15.seconds, first.since.elapsedNow() - second.since.elapsedNow())
         }
     }
 
