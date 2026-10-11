@@ -43,6 +43,10 @@ internal sealed interface Path {
         override fun toString(): String = "app_settings/time_since_last_update"
     }
 
+    data object MagnifierDuration : Path {
+        override fun toString(): String = "app_settings/magnifier"
+    }
+
     data object AlertSound : Path {
         override fun toString(): String = "app_settings/alert_sound"
     }
@@ -132,6 +136,7 @@ internal sealed interface Path {
             get() = listOf(
                 AppSettings,
                 TimeSinceUpdate,
+                MagnifierDuration,
                 AlertSound,
                 PersistentMode,
                 Debug,

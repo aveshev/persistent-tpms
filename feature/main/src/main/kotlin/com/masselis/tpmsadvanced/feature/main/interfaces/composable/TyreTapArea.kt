@@ -98,7 +98,7 @@ internal fun TyreTapArea(
         else -> null
     }
     val outline = when {
-        isWaiting -> MaterialTheme.colorScheme.primary.takeIf { isFirstBlinkPhase(BLINK) } ?: Color.Transparent
+        isWaiting -> MaterialTheme.colorScheme.primary.takeIf { isFirstBlinkPhase(WAITING_BLINK) } ?: Color.Transparent
         isInChain -> MaterialTheme.colorScheme.onSurface.copy(alpha = PASSED_ALPHA)
         isManaging || isUnassigned -> MaterialTheme.colorScheme.primary
         else -> null

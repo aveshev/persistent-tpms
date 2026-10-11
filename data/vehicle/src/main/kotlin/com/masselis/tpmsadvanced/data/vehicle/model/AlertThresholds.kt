@@ -60,6 +60,10 @@ public data class AlertThresholds(
         },
     ).maxOrNull()?.capped()
 
+    /** On the high side of the range, which tells which way a pressure alert goes */
+    public fun isHighPressure(pressure: Pressure): Boolean =
+        pressure.kpa * 2 >= lowPressure.kpa + highPressure.kpa
+
     public fun temperatureLevel(temperature: Temperature): AlertLevel? = when {
         temperature.celsius >= highTemp.celsius + CRIMSON_TEMPERATURE_ABOVE - EPSILON -> CRIMSON
         temperature.celsius >= highTemp.celsius - EPSILON -> RED

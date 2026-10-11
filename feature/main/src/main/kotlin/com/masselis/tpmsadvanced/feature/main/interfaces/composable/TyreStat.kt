@@ -69,6 +69,8 @@ internal fun TyreStat(
     modifier: Modifier = Modifier,
     /** Only the pressure, temperature and time since update, whatever the settings and alerts */
     isBasic: Boolean = false,
+    /** Its lines centered, rather than against the tyre */
+    isCentered: Boolean = false,
     vehicleComponent: VehicleComponent = LocalVehicleComponent.current,
     viewModel: TyreStatsViewModel = vehicleComponent
         .TyreComponent(location)
@@ -79,9 +81,10 @@ internal fun TyreStat(
     val showSensorFlags by viewModel.showSensorFlags.collectAsState()
     val showTimeSinceUpdate by viewModel.showTimeSinceUpdate.collectAsState()
     val showBatteryVoltage by viewModel.showBatteryVoltage.collectAsState()
-    if (isBasic) TyreStat(location, state, isBasic = true, modifier = modifier)
+    if (isBasic) TyreStat(location, state, isBasic = true, isCentered = isCentered, modifier = modifier)
     else TyreStat(
         location, state, showSensorId, showTimeSinceUpdate, showBatteryVoltage, showSensorFlags,
+        isCentered = isCentered,
         modifier = modifier,
     )
 }
@@ -96,16 +99,17 @@ private fun TyreStat(
     showBatteryVoltage: Boolean = false,
     showSensorFlags: Boolean = false,
     isBasic: Boolean = false,
+    isCentered: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val detected = state as? State.Detected
     val levels = detected?.levels.orEmpty()
     val sensorId = detected?.sensorId
     val onSurfaceColor = MaterialTheme.colorScheme.onSurface
-    val alignment = remember(isBasic) {
-        // Centered inside its outline on the sensors' page, or under the spare, against the
-        // tyre otherwise
-        if (isBasic || location == Location.Spare) Alignment.CenterHorizontally
+    val alignment = remember(isBasic, isCentered) {
+        // Centered inside its outline on the sensors' page, under the spare, or magnified, against
+        // the tyre otherwise
+        if (isBasic || isCentered || location == Location.Spare) Alignment.CenterHorizontally
         // Against the tyre, on whichever side of it the readout is
         else when (location.readoutSide) {
             LEFT -> Alignment.End
@@ -124,6 +128,7 @@ private fun TyreStat(
             Modifier.align(alignment),
             // Still on the sensors' page, where they're only checked
             blinks = isBasic.not(),
+            criticalLabel = if (detected?.isHighPressure == true) "HIGH!" else "LOW!",
         )
 
         Reading(
@@ -132,6 +137,8 @@ private fun TyreStat(
             Modifier.align(alignment),
             fontSize = 16.sp,
             blinks = isBasic.not(),
+            // Only a high temperature alerts
+            criticalLabel = "HIGH!",
         )
 
         if (showTimeSinceUpdate && detected != null) {
@@ -149,12 +156,12 @@ private fun TyreStat(
         // pressure and temperature above stay as the sensor read them. The same goes for the
         // pressure falling while riding.
         if (isBasic.not() && (PRESSURE_LOSS in levels || SENSOR_ALARM in levels)) {
-            Reading("Leaking?", AMBER, Modifier.align(alignment), fontSize = 16.sp)
+            Reading("Leak?", AMBER, Modifier.align(alignment), fontSize = 16.sp)
         }
 
         // A battery getting low shows whatever the setting
         detected
-            ?.let { it.batteryVoltage?.string() ?: it.batteryPercent?.let { percent -> "$percent %" } }
+            ?.let { it.batteryVoltage?.string() ?: it.batteryPercent?.let { percent -> "$percent%" } }
             ?.takeIf { showBatteryVoltage || (isBasic.not() && BATTERY in levels) }
             ?.also { Reading(it, levels[BATTERY], Modifier.align(alignment), fontSize = 16.sp) }
 
@@ -192,8 +199,9 @@ private fun TyreStat(
 }
 
 /**
- * A value in the colour of its alert [level]: blinking while red, alternating with "CRITICAL"
- * while crimson, in sync with the tyres, when it [blinks]
+ * A value in the colour of its alert [level]: blinking while red, alternating with [criticalLabel]
+ * while crimson, in sync with the tyres, when it [blinks]. The label is a short word, such as
+ * "LOW!", which fits beside the tyre where "CRITICAL" didn't.
  */
 @Composable
 private fun Reading(
@@ -202,8 +210,9 @@ private fun Reading(
     modifier: Modifier = Modifier,
     fontSize: TextUnit = TextUnit.Unspecified,
     blinks: Boolean = true,
+    criticalLabel: String = "",
 ) = Text(
-    if (blinks && level == CRIMSON && isFirstBlinkPhase(CRITICAL_LABEL_BLINK).not()) "CRITICAL" else text,
+    if (blinks && level == CRIMSON && isFirstBlinkPhase(CRITICAL_LABEL_BLINK).not()) criticalLabel else text,
     fontWeight = FontWeight.SemiBold,
     maxLines = 1,
     fontSize = fontSize,

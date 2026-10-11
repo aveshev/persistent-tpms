@@ -118,9 +118,9 @@ private fun VehicleBatterySettings(
     if (batteryKinds.showsPercent) {
         Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) {
             BatteryLevelSamples(
-                normal = "${lowPercent + BATTERY_AMBER_MARGIN_PERCENT * 2} %",
-                gettingLow = "${lowPercent + BATTERY_AMBER_MARGIN_PERCENT} %",
-                low = "$lowPercent %",
+                normal = "${lowPercent + BATTERY_AMBER_MARGIN_PERCENT * 2}%",
+                gettingLow = "${lowPercent + BATTERY_AMBER_MARGIN_PERCENT}%",
+                low = "$lowPercent%",
                 isVisible = isVisible,
             )
             Spacer(Modifier.height(16.dp))
@@ -135,7 +135,7 @@ private fun VehicleBatterySettings(
         SettingsGroup {
             TextSettingsItem(
                 headline = "Low battery alarm",
-                supporting = "$lowPercent %",
+                supporting = "$lowPercent%",
                 onClick = { editing = true },
                 modifier = Modifier.testTag(VehicleBatterySettingsTags.lowPercent),
             )

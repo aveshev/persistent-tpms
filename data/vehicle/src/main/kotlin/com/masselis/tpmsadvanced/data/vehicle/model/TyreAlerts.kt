@@ -18,6 +18,8 @@ public data class TyreAlerts(
     val latest: TyreAtmosphere? = null,
     val levels: Map<AlertClass, AlertLevel> = emptyMap(),
     val notifiable: Map<AlertClass, AlertLevel> = emptyMap(),
+    /** Whether [latest]'s pressure is on the high side of its range, see AlertThresholds.isHighPressure */
+    val isHighPressure: Boolean = false,
     /** When the battery's readings in a row at red started, null while it isn't red */
     private val batteryRedSince: Double? = null,
 ) {
@@ -46,6 +48,7 @@ public data class TyreAlerts(
                         copy(
                             latest = reading,
                             levels = levels,
+                            isHighPressure = thresholds.isHighPressure(reading.pressure),
                             notifiable = levels.mapValues { (alertClass, level) ->
                                 // A single low voltage can be a dip, see BATTERY_CONFIRMATION
                                 if (alertClass == BATTERY && level == RED && batteryRedSince != null &&

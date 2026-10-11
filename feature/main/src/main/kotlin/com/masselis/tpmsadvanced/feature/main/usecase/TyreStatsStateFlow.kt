@@ -53,6 +53,7 @@ public class TyreStatsStateFlow internal constructor(
                 atmosphere.flags,
                 alerts.levels,
                 atmosphere.batteryPercent,
+                alerts.isHighPressure,
             )
         }
         }
@@ -85,6 +86,8 @@ public class TyreStatsStateFlow internal constructor(
             public val levels: Map<AlertClass, AlertLevel> = emptyMap(),
             /** Sysgration's battery, which isn't a voltage */
             public val batteryPercent: Int? = null,
+            /** Which way the pressure is off, for the critical alert's label */
+            public val isHighPressure: Boolean = false,
         ) : State()
     }
 }
