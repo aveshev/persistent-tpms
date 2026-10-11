@@ -17,6 +17,7 @@ internal class MonitorService : LifecycleService() {
 
     override fun onCreate() {
         isRunningMutableStateFlow.value = true
+        isMonitoringMutableStateFlow.value = true
         super.onCreate()
         // Persistent scanning runs this service: the process is alive whenever there is a status
         // to announce. A single instance for the process, which outlives the service to say "off".
@@ -42,12 +43,26 @@ internal class MonitorService : LifecycleService() {
     override fun onDestroy() {
         Bindings.featureBackgroundInternal.unexpectedStopUseCase.stopped()
         super.onDestroy()
+        isMonitoringMutableStateFlow.value = false
         isRunningMutableStateFlow.value = false
     }
 
     companion object {
         private val isRunningMutableStateFlow = MutableStateFlow(false)
         val isRunning = isRunningMutableStateFlow.asStateFlow()
+
+        private val isMonitoringMutableStateFlow = MutableStateFlow(false)
+
+        /**
+         * [isRunning] until the service is asked to stop, rather than until the system destroys
+         * it a moment later: in between, it monitors nothing anymore.
+         */
+        val isMonitoring = isMonitoringMutableStateFlow.asStateFlow()
+
+        /** @return true if the service was running */
+        fun stop(): Boolean = appContext
+            .stopService(intent())
+            .also { if (it) isMonitoringMutableStateFlow.value = false }
 
         fun intent() = Intent(appContext, MonitorService::class.java)
     }
