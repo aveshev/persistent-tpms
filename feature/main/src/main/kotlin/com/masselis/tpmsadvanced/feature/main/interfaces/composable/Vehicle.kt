@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
@@ -812,6 +813,13 @@ private fun CarWithSpare(
     spareBeside: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    // Beside, the spare's outline is around all its readout's lines, extra ones turned on in the
+    // settings included, as the readout measures them
+    var spareReadoutHeight by remember { mutableIntStateOf(0) }
+    val spareOutlineHeight = with(LocalDensity.current) { spareReadoutHeight.toDp() }
+        .takeIf { spareBeside }
+        ?.coerceAtLeast(basicReadoutHeight)
+        ?: basicReadoutHeight
     ConstraintLayout(modifier = modifier) {
         val (
             vehicleImage,
@@ -1014,7 +1022,7 @@ private fun CarWithSpare(
                 val imageHeightPx = size.height.roundToInt()
                 val frameBottom = (imageHeightPx * SPARE_CAR_TYRE_HEIGHT)
                     .roundToInt()
-                    .coerceAtLeast(basicReadoutHeight.roundToPx())
+                    .coerceAtLeast(spareOutlineHeight.roundToPx())
                     .coerceAtMost(imageHeightPx)
                     .let { height ->
                         (outlineCenter(imageHeightPx, rearY, height, rearBottom) - height / 2f)
@@ -1057,7 +1065,9 @@ private fun CarWithSpare(
                         width = Dimension.value(readoutSlotWidth)
                         start.linkTo(rearRightStats.end, SPARE_BESIDE_GAP)
                     }
-                    .verticallyCenteredOn(rearY, basicReadoutHeight to rearBottom, SPARE_CAR_TYRE_HEIGHT)
+                    .verticallyCenteredOn(rearY, spareOutlineHeight to rearBottom, SPARE_CAR_TYRE_HEIGHT)
+                    // Inside the centering, the readout's own height
+                    .onSizeChanged { spareReadoutHeight = it.height }
                 else Modifier.constrainAs(spareStats) {
                     top.linkTo(spareBottom, SPARE_READOUT_GAP)
                     centerHorizontallyTo(vehicleImage)
@@ -1087,7 +1097,7 @@ private fun CarWithSpare(
                         width = Dimension.fillToConstraints
                         height = Dimension.fillToConstraints
                     }
-                    .outlineCenteredOn(rearY, basicReadoutHeight, SPARE_CAR_TYRE_HEIGHT, bottomAt = rearBottom)
+                    .outlineCenteredOn(rearY, spareOutlineHeight, SPARE_CAR_TYRE_HEIGHT, bottomAt = rearBottom)
                 else Modifier.constrainAs(spareTap) {
                     top.linkTo(spareTop)
                     bottom.linkTo(spareStats.bottom)
