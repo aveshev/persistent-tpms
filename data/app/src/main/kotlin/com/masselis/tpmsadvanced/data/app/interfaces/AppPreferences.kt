@@ -72,6 +72,20 @@ public class AppPreferences internal constructor(
         sharedPreferences.edit { putBoolean("SHOW_BATTERY_VOLTAGE", newValue) }
     }
 
+    /** Tapping a tyre's part of the main screen shows its reading magnified, to read it on a shaking phone */
+    public val magnifier: MutableStateFlow<Boolean> = observableStateFlow(
+        sharedPreferences.getBoolean("MAGNIFIER", true)
+    ) { _, newValue ->
+        sharedPreferences.edit { putBoolean("MAGNIFIER", newValue) }
+    }
+
+    /** How long, in seconds, a reading stays magnified, see [magnifier] */
+    public val magnifierSeconds: MutableStateFlow<Int> = observableStateFlow(
+        sharedPreferences.getInt("MAGNIFIER_DURATION_SECONDS", DEFAULT_MAGNIFIER_SECONDS)
+    ) { _, newValue ->
+        sharedPreferences.edit { putInt("MAGNIFIER_DURATION_SECONDS", newValue) }
+    }
+
     /**
      * Warns about a tyre losing at least [pressureLossMinDrop] kPa while riding. Experimental, so
      * off by default.
@@ -377,5 +391,6 @@ public class AppPreferences internal constructor(
         public const val DEFAULT_BEACON_MIN_RSSI: Int = -85
         private const val DEFAULT_STAY_ACTIVE_MINUTES = 10
         private const val DEFAULT_PRESSURE_LOSS_MIN_DROP = 7f
+        private const val DEFAULT_MAGNIFIER_SECONDS = 5
     }
 }

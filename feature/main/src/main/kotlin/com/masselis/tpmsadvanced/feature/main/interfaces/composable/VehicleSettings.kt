@@ -111,9 +111,9 @@ public fun VehicleSettings(
                         "Low voltage alarm ${lowBatteryVoltage.string()}"
 
                     batteryKinds.hasPercent && batteryKinds.hasVoltage.not() ->
-                        "Low battery alarm $lowBatteryPercent %"
+                        "Low battery alarm $lowBatteryPercent%"
 
-                    else -> "Low alarms ${lowBatteryVoltage.string()} · $lowBatteryPercent %"
+                    else -> "Low alarms ${lowBatteryVoltage.string()} · $lowBatteryPercent%"
                 },
                 onClick = openBattery,
                 opensPage = true,

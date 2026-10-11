@@ -274,6 +274,9 @@ internal fun VehicleHome(
                             openTimeSinceUpdate = {
                                 navController.navigate("${Path.TimeSinceUpdate}")
                             },
+                            openMagnifier = {
+                                navController.navigate("${Path.MagnifierDuration}")
+                            },
                             openAlertSound = {
                                 navController.navigate("${Path.AlertSound}")
                             },
@@ -328,6 +331,11 @@ internal fun VehicleHome(
                     }
                     composable("${Path.TimeSinceUpdate}") {
                         TimeSinceUpdateSettings(
+                            modifier = modifier
+                        )
+                    }
+                    composable("${Path.MagnifierDuration}") {
+                        MagnifierDurationSettings(
                             modifier = modifier
                         )
                     }
@@ -519,6 +527,7 @@ private fun TopAppBar(
                 is Path.PressureLoss -> Text(text = "Pressure loss")
                 is Path.AppSettings -> Text(text = "App settings")
                 is Path.TimeSinceUpdate -> Text(text = "Time since last update")
+                is Path.MagnifierDuration -> Text(text = "Tap to magnify")
                 is Path.AlertSound -> Text(text = "Alert sound")
                 is Path.PersistentMode -> Text(text = "Persistent mode")
                 is Path.Debug -> Text(text = "Debug")
@@ -547,6 +556,7 @@ private fun TopAppBar(
                 is Path.PressureLoss,
                 is Path.AppSettings,
                 is Path.TimeSinceUpdate,
+                is Path.MagnifierDuration,
                 is Path.AlertSound,
                 is Path.PersistentMode,
                 is Path.Debug,
@@ -583,6 +593,7 @@ private fun TopAppBar(
                 is Path.PressureLoss,
                 is Path.AppSettings,
                 is Path.TimeSinceUpdate,
+                is Path.MagnifierDuration,
                 is Path.AlertSound,
                 is Path.PersistentMode,
                 is Path.Debug,

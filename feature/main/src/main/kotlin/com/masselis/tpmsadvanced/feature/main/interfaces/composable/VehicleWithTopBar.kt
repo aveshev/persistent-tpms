@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
@@ -33,6 +34,8 @@ internal fun VehicleWithTopBar(
     actions: @Composable RowScope.() -> Unit,
     vehicle: @Composable (SpareReadout) -> Unit,
     modifier: Modifier = Modifier,
+    /** Where the top bar is, in this layout's coordinates: its whole strip over the vehicle, its corners beside it */
+    onBarPositioned: (List<Rect>) -> Unit = {},
 ) {
     // The top bar's, wherever they're drawn
     val colors = TopAppBarDefaults.centerAlignedTopAppBarColors()
@@ -95,6 +98,7 @@ internal fun VehicleWithTopBar(
                     it.measure(bar.copy(maxWidth = (width - startWidth - endWidth - titlePadding * 2).coerceAtLeast(0)))
                 }
                 layout(width, height) {
+                    onBarPositioned(listOf(Rect(0f, 0f, width.toFloat(), barHeight.toFloat())))
                     vehicles.forEach { it.place(0, barHeight) }
                     navigationIcons.forEach { it.place(barPadding, (barHeight - it.height) / 2) }
                     actionRows.forEach { it.place(width - endWidth, (barHeight - it.height) / 2) }
@@ -112,6 +116,13 @@ internal fun VehicleWithTopBar(
             Placement.BESIDE -> {
                 val titlePlaceables = titles.map { it.measure(bar.copy(maxWidth = besideTitleMaxWidth)) }
                 layout(width, height) {
+                    onBarPositioned(
+                        listOfNotNull(
+                            Rect(0f, 0f, navigationIconWidth.toFloat(), barHeight.toFloat())
+                                .takeIf { navigationIconWidth > 0 },
+                            Rect((width - besideEndWidth).toFloat(), 0f, width.toFloat(), barHeight.toFloat()),
+                        )
+                    )
                     vehicles.forEach { it.place(navigationIconWidth, 0) }
                     navigationIcons.forEach { it.place(0, (barHeight - it.height) / 2) }
                     actionRows.forEach {

@@ -319,7 +319,7 @@ internal class AlertNotifier(
                         thresholds.lowBatteryVoltage.alarmAt(reading.temperature).string()
                     }"
                 }
-                ?: "${reading.batteryPercent} %, alarm at ${thresholds.lowBatteryPercent} %"
+                ?: "${reading.batteryPercent}%, alarm at ${thresholds.lowBatteryPercent}%"
             PRESSURE_LOSS -> loss
                 ?.let { "${it.summary(pressureUnit)}, now ${reading.pressure.string(pressureUnit)}" }
                 ?: reading.pressure.string(pressureUnit)
@@ -416,7 +416,7 @@ internal class AlertNotifier(
             }
         }
 
-        /** What tells the tyre may be leaking, "Leaking?" on the main screen */
+        /** What tells the tyre may be leaking, "Leak?" on the main screen */
         private val LEAKS = setOf(PRESSURE_LOSS, SENSOR_ALARM)
 
         /**
