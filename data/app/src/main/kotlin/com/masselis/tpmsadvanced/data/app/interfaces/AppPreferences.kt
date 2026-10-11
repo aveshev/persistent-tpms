@@ -142,6 +142,20 @@ public class AppPreferences internal constructor(
         sharedPreferences.edit { putBoolean("PERSISTENT_SCANNING", newValue) }
     }
 
+    /**
+     * Whether persistent scanning was turned on once from its settings page, which explains when it
+     * scans. The main screen's menu only offers its switch after that. Those who already use it,
+     * from before this was stored, have done so.
+     */
+    public val persistentScanningSetUp: MutableStateFlow<Boolean> = observableStateFlow(
+        sharedPreferences.getBoolean(
+            "PERSISTENT_SCANNING_SET_UP",
+            sharedPreferences.getBoolean("PERSISTENT_SCANNING", false),
+        )
+    ) { _, newValue ->
+        sharedPreferences.edit { putBoolean("PERSISTENT_SCANNING_SET_UP", newValue) }
+    }
+
     public val activateOnCableCharging: MutableStateFlow<Boolean> = observableStateFlow(
         sharedPreferences.getBoolean("ACTIVATE_ON_CABLE_CHARGING", true)
     ) { _, newValue ->

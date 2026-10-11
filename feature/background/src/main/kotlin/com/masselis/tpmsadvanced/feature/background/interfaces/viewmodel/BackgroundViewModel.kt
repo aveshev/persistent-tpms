@@ -38,7 +38,7 @@ internal class BackgroundViewModel(
         data object FinishActivity : Event
     }
 
-    private val mutableStateFlow = MutableStateFlow(computeState(controller.isRunning.value))
+    private val mutableStateFlow = MutableStateFlow(computeState(controller.isMonitoring.value))
     val stateFlow = mutableStateFlow.asStateFlow()
 
     private val channel = Channel<Event>(BUFFERED)
@@ -46,7 +46,7 @@ internal class BackgroundViewModel(
 
     init {
         controller
-            .isRunning
+            .isMonitoring
             .map(::computeState)
             .onEach(mutableStateFlow::value::set)
             .launchIn(viewModelScope)
