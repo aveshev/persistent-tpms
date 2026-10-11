@@ -27,6 +27,18 @@ internal class PersistentScanningViewModel(
 
     val persistentScanning = appPreferences.persistentScanning
 
+    /** The main screen's menu only offers its switch once the settings page turned it on */
+    val persistentScanningSetUp: StateFlow<Boolean> = appPreferences.persistentScanningSetUp
+
+    /**
+     * The switch of the main screen's menu. Turning it on is enough: PersistentScanningHost walks
+     * the user through whatever is missing and starts the service as soon as it sees it on.
+     */
+    fun setPersistentScanning(enabled: Boolean) {
+        appPreferences.persistentScanning.value = enabled
+        if (enabled.not()) controller.stop()
+    }
+
     // Read before anything restarts the service. Consumed even when persistent scanning is off,
     // so that an old marker can't be reported once it is turned on again.
     private val mutableUnexpectedStop = MutableStateFlow(

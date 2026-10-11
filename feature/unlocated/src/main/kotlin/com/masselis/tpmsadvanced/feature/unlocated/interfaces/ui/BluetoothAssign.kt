@@ -269,7 +269,7 @@ private fun Instruction(text: AnnotatedString, detail: String? = null) {
 }
 
 /**
- * "the **front left** wheel on **My car**", the location and the vehicle in bold. A mono-wheel's only
+ * "the **front left** wheel on **My car**", the location and the vehicle in bold. A monowheel's only
  * wheel is just "the wheel".
  */
 private fun AnnotatedString.Builder.appendWheelOn(location: Location, vehicle: Vehicle?) {

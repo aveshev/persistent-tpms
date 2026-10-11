@@ -13,6 +13,12 @@ internal class MonitoringController {
     val isRunning: StateFlow<Boolean> = MonitorService.isRunning
 
     /**
+     * What the manual button shows. Turning persistent scanning off would otherwise show the
+     * service as monitoring by hand, for the moment it takes to stop.
+     */
+    val isMonitoring: StateFlow<Boolean> = MonitorService.isMonitoring
+
+    /**
      * Safe to call while the service already runs: it then keeps its single notifier. Throws when
      * the system refuses the start.
      */
@@ -21,5 +27,5 @@ internal class MonitoringController {
     }
 
     /** @return true if the service was running */
-    fun stop(): Boolean = appContext.stopService(MonitorService.intent())
+    fun stop(): Boolean = MonitorService.stop()
 }

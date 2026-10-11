@@ -53,6 +53,13 @@ import com.masselis.tpmsadvanced.data.vehicle.model.AlertLevel
 import com.masselis.tpmsadvanced.data.vehicle.model.AlertLevel.CRIMSON
 import com.masselis.tpmsadvanced.data.vehicle.model.AlertLevel.RED
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
+import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.CAR
+import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.CAR_WITH_SPARE
+import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.DELTA_THREE_WHEELER
+import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.MONOWHEEL
+import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.MOTORCYCLE
+import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.SINGLE_AXLE_TRAILER
+import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.TADPOLE_THREE_WHEELER
 import com.masselis.tpmsadvanced.feature.main.R
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.CurrentVehicleDropdownTags.AddVehicle.addButton
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.CurrentVehicleDropdownTags.AddVehicle.cancelButton
@@ -277,7 +284,15 @@ private fun AddVehicle(
                         .verticalScroll(rememberScrollState())
                         .selectableGroup()
                 ) {
-                    Vehicle.Kind.entries.forEach { kind ->
+                    listOf(
+                        CAR,
+                        CAR_WITH_SPARE,
+                        MOTORCYCLE,
+                        TADPOLE_THREE_WHEELER,
+                        DELTA_THREE_WHEELER,
+                        SINGLE_AXLE_TRAILER,
+                        MONOWHEEL,
+                    ).forEach { kind ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
@@ -296,13 +311,13 @@ private fun AddVehicle(
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = when (kind) {
-                                    Vehicle.Kind.CAR -> "Car"
-                                    Vehicle.Kind.SINGLE_AXLE_TRAILER -> "Single axle trailer"
-                                    Vehicle.Kind.MOTORCYCLE -> "Motorcycle"
-                                    Vehicle.Kind.TADPOLE_THREE_WHEELER -> "Tadpole three wheeler"
-                                    Vehicle.Kind.DELTA_THREE_WHEELER -> "Delta three wheeler"
-                                    Vehicle.Kind.CAR_WITH_SPARE -> "Car with a spare"
-                                    Vehicle.Kind.MONOWHEEL -> "Mono-wheel"
+                                    CAR -> "Car"
+                                    CAR_WITH_SPARE -> "Car with a spare tyre"
+                                    MOTORCYCLE -> "Motorcycle"
+                                    TADPOLE_THREE_WHEELER -> "Tadpole three-wheeler"
+                                    DELTA_THREE_WHEELER -> "Delta three-wheeler"
+                                    SINGLE_AXLE_TRAILER -> "Single axle trailer"
+                                    MONOWHEEL -> "Monowheel"
                                 }
                             )
                         }

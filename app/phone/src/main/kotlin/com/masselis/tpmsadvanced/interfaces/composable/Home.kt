@@ -23,6 +23,7 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -75,6 +76,7 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.ui.DetectedActivi
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.alertingVehicles
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.MonitoringButton
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.PersistentScanningHost
+import com.masselis.tpmsadvanced.feature.background.interfaces.ui.PersistentScanningMenuItem
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.QuietScanStatusAnnouncementsEffect
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.SilenceAlertsButton
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.CurrentVehicle
@@ -132,6 +134,8 @@ internal fun VehicleHome(
         var qrCodeResult by rememberSaveable { mutableStateOf<QrCodeResult?>(null) }
         var qrCodeLocation by rememberSaveable { mutableIntStateOf(0) }
         var qrCodeScan by rememberSaveable { mutableIntStateOf(0) }
+        // Set by the menu's persistent scanning line, the app settings then open on its section
+        var scrollToBackgroundMonitoring by rememberSaveable { mutableStateOf(false) }
         val currentPath = navController.currentBackStackEntryAsState()
             .value
             ?.destination
@@ -164,7 +168,11 @@ internal fun VehicleHome(
                 // leaving doesn't move
                 AnimatedVisibility(visible = barPath != null, enter = fadeIn(), exit = fadeOut()) {
                     lastBarPath?.also {
-                        TopAppBar(path = it, manualBackgroundButtonModifier = manualBackgroundButtonModifier)
+                        TopAppBar(
+                            path = it,
+                            openBackgroundMonitoring = { scrollToBackgroundMonitoring = true },
+                            manualBackgroundButtonModifier = manualBackgroundButtonModifier,
+                        )
                     }
                 }
             },
@@ -202,7 +210,13 @@ internal fun VehicleHome(
                                     alerts = alertingVehicles(),
                                 )
                             },
-                            actions = { HomeActions(vehicleUuid, manualBackgroundButtonModifier) },
+                            actions = {
+                                HomeActions(
+                                    vehicleUuid,
+                                    manualBackgroundButtonModifier,
+                                    openBackgroundMonitoring = { scrollToBackgroundMonitoring = true },
+                                )
+                            },
                         )
                     }
                     composable("${Path.Settings(vehicleComponent.vehicle.uuid)}") {
@@ -267,6 +281,9 @@ internal fun VehicleHome(
                             openTimeSinceUpdate = {
                                 navController.navigate("${Path.TimeSinceUpdate}")
                             },
+                            openAlertSound = {
+                                navController.navigate("${Path.AlertSound}")
+                            },
                             openPersistentScanning = {
                                 navController.navigate("${Path.PersistentScanning}")
                             },
@@ -285,7 +302,9 @@ internal fun VehicleHome(
                             openLicenses = {
                                 navController.navigate("${Path.Licenses}")
                             },
-                            modifier = modifier
+                            modifier = modifier,
+                            scrollToBackgroundMonitoring = scrollToBackgroundMonitoring,
+                            onScrolledToBackgroundMonitoring = { scrollToBackgroundMonitoring = false },
                         )
                     }
                     composable("${Path.Licenses}") {
@@ -300,6 +319,11 @@ internal fun VehicleHome(
                     }
                     composable("${Path.PressureLoss}") {
                         PressureLossSettingsPage(
+                            modifier = modifier
+                        )
+                    }
+                    composable("${Path.AlertSound}") {
+                        AlertSoundSettingsPage(
                             modifier = modifier
                         )
                     }
@@ -470,6 +494,7 @@ internal fun VehicleHome(
 @Composable
 private fun TopAppBar(
     path: Path,
+    openBackgroundMonitoring: () -> Unit,
     modifier: Modifier = Modifier,
     manualBackgroundButtonModifier: Modifier = Modifier
 ) {
@@ -496,6 +521,7 @@ private fun TopAppBar(
                 is Path.PressureLoss -> Text(text = "Pressure loss")
                 is Path.AppSettings -> Text(text = "App settings")
                 is Path.TimeSinceUpdate -> Text(text = "Time since last update")
+                is Path.AlertSound -> Text(text = "Alert sound")
                 is Path.Debug -> Text(text = "Debug")
                 is Path.PersistentScanning -> Text(text = "Persistent scanning")
                 is Path.ActivateScanConditions -> Text(text = "Activate scan conditions")
@@ -522,6 +548,7 @@ private fun TopAppBar(
                 is Path.PressureLoss,
                 is Path.AppSettings,
                 is Path.TimeSinceUpdate,
+                is Path.AlertSound,
                 is Path.Debug,
                 is Path.PersistentScanning,
                 is Path.ActivateScanConditions,
@@ -544,7 +571,8 @@ private fun TopAppBar(
         },
         actions = {
             when (currentPath) {
-                is Path.Home -> HomeActions(currentPath.vehicleUUID, manualBackgroundButtonModifier)
+                is Path.Home ->
+                    HomeActions(currentPath.vehicleUUID, manualBackgroundButtonModifier, openBackgroundMonitoring)
 
                 is Path.Settings,
                 is Path.ManageSensors,
@@ -555,6 +583,7 @@ private fun TopAppBar(
                 is Path.PressureLoss,
                 is Path.AppSettings,
                 is Path.TimeSinceUpdate,
+                is Path.AlertSound,
                 is Path.Debug,
                 is Path.PersistentScanning,
                 is Path.ActivateScanConditions,
@@ -576,8 +605,13 @@ private fun TopAppBar(
 }
 
 /** The main screen's actions, in its top bar or beside the vehicle in a wide window */
+@Suppress("LongMethod")
 @Composable
-private fun HomeActions(vehicleUuid: UUID, manualBackgroundButtonModifier: Modifier) {
+private fun HomeActions(
+    vehicleUuid: UUID,
+    manualBackgroundButtonModifier: Modifier,
+    openBackgroundMonitoring: () -> Unit,
+) {
     val navController = LocalHomeNavController.current
     var showMenu by remember { mutableStateOf(false) }
     // Out of the menu, which leaves the composition once closed
@@ -605,6 +639,9 @@ private fun HomeActions(vehicleUuid: UUID, manualBackgroundButtonModifier: Modif
         ) {
             DropdownMenuItem(
                 text = { Text("Vehicle settings") },
+                leadingIcon = {
+                    Icon(ImageVector.vectorResource(R.drawable.car_gear_24px), contentDescription = null)
+                },
                 onClick = {
                     showMenu = false
                     navController.navigate("${Path.Settings(vehicleUuid)}")
@@ -613,19 +650,36 @@ private fun HomeActions(vehicleUuid: UUID, manualBackgroundButtonModifier: Modif
             )
             DropdownMenuItem(
                 text = { Text("App settings") },
+                leadingIcon = {
+                    Icon(ImageVector.vectorResource(R.drawable.settings_24px), contentDescription = null)
+                },
                 onClick = {
                     showMenu = false
                     navController.navigate("${Path.AppSettings}")
                 },
                 modifier = Modifier.testTag(HomeTags.Overflow.appSettings)
             )
-            if (isReadingSimulationAvailable()) DropdownMenuItem(
-                text = { Text("Simulate a reading") },
+            PersistentScanningMenuItem(
                 onClick = {
                     showMenu = false
-                    simulateReading = true
+                    openBackgroundMonitoring()
+                    navController.navigate("${Path.AppSettings}")
                 },
+                modifier = Modifier.testTag(HomeTags.Overflow.persistentScanning)
             )
+            if (isReadingSimulationAvailable()) {
+                HorizontalDivider()
+                DropdownMenuItem(
+                    text = { Text("Simulate a reading") },
+                    leadingIcon = {
+                        Icon(ImageVector.vectorResource(R.drawable.science_24px), contentDescription = null)
+                    },
+                    onClick = {
+                        showMenu = false
+                        simulateReading = true
+                    },
+                )
+            }
         }
     }
 }
@@ -723,6 +777,7 @@ internal object HomeTags {
         const val root = "HomeTags_Overflow_root"
         const val settings = "HomeTags_Overflow_settings"
         const val appSettings = "HomeTags_Overflow_appSettings"
+        const val persistentScanning = "HomeTags_Overflow_persistentScanning"
     }
 }
 

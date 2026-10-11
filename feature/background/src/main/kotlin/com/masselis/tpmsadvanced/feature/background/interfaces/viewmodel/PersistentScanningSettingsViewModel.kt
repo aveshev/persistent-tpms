@@ -115,6 +115,7 @@ internal class PersistentScanningSettingsViewModel(
     fun enablePersistentScanning() {
         // Set first: the service reads it to ask for a sticky restart
         appPreferences.persistentScanning.value = true
+        appPreferences.persistentScanningSetUp.value = true
         controller.start()
     }
 

@@ -2,15 +2,28 @@
 
 package com.masselis.tpmsadvanced.interfaces.composable
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.layout.onPlaced
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
@@ -20,6 +33,7 @@ import com.masselis.tpmsadvanced.core.ui.SettingsGroup
 import com.masselis.tpmsadvanced.core.ui.SettingsSectionHeader
 import com.masselis.tpmsadvanced.core.ui.TextSettingsItem
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.ActivateBluetoothDevices
+import com.masselis.tpmsadvanced.feature.background.interfaces.composable.AlertSoundSettings
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.AlertsSettings
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.BeaconMinRssiSettingsItem
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.BeaconScan
@@ -47,62 +61,104 @@ import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.persistent
 import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.tyreDisplay
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
 import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
+@Suppress("LongMethod")
 @Composable
 internal fun AppSettings(
     openTimeSinceUpdate: () -> Unit,
+    openAlertSound: () -> Unit,
     openPersistentScanning: () -> Unit,
     openActivateScanConditions: () -> Unit,
     openSuspendScanConditions: () -> Unit,
     openDebug: () -> Unit,
     openPressureLoss: () -> Unit,
     openLicenses: () -> Unit,
-    modifier: Modifier = Modifier
-) = SettingsPage(modifier) {
-    SettingsSectionHeader("Display")
-    TyreDisplaySettings(
-        openTimeSinceUpdate = openTimeSinceUpdate,
-        modifier = Modifier.testTag(tyreDisplay),
-        additionalItems = { UnitsSettingsItems() },
-    )
-    SettingsSectionHeader("Alerts")
-    AlertsSettings(Modifier.testTag(alerts))
-    SettingsSectionHeader("Background scanning")
-    PersistentScanningSettings(
-        openPersistentScanning = openPersistentScanning,
-        openActivateConditions = openActivateScanConditions,
-        openSuspendConditions = openSuspendScanConditions,
-        modifier = Modifier.testTag(persistentScanning),
-    )
-    SettingsSectionHeader("Developer options")
-    DeveloperOptionsSettings(
-        openDebug = openDebug,
-        openPressureLoss = openPressureLoss,
-        modifier = Modifier.testTag(developerOptions),
-    )
-    SettingsSectionHeader("About")
-    LocalUriHandler.current.also { uriHandler ->
-        SettingsGroup {
-            TextSettingsItem(headline = "Version", supporting = BuildConfig.VERSION_NAME)
-            TextSettingsItem(
-                headline = "Based on TPMS Advanced",
-                supporting = "By Vincent Masselis, under the Apache License 2.0",
-                onClick = { uriHandler.openUri("https://github.com/VincentMasselis/TPMS-advanced") },
-            )
-            TextSettingsItem(
-                headline = "Source code",
-                supporting = "github.com/aveshev/persistent-tpms",
-                onClick = { uriHandler.openUri("https://github.com/aveshev/persistent-tpms") },
-            )
-            TextSettingsItem(
-                headline = "Privacy policy",
-                onClick = { uriHandler.openUri("https://aveshev.com/persistent-tpms/privacy/") },
-            )
-            TextSettingsItem(
-                headline = "Open-source licenses",
-                onClick = openLicenses,
-                opensPage = true,
-            )
+    modifier: Modifier = Modifier,
+    // Opened from the main screen's menu, on its persistent scanning line
+    scrollToBackgroundMonitoring: Boolean = false,
+    onScrolledToBackgroundMonitoring: () -> Unit = {},
+) = rememberScrollState().let { scrollState ->
+    // Where the background monitoring section starts, once laid out
+    var backgroundMonitoringTop by remember { mutableStateOf<Int?>(null) }
+    // Flashed on the section once scrolled to, like the Android settings app does for the setting
+    // it opens on: it tells why the page doesn't start at its top
+    val highlight = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(scrollToBackgroundMonitoring, backgroundMonitoringTop) {
+        backgroundMonitoringTop
+            ?.takeIf { scrollToBackgroundMonitoring }
+            ?.also { scrollState.scrollTo(it) }
+            // Out of this effect, which restarts once told about the scroll
+            ?.also {
+                scope.launch {
+                    highlight.animateTo(1f, tween(durationMillis = 200))
+                    delay(600)
+                    highlight.animateTo(0f, tween(durationMillis = 800))
+                }
+            }
+            ?.also { onScrolledToBackgroundMonitoring() }
+    }
+    val highlightColor = MaterialTheme.colorScheme.primary
+    SettingsPage(modifier, scrollState) {
+        SettingsSectionHeader("Display")
+        TyreDisplaySettings(
+            openTimeSinceUpdate = openTimeSinceUpdate,
+            modifier = Modifier.testTag(tyreDisplay),
+            additionalItems = { UnitsSettingsItems() },
+        )
+        SettingsSectionHeader("Alerts")
+        AlertsSettings(openAlertSound, Modifier.testTag(alerts))
+        SettingsSectionHeader(
+            "Background monitoring",
+            Modifier.onPlaced { backgroundMonitoringTop = it.positionInParent().y.toInt() },
+        )
+        PersistentScanningSettings(
+            openPersistentScanning = openPersistentScanning,
+            openActivateConditions = openActivateScanConditions,
+            openSuspendConditions = openSuspendScanConditions,
+            modifier = Modifier
+                .testTag(persistentScanning)
+                .drawWithContent {
+                    drawContent()
+                    // The corners of a SettingsGroup
+                    drawRoundRect(
+                        color = highlightColor.copy(alpha = 0.24f * highlight.value),
+                        cornerRadius = CornerRadius(24.dp.toPx()),
+                    )
+                },
+        )
+        SettingsSectionHeader("Developer options")
+        DeveloperOptionsSettings(
+            openDebug = openDebug,
+            openPressureLoss = openPressureLoss,
+            modifier = Modifier.testTag(developerOptions),
+        )
+        SettingsSectionHeader("About")
+        LocalUriHandler.current.also { uriHandler ->
+            SettingsGroup {
+                TextSettingsItem(headline = "Version", supporting = BuildConfig.VERSION_NAME)
+                TextSettingsItem(
+                    headline = "Based on TPMS Advanced",
+                    supporting = "By Vincent Masselis, under the Apache License 2.0",
+                    onClick = { uriHandler.openUri("https://github.com/VincentMasselis/TPMS-advanced") },
+                )
+                TextSettingsItem(
+                    headline = "Source code",
+                    supporting = "github.com/aveshev/persistent-tpms",
+                    onClick = { uriHandler.openUri("https://github.com/aveshev/persistent-tpms") },
+                )
+                TextSettingsItem(
+                    headline = "Privacy policy",
+                    onClick = { uriHandler.openUri("https://aveshev.com/persistent-tpms/privacy/") },
+                )
+                TextSettingsItem(
+                    headline = "Open-source licenses",
+                    onClick = openLicenses,
+                    opensPage = true,
+                )
+            }
         }
     }
 }
@@ -128,6 +184,13 @@ internal fun DebugSettingsPage(
             PhoneIdleMechanismSettingsItem()
         }
     )
+}
+
+@Composable
+internal fun AlertSoundSettingsPage(
+    modifier: Modifier = Modifier
+) = SettingsPage(modifier) {
+    AlertSoundSettings()
 }
 
 @Composable
@@ -216,10 +279,11 @@ internal fun BeaconScanSettings(
 @Composable
 internal fun SettingsPage(
     modifier: Modifier = Modifier,
+    scrollState: ScrollState = rememberScrollState(),
     content: @Composable ColumnScope.() -> Unit,
 ) = Column(
     modifier = modifier
-        .verticalScroll(rememberScrollState())
+        .verticalScroll(scrollState)
         .padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
     content = content,
 )

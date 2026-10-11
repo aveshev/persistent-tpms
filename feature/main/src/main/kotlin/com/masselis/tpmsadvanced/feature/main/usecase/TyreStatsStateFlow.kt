@@ -17,8 +17,6 @@ import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.parcelize.Parcelize
 
@@ -30,8 +28,12 @@ public class TyreStatsStateFlow internal constructor(
     unitPreferences: UnitPreferences,
     sensorBindingUseCase: SensorBindingUseCase,
     scope: CoroutineScope,
-    // Starts over with the sensor bound, moved or swapped here: its own latest reading, if any
-    stateFlow: StateFlow<State> = sensorBindingUseCase.boundSensor().boundIds().flatMapLatest {
+    // Starts over with the sensor bound, moved or swapped here: its own latest reading, if any. A
+    // screen coming back keeps showing the last one until then.
+    stateFlow: StateFlow<State> = sensorBindingUseCase
+        .boundSensor()
+        .boundIds()
+        .flatMapLatestBound<State>(State.NotDetected) {
         combine(
             alertsUseCase.listen(),
             unitPreferences.pressure,
@@ -53,7 +55,7 @@ public class TyreStatsStateFlow internal constructor(
                 atmosphere.batteryPercent,
             )
         }
-        }.onStart { emit(State.NotDetected) }
+        }
     }
         .catch { emit(State.NotDetected) }
         .stateIn(scope, WhileSubscribed(), State.NotDetected),

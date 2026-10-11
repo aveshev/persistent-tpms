@@ -231,7 +231,7 @@ private fun SensorCalibrationSettings(
             Text(
                 buildAnnotatedString {
                     append("Apply to ")
-                    // A mono-wheel's only wheel is just "wheel"
+                    // A monowheel's only wheel is just "wheel"
                     appendBold(buildString { location?.also { appendLoc(it, withType = false) } ?: append("this") })
                     append(" sensor")
                 }
