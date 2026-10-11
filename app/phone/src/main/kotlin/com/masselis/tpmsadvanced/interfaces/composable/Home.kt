@@ -21,6 +21,7 @@ import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
@@ -72,6 +73,7 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.ui.DetectedActivi
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.alertingVehicles
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.MonitoringButton
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.PersistentScanningHost
+import com.masselis.tpmsadvanced.feature.background.interfaces.ui.PersistentScanningMenuItem
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.QuietScanStatusAnnouncementsEffect
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.SilenceAlertsButton
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.CurrentVehicle
@@ -129,6 +131,8 @@ internal fun VehicleHome(
         var qrCodeResult by rememberSaveable { mutableStateOf<QrCodeResult?>(null) }
         var qrCodeLocation by rememberSaveable { mutableIntStateOf(0) }
         var qrCodeScan by rememberSaveable { mutableIntStateOf(0) }
+        // Set by the menu's persistent scanning line, the app settings then open on its section
+        var scrollToBackgroundMonitoring by rememberSaveable { mutableStateOf(false) }
         val currentPath = navController.currentBackStackEntryAsState()
             .value
             ?.destination
@@ -138,6 +142,7 @@ internal fun VehicleHome(
             topBar = {
                 // Manage sensors shows its own beside the vehicle, see isWideWindow
                 if ((currentPath is Path.ManageSensors && isWideWindow()).not()) TopAppBar(
+                    openBackgroundMonitoring = { scrollToBackgroundMonitoring = true },
                     manualBackgroundButtonModifier = Modifier.onGloballyPositioned { coordinates ->
                         if (offsetToFocus != null) return@onGloballyPositioned
                         coordinates.positionInRoot()
@@ -258,7 +263,9 @@ internal fun VehicleHome(
                             openLicenses = {
                                 navController.navigate("${Path.Licenses}")
                             },
-                            modifier = modifier
+                            modifier = modifier,
+                            scrollToBackgroundMonitoring = scrollToBackgroundMonitoring,
+                            onScrolledToBackgroundMonitoring = { scrollToBackgroundMonitoring = false },
                         )
                     }
                     composable("${Path.Licenses}") {
@@ -442,6 +449,7 @@ internal fun VehicleHome(
 @Suppress("LongMethod", "CyclomaticComplexMethod")
 @Composable
 private fun TopAppBar(
+    openBackgroundMonitoring: () -> Unit,
     modifier: Modifier = Modifier,
     manualBackgroundButtonModifier: Modifier = Modifier
 ) {
@@ -546,6 +554,9 @@ private fun TopAppBar(
                     ) {
                         DropdownMenuItem(
                             text = { Text("Vehicle settings") },
+                            leadingIcon = {
+                                Icon(ImageVector.vectorResource(R.drawable.car_gear_24px), contentDescription = null)
+                            },
                             onClick = {
                                 showMenu = false
                                 navController.navigate("${Path.Settings(currentPath.vehicleUUID)}")
@@ -554,19 +565,36 @@ private fun TopAppBar(
                         )
                         DropdownMenuItem(
                             text = { Text("App settings") },
+                            leadingIcon = {
+                                Icon(ImageVector.vectorResource(R.drawable.settings_24px), contentDescription = null)
+                            },
                             onClick = {
                                 showMenu = false
                                 navController.navigate("${Path.AppSettings}")
                             },
                             modifier = Modifier.testTag(HomeTags.Overflow.appSettings)
                         )
-                        if (isReadingSimulationAvailable()) DropdownMenuItem(
-                            text = { Text("Simulate a reading") },
+                        PersistentScanningMenuItem(
                             onClick = {
                                 showMenu = false
-                                simulateReading = true
+                                openBackgroundMonitoring()
+                                navController.navigate("${Path.AppSettings}")
                             },
+                            modifier = Modifier.testTag(HomeTags.Overflow.persistentScanning)
                         )
+                        if (isReadingSimulationAvailable()) {
+                            HorizontalDivider()
+                            DropdownMenuItem(
+                                text = { Text("Simulate a reading") },
+                                leadingIcon = {
+                                    Icon(ImageVector.vectorResource(R.drawable.science_24px), contentDescription = null)
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    simulateReading = true
+                                },
+                            )
+                        }
                     }
                 }
 
@@ -692,6 +720,7 @@ internal object HomeTags {
         const val root = "HomeTags_Overflow_root"
         const val settings = "HomeTags_Overflow_settings"
         const val appSettings = "HomeTags_Overflow_appSettings"
+        const val persistentScanning = "HomeTags_Overflow_persistentScanning"
     }
 }
 

@@ -11,6 +11,7 @@ import com.masselis.tpmsadvanced.feature.background.usecase.UnexpectedStopUseCas
 import com.masselis.tpmsadvanced.feature.background.usecase.WifiConnectionUseCase
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
@@ -19,18 +20,22 @@ import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
 
 internal class PersistentScanningViewModelTest {
 
     private lateinit var persistentScanning: MutableStateFlow<Boolean>
+    private lateinit var persistentScanningSetUp: MutableStateFlow<Boolean>
     private lateinit var suspendConditions: MutableStateFlow<Boolean>
     private lateinit var suspendScanningOnWifi: MutableStateFlow<Boolean>
     private lateinit var wifiExceptionEnabled: MutableStateFlow<Boolean>
     private var unexpectedStop: UnexpectedStop? = null
+    private lateinit var controller: MonitoringController
 
     private fun test() = PersistentScanningViewModel(
         mockk<AppPreferences> {
             every { persistentScanning } returns this@PersistentScanningViewModelTest.persistentScanning
+            every { persistentScanningSetUp } returns this@PersistentScanningViewModelTest.persistentScanningSetUp
             every { suspendConditions } returns this@PersistentScanningViewModelTest.suspendConditions
             every { suspendScanningOnWifi } returns this@PersistentScanningViewModelTest.suspendScanningOnWifi
             every { wifiExceptionEnabled } returns this@PersistentScanningViewModelTest.wifiExceptionEnabled
@@ -38,16 +43,18 @@ internal class PersistentScanningViewModelTest {
         mockk<ScanPolicyUseCase> { every { decision } returns MutableSharedFlow<ScanDecision>() },
         mockk<WifiConnectionUseCase>(),
         mockk<UnexpectedStopUseCase> { every { consume() } returns unexpectedStop },
-        mockk<MonitoringController>(),
+        controller,
     )
 
     @Before
     fun setup() {
         persistentScanning = MutableStateFlow(true)
+        persistentScanningSetUp = MutableStateFlow(true)
         suspendConditions = MutableStateFlow(true)
         suspendScanningOnWifi = MutableStateFlow(true)
         wifiExceptionEnabled = MutableStateFlow(true)
         unexpectedStop = null
+        controller = mockk { every { stop() } returns true }
     }
 
     @Test
@@ -97,5 +104,20 @@ internal class PersistentScanningViewModelTest {
         unexpectedStop = UnexpectedStop(42L, LowMemory)
         persistentScanning.value = false
         assertNull(test().unexpectedStop.value)
+    }
+
+    @Test
+    fun `the menu's switch turns persistent scanning off and stops the service`() {
+        test().setPersistentScanning(false)
+        assertFalse(persistentScanning.value)
+        verify { controller.stop() }
+    }
+
+    @Test
+    fun `the menu's switch only turns persistent scanning on, the host starts the service`() {
+        persistentScanning.value = false
+        test().setPersistentScanning(true)
+        assertTrue(persistentScanning.value)
+        verify(exactly = 0) { controller.stop() }
     }
 }
