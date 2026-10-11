@@ -27,6 +27,12 @@ internal interface CurrentVehicleDropdownViewModel {
     val stateFlow: StateFlow<State>
     val eventChannel: ReceiveChannel<Event>
 
+    /**
+     * Scans every vehicle's tyres until cancelled, so their alerts are known while the picker is
+     * shown, as the monitor service does in the background: listening to a tyre is what scans it
+     */
+    suspend fun scanVehicles()
+
     fun setCurrent(vehicle: Vehicle)
 
     fun insert(carName: String, kind: Vehicle.Kind)

@@ -10,6 +10,7 @@ import com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorDatabase
 import com.masselis.tpmsadvanced.feature.background.interfaces.AlertNotifier
 import com.masselis.tpmsadvanced.feature.background.interfaces.MonitoringController
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.AlertSilenceViewModel
+import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.AlertingVehiclesViewModel
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.AlertsSettingsViewModel
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.BackgroundViewModel
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.BeaconsViewModel
@@ -23,6 +24,7 @@ import com.masselis.tpmsadvanced.feature.background.usecase.ActivityRecognitionU
 import com.masselis.tpmsadvanced.feature.background.usecase.AlertSilenceUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.AlertSnoozeUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.AlertSpeaker
+import com.masselis.tpmsadvanced.feature.background.usecase.AlertingVehiclesUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.AndroidAutoUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.BeaconDiscoveryUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.BeaconPresenceUseCase
@@ -343,6 +345,10 @@ public interface Bindings {
     ): AlertSilenceViewModel = AlertSilenceViewModel(silenceAlertsUseCase)
 
     @Provides
+    private fun alertingVehiclesViewModel(alertSpeaker: AlertSpeaker): AlertingVehiclesViewModel =
+        AlertingVehiclesViewModel(AlertingVehiclesUseCase(alertSpeaker))
+
+    @Provides
     private fun scanStatusAnnouncementsViewModel(
         appPreferences: AppPreferences,
     ): ScanStatusAnnouncementsViewModel = ScanStatusAnnouncementsViewModel(appPreferences)
@@ -367,6 +373,7 @@ public interface Bindings {
         internal val scanStatusAnnouncementsViewModel: () -> ScanStatusAnnouncementsViewModel,
         internal val alertsSettingsViewModel: () -> AlertsSettingsViewModel,
         internal val alertSilenceViewModel: () -> AlertSilenceViewModel,
+        internal val alertingVehiclesViewModel: () -> AlertingVehiclesViewModel,
         internal val beaconsViewModel: () -> BeaconsViewModel,
         internal val phoneIdleMechanismViewModel: () -> PhoneIdleMechanismViewModel,
     )
