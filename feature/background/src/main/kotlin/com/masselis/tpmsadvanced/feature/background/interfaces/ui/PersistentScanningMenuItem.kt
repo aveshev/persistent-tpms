@@ -15,7 +15,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -26,6 +28,7 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.ui.BellState.Need
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningViewModel
 import com.masselis.tpmsadvanced.feature.background.ioc.Bindings
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision
+import kotlin.math.roundToInt
 
 /**
  * The line of the main screen's menu for persistent scanning, with the top bar's bell in the same
@@ -101,11 +104,29 @@ private fun PersistentScanningMenuItem(
                 checked = state != null,
                 onCheckedChange = onPersistentScanning,
                 enabled = setUp,
+                // Smaller than in the settings, laid out at its scaled size, so "Persistent mode"
+                // fits on one line in a menu at most 280 dp wide
+                modifier = Modifier.layout { measurable, constraints ->
+                    measurable.measure(constraints).let { placeable ->
+                        layout(
+                            (placeable.width * SWITCH_SCALE).roundToInt(),
+                            (placeable.height * SWITCH_SCALE).roundToInt(),
+                        ) {
+                            placeable.placeWithLayer(0, 0) {
+                                scaleX = SWITCH_SCALE
+                                scaleY = SWITCH_SCALE
+                                transformOrigin = TransformOrigin(0f, 0f)
+                            }
+                        }
+                    }
+                },
             )
         }
     },
     modifier = modifier,
 )
+
+private const val SWITCH_SCALE = .75f
 
 @Preview
 @Composable
