@@ -4,7 +4,9 @@ package com.masselis.tpmsadvanced.feature.main.interfaces.composable
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -134,6 +137,9 @@ private val SPARE_READOUT_GAP = 4.dp
 
 /** Between the rear right readout and the spare's, beside it, see [Vehicle]'s spareBeside */
 private val SPARE_BESIDE_GAP = 24.dp
+
+/** The spare's frame beside, and the line leading to it from the spare */
+private val SPARE_LINE_WIDTH = 1.dp
 
 
 /** A mono-wheel's tyre is drawn much taller and narrower than the others, its width following [MONOWHEEL_TYRE_RATIO] */
@@ -948,22 +954,39 @@ private fun CarWithSpare(
         // Lying flat behind the car, its tyre is drawn across
         val (spare, spareSpan, spareStats, spareTap) = createRefs()
         ImageSpan(spareSpan, .34f, imageHeight)
-        // Beside, a line leads from the spare to under its readout
+        // Beside, a line leads from the spare to under its readout's frame, then up to it
         if (spareBeside) createRefs().let { (tyreSpan, line) ->
             // As wide as the spare's tyre drawn across
             ImageSpan(tyreSpan, TYRE_HEIGHT / IMAGE_RATIO, imageHeight)
-            val axle = imageGuideline(SPARE_Y, imageHeight)
-            Box(
-                Modifier
-                    .constrainAs(line) {
-                        start.linkTo(tyreSpan.end)
-                        end.linkTo(spareStats.end)
-                        centerAround(axle)
-                        width = Dimension.fillToConstraints
-                        height = Dimension.value(1.dp)
+            val color = MaterialTheme.colorScheme.onBackground
+            Canvas(
+                Modifier.constrainAs(line) {
+                    start.linkTo(tyreSpan.end)
+                    end.linkTo(spareStats.end)
+                    top.linkTo(vehicleImage.top)
+                    bottom.linkTo(vehicleImage.bottom)
+                    width = Dimension.fillToConstraints
+                    height = Dimension.fillToConstraints
+                }
+            ) {
+                // As tall as the image, it places the frame as outlineCenteredOn does
+                val imageHeightPx = size.height.roundToInt()
+                val frameBottom = (imageHeightPx * TYRE_HEIGHT)
+                    .roundToInt()
+                    .coerceAtLeast(basicReadoutHeight.roundToPx())
+                    .coerceAtMost(imageHeightPx)
+                    .let { height ->
+                        (outlineCenter(imageHeightPx, rearY, height, rearBottom) - height / 2f)
+                            .roundToInt()
+                            .coerceIn(0, imageHeightPx - height)
+                            .plus(height)
                     }
-                    .background(MaterialTheme.colorScheme.onBackground)
-            )
+                    .plus(OUTLINE_OUTSET.toPx())
+                val turn = Offset(size.width - readoutSlotWidth.toPx() / 2, size.height * SPARE_Y)
+                val stroke = SPARE_LINE_WIDTH.toPx()
+                drawLine(color, Offset(0f, turn.y), turn, stroke)
+                drawLine(color, turn, Offset(turn.x, frameBottom), stroke)
+            }
         }
         val spareAxle = imageGuideline(SPARE_Y, imageHeight)
         // Drawn across, the spare's tyre is as tall as a tyre is wide
@@ -1032,6 +1055,44 @@ private fun CarWithSpare(
                     height = Dimension.fillToConstraints
                 },
             )
+            // Beside, framed like its outline and titled on its border, over the outline when
+            // there's one. Taps go through to it.
+            if (spareBeside) createRef().also { frame ->
+                Box(
+                    Modifier
+                        .constrainAs(frame) {
+                            top.linkTo(spareStats.top)
+                            bottom.linkTo(spareStats.bottom)
+                            start.linkTo(spareStats.start)
+                            end.linkTo(spareStats.end)
+                            width = Dimension.fillToConstraints
+                            height = Dimension.fillToConstraints
+                        }
+                        .outlineCenteredOn(rearY, basicReadoutHeight, bottomAt = rearBottom)
+                        .outset(OUTLINE_OUTSET)
+                ) {
+                    // Under the title: a border draws over what it's around
+                    Box(
+                        Modifier
+                            .matchParentSize()
+                            .border(SPARE_LINE_WIDTH, MaterialTheme.colorScheme.onBackground, OUTLINE_SHAPE)
+                    )
+                    Text(
+                        text = "Spare",
+                        style = MaterialTheme.typography.labelMedium,
+                        modifier = Modifier
+                            .padding(start = 12.dp)
+                            // Centered on the border
+                            .layout { measurable, constraints ->
+                                val placeable = measurable.measure(constraints)
+                                layout(placeable.width, placeable.height) { placeable.place(0, -placeable.height / 2) }
+                            }
+                            // Cuts the border
+                            .background(MaterialTheme.colorScheme.background)
+                            .padding(horizontal = 4.dp),
+                    )
+                }
+            }
         }
         // Last, over everything else
         createRef().also { ref ->

@@ -44,7 +44,8 @@ import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
 
 /** How far a location's outline reaches past its tyre and readout */
 internal val OUTLINE_OUTSET = 6.dp
-private val SHAPE = RoundedCornerShape(12.dp)
+/** A location's outline's corners */
+internal val OUTLINE_SHAPE = RoundedCornerShape(12.dp)
 
 /** A location a moving sensor went through, greyed out */
 private const val PASSED_ALPHA = .38f
@@ -100,8 +101,8 @@ internal fun TyreTapArea(
                     ?.let { report -> onGloballyPositioned { report(location, it.boundsInWindow()) } }
                     ?: this
             }
-            .run { outline?.let { border(2.dp, it, SHAPE) } ?: this }
-            .clip(SHAPE)
+            .run { outline?.let { border(2.dp, it, OUTLINE_SHAPE) } ?: this }
+            .clip(OUTLINE_SHAPE)
             .run { onTap?.let { clickable(onClick = it) } ?: this }
             .testTag(TyreTapAreaTags.root(location))
     )
@@ -158,7 +159,7 @@ internal fun TyreTapArea(
 }
 
 /** Grows by [outset] on every side, around what it's laid out on */
-private fun Modifier.outset(outset: Dp) = layout { measurable, constraints ->
+internal fun Modifier.outset(outset: Dp) = layout { measurable, constraints ->
     val extra = outset.roundToPx() * 2
     val placeable = measurable.measure(
         constraints.copy(
