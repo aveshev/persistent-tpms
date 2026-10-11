@@ -49,9 +49,7 @@ internal fun VehicleBeside(
         ),
         modifier = modifier,
     ) { (sides, vehicles), constraints ->
-        val span = outlines.values
-            .takeIf { it.isNotEmpty() }
-            ?.let { all -> all.minOf { it.left } - vehicleX to all.maxOf { it.right } - vehicleX }
+        val span = outlines.spanFrom(vehicleX)
         val minMargin = MIN_SIDE_MARGIN.toPx()
         val sidePlaceables = sides.map { measurable ->
             measurable.measure(
@@ -80,6 +78,75 @@ internal fun VehicleBeside(
         }
     }
 }
+
+/**
+ * In a wide window, see [isWideWindow], the vehicle needs all the height: the top bar's [start] and
+ * [end] stay in the top corners, beside the [vehicle] rather than over it, its [outlines] centered
+ * in the room they leave. [start] is as wide as it asks, up to what leaves the vehicle and [end]
+ * room with [MIN_SIDE_MARGIN] on each side. Until the outlines are placed, the vehicle is at the
+ * left edge.
+ */
+@Composable
+internal fun VehicleBetweenCorners(
+    /** Where each location's outline is in the window, see [TyreTaps.onOutlinePositioned] */
+    outlines: Map<Location, Rect>,
+    start: @Composable () -> Unit,
+    end: @Composable () -> Unit,
+    vehicle: @Composable (Modifier) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // Where the vehicle's box is in the window, see VehicleBeside
+    var vehicleX by remember { mutableFloatStateOf(0f) }
+    Layout(
+        contents = listOf(
+            start,
+            end,
+            {
+                vehicle(
+                    Modifier
+                        .fillMaxSize()
+                        .onGloballyPositioned { vehicleX = it.positionInWindow().x }
+                )
+            },
+        ),
+        modifier = modifier,
+    ) { (starts, ends, vehicles), constraints ->
+        val span = outlines.spanFrom(vehicleX)
+        val corner = Constraints(maxWidth = constraints.maxWidth, maxHeight = constraints.maxHeight)
+        val endPlaceables = ends.map { it.measure(corner) }
+        val endWidth = endPlaceables.maxOfOrNull { it.width } ?: 0
+        val startPlaceables = starts.map { measurable ->
+            measurable.measure(
+                corner.copy(
+                    maxWidth = span
+                        ?.let { (left, right) ->
+                            constraints.maxWidth - endWidth - (right - left) - MIN_SIDE_MARGIN.toPx() * 2
+                        }
+                        ?.roundToInt()
+                        ?.coerceAtLeast(0)
+                        ?: constraints.maxWidth
+                )
+            )
+        }
+        val startWidth = startPlaceables.maxOfOrNull { it.width } ?: 0
+        val vehiclePlaceables = vehicles.map { it.measure(constraints) }
+        layout(constraints.maxWidth, constraints.maxHeight) {
+            val vehicleShift = span
+                ?.let { (left, right) ->
+                    startWidth + (constraints.maxWidth - startWidth - endWidth - (right - left)) / 2 - left
+                }
+                ?: 0f
+            vehiclePlaceables.forEach { it.place(vehicleShift.roundToInt(), 0) }
+            startPlaceables.forEach { it.place(0, 0) }
+            endPlaceables.forEach { it.place(constraints.maxWidth - it.width, 0) }
+        }
+    }
+}
+
+/** From the left of the outlines to their right, relative to [x], none until they're placed */
+private fun Map<Location, Rect>.spanFrom(x: Float): Pair<Float, Float>? = values
+    .takeIf { it.isNotEmpty() }
+    ?.let { all -> all.minOf { it.left } - x to all.maxOf { it.right } - x }
 
 private val MIN_SIDE_MARGIN = 8.dp
 

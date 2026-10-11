@@ -8,7 +8,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,8 +24,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -181,20 +178,14 @@ internal fun VehicleHome(
                             scanBluetooth = {
                                 navController.navigate("${Path.BluetoothAssign(vehicleUuid, locations.indexOf(it))}")
                             },
-                            side = {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    ProvideTextStyle(MaterialTheme.typography.titleLarge) {
-                                        CurrentVehicleDropdown(
-                                            modifier = Modifier.testTag(carListDropdownMenu),
-                                            alerts = alertingVehicles(),
-                                        )
-                                    }
-                                    Row(Modifier.padding(top = 8.dp)) {
-                                        HomeActions(vehicleUuid, manualBackgroundButtonModifier)
-                                    }
-                                }
-                            },
                             navigationIcon = { DetectedActivitiesIndicator() },
+                            title = {
+                                CurrentVehicleDropdown(
+                                    modifier = Modifier.testTag(carListDropdownMenu),
+                                    alerts = alertingVehicles(),
+                                )
+                            },
+                            actions = { HomeActions(vehicleUuid, manualBackgroundButtonModifier) },
                         )
                     }
                     composable("${Path.Settings(vehicleComponent.vehicle.uuid)}") {

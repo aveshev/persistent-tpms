@@ -6,12 +6,16 @@ import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -166,17 +170,37 @@ public fun CurrentVehicle(
     center: @Composable (Modifier) -> Unit = {},
     scanQrCode: (Location) -> Unit = {},
     scanBluetooth: (Location) -> Unit = {},
-    /** In a wide window, see [isWideWindow], the top bar makes way: what it shows, beside the vehicle */
-    side: @Composable () -> Unit = {},
-    /** In a wide window, the top bar's navigation icon, in its place */
+    /**
+     * In a wide window, see [isWideWindow], the top bar makes way: what it shows is drawn in the
+     * top corners instead, beside the vehicle
+     */
     navigationIcon: @Composable () -> Unit = {},
+    title: @Composable () -> Unit = {},
+    actions: @Composable RowScope.() -> Unit = {},
 ) {
     val component = LocalVehicleComponent.current
-    if (isWideWindow()) Box(modifier) {
+    if (isWideWindow()) {
         val outlines = remember { mutableStateMapOf<Location, Rect>() }
-        VehicleBeside(
+        VehicleBetweenCorners(
             outlines = outlines,
-            side = side,
+            // Laid out like the top bar's
+            start = {
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(TOP_BAR_HEIGHT)) {
+                    navigationIcon()
+                    Box(Modifier.padding(horizontal = 16.dp)) {
+                        ProvideTextStyle(MaterialTheme.typography.titleLarge, title)
+                    }
+                }
+            },
+            end = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .height(TOP_BAR_HEIGHT)
+                        .padding(end = 4.dp),
+                    content = actions,
+                )
+            },
             vehicle = { vehicleModifier ->
                 Vehicle(
                     component = component,
@@ -191,9 +215,8 @@ public fun CurrentVehicle(
                     ),
                 )
             },
-            modifier = Modifier.fillMaxSize(),
+            modifier = modifier,
         )
-        Box(contentAlignment = Alignment.CenterStart, modifier = Modifier.height(TOP_BAR_HEIGHT)) { navigationIcon() }
     } else Vehicle(
         component = component,
         snackbarHostState = snackbarHostState,
