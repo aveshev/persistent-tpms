@@ -115,7 +115,7 @@ private const val TYRE_HEIGHT = .165f
 private const val SPARE_HALF_HEIGHT = TYRE_HEIGHT * TYRE_ASPECT_RATIO / 2f
 
 
-/** A mono-wheel's tyre is drawn much taller and narrower than the others, its width following [MONOWHEEL_TYRE_RATIO] */
+/** A monowheel's tyre is drawn much taller and narrower than the others, its width following [MONOWHEEL_TYRE_RATIO] */
 private const val MONOWHEEL_TYRE_HEIGHT = .377f
 private const val MONOWHEEL_TYRE_RATIO = 11.2f / 52f
 
@@ -928,7 +928,7 @@ private fun Monowheel(
 ) {
     ConstraintLayout(modifier = modifier) {
         val (vehicleImage, tyre, stats, tap) = createRefs()
-        VehicleImage(vehicleImage, R.drawable.schema_monowheel_top_view, "Image of your mono-wheel", imageHeight)
+        VehicleImage(vehicleImage, R.drawable.schema_monowheel_top_view, "Image of your monowheel", imageHeight)
         val wheelY = .505f
         val axle = imageGuideline(wheelY, imageHeight)
         with(Location.Single) {
