@@ -68,7 +68,7 @@ internal fun Tyre(
     modifier: Modifier = Modifier,
     /** An alerting tyre blinks, but on the sensors' page */
     blinks: Boolean = true,
-    /** Its width over its height, a mono-wheel's is narrower */
+    /** Its width over its height, a monowheel's is narrower */
     aspectRatio: Float = TYRE_ASPECT_RATIO,
     vehicleComponent: Lazy<VehicleComponent> = lazyOf(LocalVehicleComponent.current),
     viewModel: TyreIconViewModel = vehicleComponent.value

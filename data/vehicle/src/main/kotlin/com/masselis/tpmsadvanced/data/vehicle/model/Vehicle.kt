@@ -162,7 +162,7 @@ public data class Vehicle(
                 override fun toAxleOrNull(): Axle = Axle(SensorLocation.Axle.REAR)
             }
 
-            /** The only wheel of a mono-wheel */
+            /** The only wheel of a monowheel */
             @Parcelize
             public data object Single : Location {
                 override fun toAxleOrNull(): Axle? = null
