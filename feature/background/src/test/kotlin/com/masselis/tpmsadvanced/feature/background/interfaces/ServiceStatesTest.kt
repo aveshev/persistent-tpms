@@ -14,22 +14,27 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.S
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.Idle
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.MonitoringFailure
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.ScanFailure
+import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.ScanKeepsFailing
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.ScanRetrying
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.Starting
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.Suspended
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.CABLE
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanSuspensionUseCase.Reason.WIFI
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 
 internal class ServiceStatesTest {
 
@@ -50,6 +55,9 @@ internal class ServiceStatesTest {
             emitAll(merge(active, scanFailures.map { throw it }))
         }
     }
+
+    context(scope: TestScope)
+    private fun markNow() = scope.testScheduler.timeSource.markNow()
 
     @Before
     fun setup() {
@@ -99,11 +107,37 @@ internal class ServiceStatesTest {
     fun `a refused start is told while the scanner retries it`() = runTest {
         test().test {
             skipItems(2)
-            tyreScanStatus.value = Retrying(SCAN_FAILED_APPLICATION_REGISTRATION_FAILED)
+            tyreScanStatus.value = Retrying(SCAN_FAILED_APPLICATION_REGISTRATION_FAILED, markNow())
             assertEquals(ScanRetrying(SCAN_FAILED_APPLICATION_REGISTRATION_FAILED), awaitItem())
             tyreScanStatus.value = Scanning
             assertEquals(ACTIVE, awaitItem())
             assertEquals(1, scans)
+        }
+    }
+
+    @Test
+    fun `starts refused for 10 minutes are told as failing, until it scans again`() = runTest {
+        test().test {
+            skipItems(2)
+            tyreScanStatus.value = Retrying(SCAN_FAILED_APPLICATION_REGISTRATION_FAILED, markNow())
+            assertEquals(ScanRetrying(SCAN_FAILED_APPLICATION_REGISTRATION_FAILED), awaitItem())
+            delay(10.minutes - 1.milliseconds)
+            expectNoEvents()
+            delay(1.milliseconds)
+            assertEquals(ScanKeepsFailing(SCAN_FAILED_APPLICATION_REGISTRATION_FAILED), awaitItem())
+            tyreScanStatus.value = Scanning
+            assertEquals(ACTIVE, awaitItem())
+        }
+    }
+
+    @Test
+    fun `the time the starts were already refused for counts`() = runTest {
+        test().test {
+            skipItems(2)
+            tyreScanStatus.value = Retrying(SCAN_FAILED_INTERNAL_ERROR, markNow() - 9.minutes)
+            assertEquals(ScanRetrying(SCAN_FAILED_INTERNAL_ERROR), awaitItem())
+            delay(1.minutes)
+            assertEquals(ScanKeepsFailing(SCAN_FAILED_INTERNAL_ERROR), awaitItem())
         }
     }
 
@@ -132,6 +166,7 @@ internal class ServiceStatesTest {
 
         // ScanCallback constants
         const val SCAN_FAILED_APPLICATION_REGISTRATION_FAILED = 2
+        const val SCAN_FAILED_INTERNAL_ERROR = 3
         const val SCAN_FAILED_FEATURE_UNSUPPORTED = 4
     }
 }

@@ -32,6 +32,7 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.S
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.Idle
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.MonitoringFailure
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.ScanFailure
+import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.ScanKeepsFailing
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.ScanRetrying
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.Starting
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.Suspended
@@ -45,6 +46,7 @@ import com.masselis.tpmsadvanced.feature.main.usecase.VehicleListUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
@@ -57,6 +59,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.transformLatest
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * The monitor service's notification, telling the status of the scan. The tyres' alerts are
@@ -124,19 +128,20 @@ internal class ServiceNotifier(
                         appContext,
                         when (state) {
                             Starting, is Active, is Suspended, Idle, BluetoothOff, is ScanRetrying -> channelNameWhenOk
-                            is ScanFailure, MonitoringFailure -> channelNameForFailure
+                            is ScanKeepsFailing, is ScanFailure, MonitoringFailure -> channelNameForFailure
                         }
                     )
                     .setSmallIcon(
                         when (state) {
                             Starting, is Active, is Suspended, Idle -> R.drawable.car_tire
-                            BluetoothOff, is ScanRetrying, is ScanFailure, MonitoringFailure -> R.drawable.car_tire_alert
+                            BluetoothOff, is ScanRetrying, is ScanKeepsFailing, is ScanFailure, MonitoringFailure ->
+                                R.drawable.car_tire_alert
                         }
                     )
                     .setPriority(
                         when (state) {
                             Starting, is Active, is Suspended, Idle, BluetoothOff, is ScanRetrying -> PRIORITY_LOW
-                            is ScanFailure, MonitoringFailure -> PRIORITY_MAX
+                            is ScanKeepsFailing, is ScanFailure, MonitoringFailure -> PRIORITY_MAX
                         }
                     )
                     .setContentText(
@@ -152,11 +157,15 @@ internal class ServiceNotifier(
                             is ScanRetrying -> "The Android system refused the Bluetooth scan (error " +
                                 "${state.reason}), background scanning tries again shortly"
 
-                            is ScanFailure -> "The Android system can't run the Bluetooth scan (error " +
-                                "${state.reason}), Persistent TPMS must be restarted"
+                            is ScanKeepsFailing -> "The Android system keeps refusing the Bluetooth scan " +
+                                "(error ${state.reason}), the tyres aren't monitored. Background scanning " +
+                                "keeps trying"
+
+                            is ScanFailure -> "This phone can't scan for Bluetooth devices (error " +
+                                "${state.reason}), the tyres can't be monitored in the background"
 
                             MonitoringFailure -> "Background monitoring stopped because of an unexpected " +
-                                "error, Persistent TPMS must be restarted"
+                                "error, restart the app to monitor again"
 
                             is Suspended -> state.decision.explanation()
                             Idle -> ScanDecision.Idle.explanation()
@@ -166,7 +175,8 @@ internal class ServiceNotifier(
                         when (state) {
                             // Opens the app on its current vehicle. Bluetooth off: the app tells it
                             // and has the button to turn it on
-                            Starting, is Active, is Suspended, Idle, BluetoothOff, is ScanRetrying -> appContext
+                            Starting, is Active, is Suspended, Idle, BluetoothOff, is ScanRetrying,
+                            is ScanKeepsFailing -> appContext
                                 .packageManager
                                 .getLaunchIntentForPackage(appContext.packageName)
                                 ?.let { getActivity(appContext, requestCode, it, FLAG_IMMUTABLE) }
@@ -181,7 +191,7 @@ internal class ServiceNotifier(
                         when (state) {
                             // Persistent scanning is turned off from the app's settings, only the
                             // manual monitoring stops from here, even while waiting for Bluetooth
-                            is Active, BluetoothOff, is ScanRetrying -> if (
+                            is Active, BluetoothOff, is ScanRetrying, is ScanKeepsFailing -> if (
                                 (state as? Active)?.decision?.causes?.contains(MANUAL)
                                     ?: (scanPolicyUseCase.currentDecision as? ScanDecision.Active)?.causes?.contains(MANUAL)
                                     ?: false
@@ -198,9 +208,10 @@ internal class ServiceNotifier(
                                 ).build()
                             )
 
-                            Starting, is Suspended, Idle -> Unit
+                            // Restarting doesn't give the phone the feature
+                            Starting, is Suspended, Idle, is ScanFailure -> Unit
 
-                            is ScanFailure, MonitoringFailure -> addAction(
+                            MonitoringFailure -> addAction(
                                 NotificationCompat.Action.Builder(
                                     null,
                                     "Restart app",
@@ -256,6 +267,9 @@ internal class ServiceNotifier(
         /** The system refused the scan for a [reason] that can go away, it's tried again shortly */
         data class ScanRetrying(val reason: Int) : State
 
+        /** [ScanRetrying] for [SCAN_KEEPS_FAILING_AFTER] in a row: told as a failure, it's still tried again */
+        data class ScanKeepsFailing(val reason: Int) : State
+
         /** The system can't run the scan, whatever the attempts: monitoring stopped */
         data class ScanFailure(val reason: Int) : State
 
@@ -281,8 +295,9 @@ internal class ServiceNotifier(
 /**
  * What the service shows for each decision: the [active] states while active, unless the
  * [tyreScanStatus] tells the scan waits for Bluetooth or retries a refused start. The scanner
- * starts the scan over by itself then. Only the failures nothing can recover from end the flow,
- * with the state telling which. Each state differs from the previous one.
+ * starts the scan over by itself then. Retrying for [SCAN_KEEPS_FAILING_AFTER] is told as a
+ * failure. Only the failures nothing can recover from end the flow, with the state telling which.
+ * Each state differs from the previous one.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 internal fun Flow<ScanDecision>.serviceStates(
@@ -295,13 +310,21 @@ internal fun Flow<ScanDecision>.serviceStates(
         // that call if the app launches already suspended (e.g. opened while already in Doze).
         is ScanDecision.Suspended -> flowOf(Suspended(decision))
         ScanDecision.Idle -> flowOf(Idle)
-        is ScanDecision.Active -> combine(active(decision), tyreScanStatus) { state, status ->
-            when (status) {
-                WaitingForBluetooth -> BluetoothOff
-                is Retrying -> ScanRetrying(status.reason)
-                Scanning, null -> state
-            }
-        }
+        is ScanDecision.Active -> combine(
+            active(decision),
+            tyreScanStatus.transformLatest<ScanStatus?, ServiceNotifier.State?> { status ->
+                when (status) {
+                    WaitingForBluetooth -> emit(BluetoothOff)
+                    is Retrying -> {
+                        emit(ScanRetrying(status.reason))
+                        delay(SCAN_KEEPS_FAILING_AFTER - status.since.elapsedNow())
+                        emit(ScanKeepsFailing(status.reason))
+                    }
+
+                    Scanning, null -> emit(null)
+                }
+            },
+        ) { state, scanState -> scanState ?: state }
     }
 }
     // The service must call startForeground() shortly after being started, before the database
@@ -312,3 +335,5 @@ internal fun Flow<ScanDecision>.serviceStates(
         emit(if (cause is Failure.Scan) ScanFailure(cause.reason) else MonitoringFailure)
     }
     .distinctUntilChanged()
+
+private val SCAN_KEEPS_FAILING_AFTER = 10.minutes
