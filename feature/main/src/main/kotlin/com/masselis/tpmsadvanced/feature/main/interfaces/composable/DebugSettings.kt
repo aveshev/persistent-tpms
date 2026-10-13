@@ -27,8 +27,8 @@ import kotlinx.coroutines.launch
 
 /**
  * The page opened from the "Debug" item of [DeveloperOptionsSettings]: what the sensors and the
- * phone report, shown on the home screen. [additionalItems] are appended to the group, for debug
- * options owned by other features.
+ * phone report, shown on the home screen, and how the tyres are scanned. [additionalItems] are
+ * appended to the first group, for debug options owned by other features.
  */
 @Composable
 public fun DebugSettings(
@@ -46,6 +46,7 @@ internal fun DebugSettings(
     OnLeaveEffect(viewModel::disableIfNoneSelected)
     val showSensorId by viewModel.showSensorId.collectAsState()
     val showSensorFlags by viewModel.showSensorFlags.collectAsState()
+    val balancedAfterFirstReading by viewModel.balancedAfterFirstReading.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     DebugSettings(
@@ -53,6 +54,8 @@ internal fun DebugSettings(
         onShowSensorId = { viewModel.showSensorId.value = it },
         showSensorFlags = showSensorFlags,
         onShowSensorFlags = { viewModel.showSensorFlags.value = it },
+        balancedAfterFirstReading = balancedAfterFirstReading,
+        onBalancedAfterFirstReading = { viewModel.balancedAfterFirstReading.value = it },
         onExportDatabase = {
             scope.launch {
                 viewModel
@@ -79,13 +82,15 @@ private fun DebugSettings(
     onShowSensorId: (Boolean) -> Unit,
     showSensorFlags: Boolean,
     onShowSensorFlags: (Boolean) -> Unit,
+    balancedAfterFirstReading: Boolean,
+    onBalancedAfterFirstReading: (Boolean) -> Unit,
     onExportDatabase: () -> Unit,
     modifier: Modifier = Modifier,
     additionalItems: @Composable ColumnScope.() -> Unit = {},
 ) = Column(modifier) {
     @Suppress("MaxLineLength")
     SettingsIntro(
-        "What the sensors and the phone report, to help investigate them. Turning Debug off in the app settings hides all of it, and keeps what is selected here."
+        "What the sensors and the phone report, to help investigate them. Turning Debug off in the app settings hides or turns off all of it, and keeps what is selected here."
     )
     SettingsGroup(Modifier.padding(top = 24.dp)) {
         SwitchSettingsItem(
@@ -102,6 +107,16 @@ private fun DebugSettings(
             modifier = Modifier.testTag(DebugSettingsTags.showSensorFlags),
         )
         additionalItems()
+    }
+    SettingsSectionHeader("Scanning")
+    SettingsGroup {
+        SwitchSettingsItem(
+            headline = "Balanced after the first reading",
+            supporting = "Low latency only until a reading comes in, as before: less battery, more missed updates",
+            checked = balancedAfterFirstReading,
+            onCheckedChange = onBalancedAfterFirstReading,
+            modifier = Modifier.testTag(DebugSettingsTags.balancedAfterFirstReading),
+        )
     }
     SettingsSectionHeader("Data")
     SettingsGroup {
@@ -122,6 +137,8 @@ internal fun DebugSettingsPreview() {
         onShowSensorId = {},
         showSensorFlags = false,
         onShowSensorFlags = {},
+        balancedAfterFirstReading = false,
+        onBalancedAfterFirstReading = {},
         onExportDatabase = {},
     )
 }
@@ -130,5 +147,6 @@ internal fun DebugSettingsPreview() {
 internal object DebugSettingsTags {
     const val showSensorId = "DebugSettingsTags_showSensorId"
     const val showSensorFlags = "DebugSettingsTags_showSensorFlags"
+    const val balancedAfterFirstReading = "DebugSettingsTags_balancedAfterFirstReading"
     const val exportDatabase = "DebugSettingsTags_exportDatabase"
 }

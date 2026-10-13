@@ -15,6 +15,7 @@ internal class DebugSettingsViewModel(
     val debugOptions = appPreferences.debugOptions
     val showSensorId = appPreferences.showSensorId
     val showSensorFlags = appPreferences.showSensorFlags
+    val balancedAfterFirstReading = appPreferences.balancedAfterFirstReading
 
     // Owned by the background feature, which also puts their items on the debug page
     val showDetectedActivities = appPreferences.showDetectedActivities
@@ -28,7 +29,7 @@ internal class DebugSettingsViewModel(
         .also { databaseExport.exportTo(it) }
 
     fun disableIfNoneSelected() {
-        listOf(showSensorId, showSensorFlags, showDetectedActivities, announceScanStatus)
+        listOf(showSensorId, showSensorFlags, showDetectedActivities, announceScanStatus, balancedAfterFirstReading)
             .none { it.value }
             .also { if (it) debugOptions.value = false }
     }

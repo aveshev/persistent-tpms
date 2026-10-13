@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeMark
 
 public interface BluetoothLeScanner {
@@ -97,4 +98,14 @@ public interface BluetoothLeScanner {
     public fun missingPermission(): List<String>
 
     public val isBluetoothRequired: Boolean
+
+    public companion object {
+        /**
+         * Within this, a sensor's identical advertisement is another copy of the same burst, and
+         * dropped. A sensor sends each reading several times in a burst of under a second, up to
+         * a few bursts in a couple of seconds, and Pecham sensors send one every 60 s while riding,
+         * often unchanged: an unchanged one still tells the sensor was heard.
+         */
+        public val BURST: Duration = 50.seconds
+    }
 }

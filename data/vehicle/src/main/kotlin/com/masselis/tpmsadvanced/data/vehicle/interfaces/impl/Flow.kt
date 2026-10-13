@@ -12,9 +12,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeMark
@@ -74,6 +76,23 @@ internal fun <T> Flow<T>.recovering(
             true
         }
         .collect { send(it) }
+}
+
+/**
+ * Drops an element whose [key] was let through less than [window] earlier, by [time]: a
+ * `distinctUntilChangedBy` that forgets a key after [window], and that other keys in between don't
+ * reset.
+ */
+internal fun <T> Flow<T>.distinctWithin(window: Duration, key: (T) -> Any, time: (T) -> Duration): Flow<T> = flow {
+    // When each key was last let through, only those still within the window
+    val passed = mutableMapOf<Any, Duration>()
+    collect { element ->
+        passed.values.removeAll { time(element) - it >= window }
+        element
+            .takeIf { key(it) !in passed }
+            ?.also { passed[key(it)] = time(it) }
+            ?.also { emit(it) }
+    }
 }
 
 private val logger = Logger.withTag("BluetoothLeScannerImpl")

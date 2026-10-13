@@ -47,12 +47,14 @@ internal fun DeveloperOptionsSettings(
     val sensorFlags by viewModel.showSensorFlags.collectAsState()
     val activities by viewModel.showDetectedActivities.collectAsState()
     val announcements by viewModel.announceScanStatus.collectAsState()
+    val balanced by viewModel.balancedAfterFirstReading.collectAsState()
     val selected = listOfNotNull(
         // Same order as their page
         "Sensor ID".takeIf { sensorId },
         "Sensor flags".takeIf { sensorFlags },
         "Detected activities".takeIf { activities },
         "Status announcements".takeIf { announcements },
+        "Balanced scanning".takeIf { balanced },
     )
     SettingsGroup(modifier) {
         DemoModeSettingsItem()

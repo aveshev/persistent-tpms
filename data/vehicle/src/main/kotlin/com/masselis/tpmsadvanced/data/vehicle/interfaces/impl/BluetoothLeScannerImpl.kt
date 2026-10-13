@@ -52,7 +52,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOn
@@ -186,11 +185,13 @@ internal class BluetoothLeScannerImpl(
     )
         .mapNotNull { result ->
             logger.v { "Sensor found during scan. Address: ${result.device.address}, scan bytes: ${result.scanRecord?.bytes?.toHexString()}" }
-            result.scanRecord?.advertisementHex?.let { Triple(result.device.address, result.rssi, it) }
+            result.scanRecord?.advertisementHex?.let {
+                Packet(result.device.address, result.rssi, it, result.timestampNanos.nanoseconds)
+            }
         }
-        // A real sensor sends the same advertisement up to 10 times in a short time, only a change
-        // goes through. The signal strength isn't compared, it changes from one to the next.
-        .distinctUntilChangedBy { (address, _, advertisement) -> address to advertisement }
+        // A real sensor sends the same advertisement up to 10 times in a short time, only the first
+        // copy goes through. The signal strength isn't compared, it changes from one to the next.
+        .distinctWithin(BluetoothLeScanner.BURST, { it.address to it.advertisement }, Packet::receivedAt)
         .mapNotNull { (address, rssi, advertisement) ->
             AdvertisingPacket(advertisement.hexToByteArray())
                 .decode()
@@ -295,6 +296,9 @@ internal class BluetoothLeScannerImpl(
      * drops a running scan then, without telling it to the app. See [recovering].
      */
     internal class BluetoothOff(adapterState: Int?) : Exception("BluetoothOff(adapterState=$adapterState)")
+
+    /** [receivedAt] is on the clock of `SystemClock.elapsedRealtimeNanos()` */
+    private data class Packet(val address: String, val rssi: Int, val advertisement: String, val receivedAt: Duration)
 
     @OptIn(ExperimentalUnsignedTypes::class)
     companion object {

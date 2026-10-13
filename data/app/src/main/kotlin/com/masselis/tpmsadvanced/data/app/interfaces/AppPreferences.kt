@@ -59,6 +59,16 @@ public class AppPreferences internal constructor(
         sharedPreferences.edit { putBoolean("ANNOUNCE_SCAN_STATUS", newValue) }
     }
 
+    /**
+     * Switches the tyre scan to balanced after its first reading, as it used to, instead of keeping
+     * it at low latency the whole time it runs (main screen shown, or persistent scanning active)
+     */
+    public val balancedAfterFirstReading: MutableStateFlow<Boolean> = observableStateFlow(
+        sharedPreferences.getBoolean("BALANCED_AFTER_FIRST_READING", false)
+    ) { _, newValue ->
+        sharedPreferences.edit { putBoolean("BALANCED_AFTER_FIRST_READING", newValue) }
+    }
+
     public val showTimeSinceUpdate:MutableStateFlow<Boolean> = observableStateFlow(
         sharedPreferences.getBoolean("SHOW_TIME_SINCE_UPDATE", true)
     ) { _, newValue ->

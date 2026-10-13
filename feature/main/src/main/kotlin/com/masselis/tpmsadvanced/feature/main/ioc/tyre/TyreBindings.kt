@@ -34,6 +34,7 @@ import dev.zacsweers.metro.Inject
 import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.combine
 
 @Suppress("unused", "MaxLineLength", "FunctionNaming")
 @ContributesTo(scope = TyreComponent.Scope::class)
@@ -102,8 +103,14 @@ public interface TyreBindings {
     ): TyreAtmosphereUseCase = TyreAtmosphereUseCase(listenTyreUseCase, calibrationUseCase)
 
     @Provides
-    private fun listenTyreSmartDutyUseCase(scanner: LocatedTyreScannerUseCase): ListenTyreSmartDutyUseCase =
-        ListenTyreSmartDutyUseCase(scanner)
+    private fun listenTyreSmartDutyUseCase(
+        scanner: LocatedTyreScannerUseCase,
+        appPreferences: AppPreferences,
+    ): ListenTyreSmartDutyUseCase = ListenTyreSmartDutyUseCase(
+        scanner,
+        // A debug option: turning Debug off turns it off too
+        combine(appPreferences.debugOptions, appPreferences.balancedAfterFirstReading, Boolean::and),
+    )
 
     // Single, it keeps the sensor it detects for TyreActionsViewModel
     @SingleIn(TyreComponent.Scope::class)

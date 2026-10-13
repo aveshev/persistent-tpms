@@ -2,6 +2,7 @@ package com.masselis.tpmsadvanced.feature.main.usecase
 
 import com.masselis.tpmsadvanced.core.common.dematerializeCompletion
 import com.masselis.tpmsadvanced.core.common.materializeCompletion
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.ReadingDatabase
 import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.shareIn
+import kotlin.time.DurationUnit
 
 internal interface ListenTyreWithDatabaseUseCase : ListenTyreUseCase {
     class Impl(
@@ -70,7 +72,7 @@ internal interface ListenTyreWithDatabaseUseCase : ListenTyreUseCase {
         override fun listen(): Flow<Tyre.Located> = flow
 
         private companion object {
-            const val BURST_SECONDS = 60.0
+            val BURST_SECONDS = BluetoothLeScanner.BURST.toDouble(DurationUnit.SECONDS)
             const val PRUNE_EVERY = 500
         }
     }
