@@ -172,21 +172,31 @@ private const val TRAILER_TRACK = .86f
 private const val TADPOLE_FRONT_TRACK = .58f
 
 /**
- * How far inside the image's edge the readouts' tyres reach, as a fraction of the image width. The
- * readouts sit against their tyre, not against the image's edge: the image grows by as much, so the
- * outlines reach [SCREEN_MARGIN] from the screen edges. The others' readouts sit against the image.
+ * Width of a body at an axle, as a fraction of the image width, where it reaches past the tyres
+ * (the car's mirrors and wheel arches) or the image's edge (the delta's drawing has a margin): its
+ * readouts sit against the body there, the gap to it is what's seen
+ */
+private const val CAR_FRONT_BODY = .91f
+private const val CAR_REAR_BODY = .92f
+private const val DELTA_REAR_BODY = .886f
+
+/**
+ * How far inside the image's edge the readouts' tyres or body reach, as a fraction of the image
+ * width. The readouts sit against them, not against the image's edge: the image grows by as much,
+ * so the outlines reach [SCREEN_MARGIN] from the screen edges. The others' readouts sit against
+ * the image.
  */
 private val Kind.readoutInset: Float
     get() = when (this) {
-        Kind.CAR -> CAR_TRACK
-        Kind.CAR_WITH_SPARE -> CAR_WITH_SPARE_TRACK
-        Kind.SINGLE_AXLE_TRAILER -> TRAILER_TRACK
-        Kind.TADPOLE_THREE_WHEELER -> TADPOLE_FRONT_TRACK
-        Kind.MOTORCYCLE, Kind.DELTA_THREE_WHEELER, Kind.MONOWHEEL -> null
+        Kind.CAR -> CAR_REAR_BODY
+        Kind.DELTA_THREE_WHEELER -> DELTA_REAR_BODY
+        Kind.CAR_WITH_SPARE -> CAR_WITH_SPARE_TRACK + tyreHeight * TYRE_ASPECT_RATIO / imageRatio
+        Kind.SINGLE_AXLE_TRAILER -> TRAILER_TRACK + tyreHeight * TYRE_ASPECT_RATIO / imageRatio
+        Kind.TADPOLE_THREE_WHEELER -> TADPOLE_FRONT_TRACK + tyreHeight * TYRE_ASPECT_RATIO / imageRatio
+        Kind.MOTORCYCLE, Kind.MONOWHEEL -> 1f
     }
-        ?.let { track -> (1 - track) / 2 - tyreHeight * TYRE_ASPECT_RATIO / 2 / imageRatio }
-        ?.coerceAtLeast(0f)
-        ?: 0f
+        .let { span -> (1 - span) / 2 }
+        .coerceAtLeast(0f)
 
 /**
  * The current vehicle. Tapping a location without a sensor assigns it one by [scanQrCode],
@@ -503,15 +513,7 @@ internal fun rememberWidestReadoutWidth(pressureUnit: PressureUnit, isOutlined: 
         listOf(measurer.measure(pressureUnit.widestReadout, pressureStyle))
             .plus(WIDEST_DETAILS.map { measurer.measure(it, pressureStyle.copy(fontSize = 16.sp)) })
             // What a location without a sensor shows instead, see TyreReadout
-            .plus(
-                listOf(
-                    measurer.measure("Tap to", pressureStyle.copy(fontSize = 20.sp)),
-                    measurer.measure(
-                        "(detected)",
-                        pressureStyle.copy(fontSize = 16.sp, fontWeight = FontWeight.Normal),
-                    ),
-                ).takeIf { isOutlined }.orEmpty()
-            )
+            .plus(listOfNotNull(measurer.measure("Tap to", pressureStyle.copy(fontSize = 20.sp)).takeIf { isOutlined }))
             .maxOf { it.size.width }
             .let { with(density) { it.toDp() } }
     }
@@ -648,6 +650,9 @@ private fun Car(
         ) = createRefs()
         VehicleImage(vehicleImage, R.drawable.schema_car_top_view, "Image of your car", imageHeight)
         ImageSpan(track, CAR_TRACK, imageHeight)
+        // The body reaches past the tyres, the readouts sit against it
+        val frontBody = createRef().also { ImageSpan(it, CAR_FRONT_BODY, imageHeight) }
+        val rearBody = createRef().also { ImageSpan(it, CAR_REAR_BODY, imageHeight) }
         val frontY = .217f
         val frontAxle = imageGuideline(frontY, imageHeight)
         val rearY = .783f
@@ -671,7 +676,7 @@ private fun Car(
                     bottom.linkTo(vehicleImage.bottom)
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
-                    end.linkTo(frontLeft.start, 8.dp)
+                    end.linkTo(frontBody.start, READOUT_GAP)
                 }.verticallyCenteredOn(frontY)
             )
             TyreTapArea(
@@ -708,7 +713,7 @@ private fun Car(
                     bottom.linkTo(vehicleImage.bottom)
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
-                    start.linkTo(frontRight.end, 8.dp)
+                    start.linkTo(frontBody.end, READOUT_GAP)
                 }.verticallyCenteredOn(frontY)
             )
             TyreTapArea(
@@ -745,7 +750,7 @@ private fun Car(
                     bottom.linkTo(vehicleImage.bottom)
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
-                    end.linkTo(rearLeft.start, 8.dp)
+                    end.linkTo(rearBody.start, READOUT_GAP)
                 }.verticallyCenteredOn(rearY)
             )
             TyreTapArea(
@@ -782,7 +787,7 @@ private fun Car(
                     bottom.linkTo(vehicleImage.bottom)
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
-                    start.linkTo(rearRight.end, 8.dp)
+                    start.linkTo(rearBody.end, READOUT_GAP)
                 }.verticallyCenteredOn(rearY)
             )
             TyreTapArea(
@@ -882,7 +887,7 @@ private fun CarWithSpare(
                     bottom.linkTo(vehicleImage.bottom)
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
-                    end.linkTo(frontLeft.start, 8.dp)
+                    end.linkTo(frontLeft.start, READOUT_GAP)
                 }.verticallyCenteredOn(frontY)
             )
             TyreTapArea(
@@ -919,7 +924,7 @@ private fun CarWithSpare(
                     bottom.linkTo(vehicleImage.bottom)
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
-                    start.linkTo(frontRight.end, 8.dp)
+                    start.linkTo(frontRight.end, READOUT_GAP)
                 }.verticallyCenteredOn(frontY)
             )
             TyreTapArea(
@@ -956,7 +961,7 @@ private fun CarWithSpare(
                     bottom.linkTo(vehicleImage.bottom)
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
-                    end.linkTo(rearLeft.start, 8.dp)
+                    end.linkTo(rearLeft.start, READOUT_GAP)
                 }.verticallyCenteredOn(rearY, basicReadoutHeight to rearBottom, SPARE_CAR_TYRE_HEIGHT)
             )
             TyreTapArea(
@@ -993,7 +998,7 @@ private fun CarWithSpare(
                     bottom.linkTo(vehicleImage.bottom)
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
-                    start.linkTo(rearRight.end, 8.dp)
+                    start.linkTo(rearRight.end, READOUT_GAP)
                 }.verticallyCenteredOn(rearY, basicReadoutHeight to rearBottom, SPARE_CAR_TYRE_HEIGHT)
             )
             TyreTapArea(
@@ -1168,7 +1173,7 @@ private fun Monowheel(
                     bottom.linkTo(vehicleImage.bottom)
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
-                    start.linkTo(vehicleImage.end, 8.dp)
+                    start.linkTo(vehicleImage.end, READOUT_GAP)
                 }.verticallyCenteredOn(wheelY)
             )
             TyreTapArea(
@@ -1248,7 +1253,7 @@ private fun SingleAxleTrailer(
                     bottom.linkTo(vehicleImage.bottom)
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
-                    end.linkTo(tyreLeft.start, 8.dp)
+                    end.linkTo(tyreLeft.start, READOUT_GAP)
                 }.verticallyCenteredOn(axleY)
             )
             TyreTapArea(
@@ -1285,7 +1290,7 @@ private fun SingleAxleTrailer(
                     bottom.linkTo(vehicleImage.bottom)
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
-                    start.linkTo(tyreRight.end, 8.dp)
+                    start.linkTo(tyreRight.end, READOUT_GAP)
                 }.verticallyCenteredOn(axleY)
             )
             TyreTapArea(
@@ -1366,7 +1371,7 @@ private fun Motorcycle(
                     bottom.linkTo(vehicleImage.bottom)
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
-                    start.linkTo(vehicleImage.end, 8.dp)
+                    start.linkTo(vehicleImage.end, READOUT_GAP)
                 }.verticallyCenteredOn(frontY)
             )
             TyreTapArea(
@@ -1403,7 +1408,7 @@ private fun Motorcycle(
                     bottom.linkTo(vehicleImage.bottom)
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
-                    start.linkTo(vehicleImage.end, 8.dp)
+                    start.linkTo(vehicleImage.end, READOUT_GAP)
                 }.verticallyCenteredOn(rearY)
             )
             TyreTapArea(
@@ -1491,7 +1496,7 @@ private fun TadpoleThreadWheeler(
                     bottom.linkTo(vehicleImage.bottom)
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
-                    end.linkTo(frontLeft.start, 8.dp)
+                    end.linkTo(frontLeft.start, READOUT_GAP)
                 }.verticallyCenteredOn(frontY)
             )
             TyreTapArea(
@@ -1528,7 +1533,7 @@ private fun TadpoleThreadWheeler(
                     bottom.linkTo(vehicleImage.bottom)
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
-                    start.linkTo(frontRight.end, 8.dp)
+                    start.linkTo(frontRight.end, READOUT_GAP)
                 }.verticallyCenteredOn(frontY)
             )
             TyreTapArea(
@@ -1565,7 +1570,7 @@ private fun TadpoleThreadWheeler(
                     bottom.linkTo(vehicleImage.bottom)
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
-                    start.linkTo(rearOutline.end, 8.dp)
+                    start.linkTo(rearOutline.end, READOUT_GAP)
                 }.verticallyCenteredOn(rearY)
             )
             TyreTapArea(
@@ -1628,6 +1633,8 @@ private fun DeltaThreeWheeler(
             imageHeight
         )
         ImageSpan(rearTrack, .713f, imageHeight)
+        // The image has a margin past the body, the rear readouts sit against the body
+        val rearBody = createRef().also { ImageSpan(it, DELTA_REAR_BODY, imageHeight) }
         // Outline around the front wheel, the front readout sits next to it
         ImageSpan(frontOutline, .22f, imageHeight)
         val frontY = .0865f
@@ -1653,7 +1660,7 @@ private fun DeltaThreeWheeler(
                     bottom.linkTo(vehicleImage.bottom)
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
-                    start.linkTo(frontOutline.end, 8.dp)
+                    start.linkTo(frontOutline.end, READOUT_GAP)
                 }.verticallyCenteredOn(frontY)
             )
             TyreTapArea(
@@ -1690,7 +1697,7 @@ private fun DeltaThreeWheeler(
                     bottom.linkTo(vehicleImage.bottom)
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
-                    end.linkTo(vehicleImage.start, 8.dp)
+                    end.linkTo(rearBody.start, READOUT_GAP)
                 }.verticallyCenteredOn(rearY)
             )
             TyreTapArea(
@@ -1727,7 +1734,7 @@ private fun DeltaThreeWheeler(
                     bottom.linkTo(vehicleImage.bottom)
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
-                    start.linkTo(vehicleImage.end, 8.dp)
+                    start.linkTo(rearBody.end, READOUT_GAP)
                 }.verticallyCenteredOn(rearY)
             )
             TyreTapArea(

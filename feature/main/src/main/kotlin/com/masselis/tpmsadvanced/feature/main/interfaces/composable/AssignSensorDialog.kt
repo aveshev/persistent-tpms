@@ -1,24 +1,15 @@
 package com.masselis.tpmsadvanced.feature.main.interfaces.composable
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.vectorResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.masselis.tpmsadvanced.data.vehicle.model.Sensor
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.SYSGRATION
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.FRONT_LEFT
@@ -86,24 +77,6 @@ internal fun AssignSensorDialog(
         },
         modifier = modifier.testTag(AssignSensorDialogTags.root),
     )
-}
-
-/** Stands for Sysgration, the only brand advertising its location, without being its logo */
-@Composable
-private fun SysgrationBadge(modifier: Modifier = Modifier) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = modifier
-            .size(24.dp)
-            .background(MaterialTheme.colorScheme.primary, CircleShape),
-    ) {
-        Text(
-            text = "S",
-            color = MaterialTheme.colorScheme.onPrimary,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Black,
-        )
-    }
 }
 
 @Preview
