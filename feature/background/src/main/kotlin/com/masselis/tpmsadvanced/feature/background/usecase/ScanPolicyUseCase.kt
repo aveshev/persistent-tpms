@@ -41,7 +41,7 @@ import kotlin.time.TimeSource
 @Suppress("LongParameterList")
 internal class ScanPolicyUseCase(
     private val appPreferences: AppPreferences,
-    private val scanSuspensionUseCase: ScanSuspensionUseCase,
+    scanSuspensionUseCase: ScanSuspensionUseCase,
     private val chargingStateUseCase: ChargingStateUseCase,
     private val androidAutoUseCase: AndroidAutoUseCase,
     private val bluetoothDevicesUseCase: BluetoothDevicesUseCase,
@@ -50,6 +50,15 @@ internal class ScanPolicyUseCase(
     private val timeSource: TimeSource = TimeSource.Monotonic,
 ) {
     private val logger = Logger.withTag("ScanPolicy")
+
+    /**
+     * Read by both the decision and the stay active timer: shared, so that the system listeners
+     * behind it (WiFi, idle, Bluetooth devices) are registered once rather than twice. A stale
+     * value isn't replayed to a new subscriber.
+     */
+    private val suspensionReasons: SharedFlow<Set<Reason>> = scanSuspensionUseCase
+        .suspensionReasons
+        .shareIn(scope, WhileSubscribed(replayExpirationMillis = 0), replay = 1)
 
     /**
      * Each decision along with the mode (persistent scanning or not) it was made for. Shared, so
@@ -115,7 +124,7 @@ internal class ScanPolicyUseCase(
     ).flatMapLatest { (enabled, stayActiveMinutes, beaconOverridesSuspend) ->
         combine(
             fulfilledCauses(enabled, stayActiveMinutes.minutes, beaconOverridesSuspend),
-            scanSuspensionUseCase.suspensionReasons,
+            suspensionReasons,
         ) { fulfilled, reasons ->
             decide(enabled, fulfilled, reasons, beaconOverridesSuspend).let { decision ->
                 // What the decision was made from, to tell afterwards why it changed
@@ -277,7 +286,7 @@ internal class ScanPolicyUseCase(
         var wasActive = false
         var stayEnd: TimeMark? = null
         emitAll(
-            combine(this@stayingActive, scanSuspensionUseCase.suspensionReasons) { causes, reasons ->
+            combine(this@stayingActive, suspensionReasons) { causes, reasons ->
                 causes to (decide(enabled, causes, reasons, beaconOverridesSuspend) is ScanDecision.Active)
             }.transformLatest { (causes, active) ->
                 if ((causes intersect enabled).isNotEmpty()) {

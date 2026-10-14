@@ -23,6 +23,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.onEach
 
 @SuppressLint("MissingPermission")
 internal class WifiConnectionUseCase {
@@ -38,15 +39,10 @@ internal class WifiConnectionUseCase {
     val state: Flow<State> = callbackFlow {
         val connectivityManager = appContext.getSystemService<ConnectivityManager>()!!
         val callback = networkCallback(
-            onCapabilitiesChanged = {
-                val ssid = it.wifiSsid()
-                logger.d { "Connected to a WiFi, its name is readable: ${ssid != null}" }
-                trySend(State.Connected(ssid))
-            },
-            onLost = {
-                logger.d { "Lost the WiFi" }
-                trySend(State.Disconnected)
-            },
+            // Called again whenever anything about the network changes, its signal strength
+            // every few seconds: only a change of state is told below
+            onCapabilitiesChanged = { trySend(State.Connected(it.wifiSsid())) },
+            onLost = { trySend(State.Disconnected) },
         )
         connectivityManager.registerNetworkCallback(
             NetworkRequest.Builder().addTransportType(TRANSPORT_WIFI).build(),
@@ -57,7 +53,14 @@ internal class WifiConnectionUseCase {
         // saying "disconnected" first would be wrong for a moment on a connected phone.
         if (connectivityManager.hasWifiNetwork().not()) send(State.Disconnected)
         awaitClose { connectivityManager.unregisterNetworkCallback(callback) }
-    }.distinctUntilChanged()
+    }
+        .distinctUntilChanged()
+        .onEach { state ->
+            when (state) {
+                is State.Connected -> logger.d { "Connected to a WiFi, its name is readable: ${state.ssid != null}" }
+                State.Disconnected -> logger.d { "Not connected to a WiFi" }
+            }
+        }
 
     // Since API 31, NetworkCapabilities redacts location-sensitive transport info (including the
     // WiFi SSID) by default, even when the caller holds the permission and location is enabled —
