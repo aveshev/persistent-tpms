@@ -40,7 +40,10 @@ internal class AlertSilenceUseCase(
             silence
                 ?.takeIf { it.until > clock() }
                 ?.also { emit(it) }
-                ?.also { delay(it.until - clock()) }
+                // Checked against the wall clock at least every second rather than after a single
+                // delay: a delay's clock stops while the phone sleeps, so the silence would outlast
+                // its end, the button saying 0 min left
+                ?.also { while (it.until > clock()) delay((it.until - clock()).coerceAtMost(CHECK_PERIOD_MS)) }
             emit(null)
         }
         .stateIn(scope, Eagerly, stored.value?.takeIf { it.until > clock() })
@@ -61,5 +64,6 @@ internal class AlertSilenceUseCase(
         val DURATION = 10.minutes
         private const val LEVEL = "LEVEL"
         private const val UNTIL = "UNTIL"
+        private const val CHECK_PERIOD_MS = 1_000L
     }
 }
