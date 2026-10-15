@@ -76,11 +76,9 @@ private fun TapToAssign(
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
         )
-        if (isDetected) Text(
-            text = "(detected)",
-            color = MaterialTheme.colorScheme.primary,
-            fontSize = 16.sp,
-        )
+        // A Sysgration sensor advertising this location, see AssignSensorDialog. As narrow as the
+        // text above, so the outlines needn't widen for it.
+        if (isDetected) SysgrationBadge(Modifier.padding(top = 4.dp))
     }
 }
 
