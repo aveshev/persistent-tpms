@@ -14,9 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.masselis.tpmsadvanced.feature.main.interfaces.composable.SpareReadout.BESIDE_CENTERED
-import com.masselis.tpmsadvanced.feature.main.interfaces.composable.SpareReadout.UNDER
 import kotlin.math.roundToInt
 
 /**
@@ -32,7 +31,8 @@ internal fun VehicleWithTopBar(
     navigationIcon: @Composable () -> Unit,
     title: @Composable () -> Unit,
     actions: @Composable RowScope.() -> Unit,
-    vehicle: @Composable (SpareReadout) -> Unit,
+    /** Given the corners beside it, see [Vehicle]'s */
+    vehicle: @Composable (corners: Pair<Dp, Dp>?) -> Unit,
     modifier: Modifier = Modifier,
     /** Where the top bar is, in this layout's coordinates: its whole strip over the vehicle, its corners beside it */
     onBarPositioned: (List<Rect>) -> Unit = {},
@@ -69,26 +69,29 @@ internal fun VehicleWithTopBar(
         val besideEndWidth = (titles.maxOfOrNull { it.maxIntrinsicWidth(barHeight) } ?: 0)
             .coerceAtMost(besideTitleMaxWidth)
             .plus(besideTitleGaps + actionsWidth)
-        // The vehicle's box for each placement
-        fun Placement.box() = when (this) {
-            Placement.ON_TOP, Placement.ON_TOP_SPARE_BESIDE -> width to height - barHeight
-            Placement.BESIDE -> width - navigationIconWidth - besideEndWidth to height
+        // The vehicle's box for each placement, the whole width, and the corners beside it
+        fun Placement.boxHeight() = when (this) {
+            Placement.ON_TOP -> height - barHeight
+            Placement.BESIDE -> height
+        }
+        fun Placement.corners() = when (this) {
+            Placement.ON_TOP -> null
+            Placement.BESIDE -> navigationIconWidth.toDp() to besideEndWidth.toDp()
         }
         val placement = Placement.entries.maxBy { placement ->
             placement
-                .box()
-                .takeIf { (boxWidth, boxHeight) -> boxWidth > 0 && boxHeight > 0 }
+                .boxHeight()
+                .takeIf { width > 0 && it > 0 }
                 // Without the minimum height, which only lets the readouts go past the box
-                ?.let { (boxWidth, boxHeight) ->
-                    boxHeight * sizing.imageHeight(boxWidth.toDp(), boxHeight.toDp(), placement.spareReadout, 0f)
+                ?.let { boxHeight ->
+                    boxHeight * sizing.imageHeight(width.toDp(), boxHeight.toDp(), placement.corners(), 0f)
                 }
                 ?: 0f
         }
-        val (boxWidth, boxHeight) = placement.box()
-        val vehicles = subcompose(Slot.VEHICLE) { vehicle(placement.spareReadout) }
-            .map { it.measure(Constraints.fixed(boxWidth.coerceAtLeast(0), boxHeight.coerceAtLeast(0))) }
+        val vehicles = subcompose(Slot.VEHICLE) { vehicle(placement.corners()) }
+            .map { it.measure(Constraints.fixed(width, placement.boxHeight().coerceAtLeast(0))) }
         when (placement) {
-            Placement.ON_TOP, Placement.ON_TOP_SPARE_BESIDE -> {
+            Placement.ON_TOP -> {
                 // As Material's centered top bar: its title is padded on both sides and centered on
                 // the whole width, unless it would cover the navigation icon or the actions
                 val titlePadding = BAR_PADDING.roundToPx()
@@ -123,7 +126,7 @@ internal fun VehicleWithTopBar(
                             Rect((width - besideEndWidth).toFloat(), 0f, width.toFloat(), barHeight.toFloat()),
                         )
                     )
-                    vehicles.forEach { it.place(navigationIconWidth, 0) }
+                    vehicles.forEach { it.place(0, 0) }
                     navigationIcons.forEach { it.place(0, (barHeight - it.height) / 2) }
                     actionRows.forEach {
                         it.place(width - barPadding - actionsWidth, (barHeight - it.height) / 2)
@@ -140,19 +143,16 @@ internal fun VehicleWithTopBar(
     }
 }
 
-/** Where the top bar goes, and the spare's readout with it */
-private enum class Placement(val spareReadout: SpareReadout) {
-    /** Over the vehicle, the spare's readout under the spare */
-    ON_TOP(UNDER),
-
-    /** Over the vehicle, the spare's readout beside the vehicle */
-    ON_TOP_SPARE_BESIDE(SpareReadout.BESIDE),
+/** Where the top bar goes */
+private enum class Placement {
+    /** Over the vehicle, a spare's readout under the spare */
+    ON_TOP,
 
     /**
      * The navigation icon in the top left corner, the title then the actions in the top right one,
-     * the vehicle between them taking the whole height, the spare's readout beside it
+     * the vehicle between them taking the whole height, a spare's readout beside it
      */
-    BESIDE(BESIDE_CENTERED),
+    BESIDE,
 }
 
 private enum class Slot { NAVIGATION_ICON, TITLE, ACTIONS, VEHICLE }
