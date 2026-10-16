@@ -135,7 +135,6 @@ private fun BluetoothDevices(
                 headline = "No paired device",
                 supporting = PAIRING_HINT,
                 onClick = openBluetoothSettings,
-                opensPage = true,
                 modifier = Modifier.testTag(BluetoothDevicesTags.noDevice),
             )
         }
@@ -184,7 +183,6 @@ private fun BluetoothDevices(
                     headline = "Missing a device?",
                     supporting = PAIRING_HINT,
                     onClick = openBluetoothSettings,
-                    opensPage = true,
                     modifier = Modifier.testTag(BluetoothDevicesTags.missingDevice),
                 )
             }

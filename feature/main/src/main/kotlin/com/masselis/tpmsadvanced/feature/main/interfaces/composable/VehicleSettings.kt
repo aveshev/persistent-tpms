@@ -93,7 +93,6 @@ public fun VehicleSettings(
                     ?.joinToString(" · ")
                     ?: (low..high).summary(),
                 onClick = openPressure,
-                opensPage = true,
             )
             TextSettingsItem(
                 headline = "Temperature",
@@ -101,7 +100,6 @@ public fun VehicleSettings(
                     "Normal ${normalTemp.numberString(temperatureUnit)} · " +
                     "Hot ${highTemp.numberString(temperatureUnit)} ${temperatureUnit.symbol()}",
                 onClick = openTemperature,
-                opensPage = true,
             )
             TextSettingsItem(
                 headline = "Battery",
@@ -116,7 +114,6 @@ public fun VehicleSettings(
                     else -> "Low alarms ${lowBatteryVoltage.string()} · $lowBatteryPercent%"
                 },
                 onClick = openBattery,
-                opensPage = true,
                 modifier = Modifier.testTag(VehicleSettingsTags.battery),
             )
         }
@@ -130,7 +127,6 @@ public fun VehicleSettings(
                 headline = "Manage sensors",
                 supporting = "Move, calibrate, delete",
                 onClick = openManageSensors,
-                opensPage = true,
                 modifier = Modifier.testTag(VehicleSettingsTags.manageSensors),
             )
             ClearBoundSensorsButton()

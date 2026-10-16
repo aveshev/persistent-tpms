@@ -202,8 +202,9 @@ public fun ActionSettingsItem(
 }
 
 /**
- * A [SettingsGroup] item made of texts. [onClick] makes the whole item clickable, [opensPage] adding
- * a chevron hinting it opens a page rather than a dialog.
+ * A [SettingsGroup] item made of texts. [onClick] makes the whole item clickable. Like the system
+ * settings, an item opening a page has no chevron: only [SwitchNavigationSettingsItem] shows one,
+ * to tell its text, which opens the page, from its switch.
  */
 @Composable
 public fun TextSettingsItem(
@@ -211,7 +212,6 @@ public fun TextSettingsItem(
     modifier: Modifier = Modifier,
     supporting: String? = null,
     onClick: (() -> Unit)? = null,
-    opensPage: Boolean = false,
     enabled: Boolean = true,
     headlineColor: Color = Color.Unspecified,
 ): Unit = Row(
@@ -219,7 +219,7 @@ public fun TextSettingsItem(
     modifier = modifier
         .settingsItem(MaterialTheme.colorScheme.settingsItem)
         .run { onClick?.let { clickable(enabled = enabled, onClick = it) } ?: this }
-        .padding(start = 16.dp, end = if (opensPage) 8.dp else 16.dp),
+        .padding(horizontal = 16.dp),
 ) {
     ItemTexts(
         headline = headline,
@@ -227,19 +227,13 @@ public fun TextSettingsItem(
         modifier = Modifier.enabledAlpha(enabled),
         headlineColor = headlineColor,
     )
-    if (opensPage) Icon(
-        imageVector = ImageVector.vectorResource(R.drawable.chevron_right_24px),
-        contentDescription = null,
-        modifier = Modifier
-            .size(32.dp)
-            .enabledAlpha(enabled),
-    )
 }
 
 /**
  * A [SettingsGroup] item choosing one of a few [options] with segmented buttons. The buttons sit at
  * the item's end while the headline fits next to them on one line. Otherwise, as with a large font
- * or display size, they go below it and take the item's whole width.
+ * or display size, they go below it and take the item's whole width. With an [icon], a segment
+ * shows it instead of its [label], which then only describes it to accessibility services.
  */
 @Suppress("LongMethod")
 @Composable
@@ -250,6 +244,7 @@ public fun <T> SegmentedSettingsItem(
     onSelect: (T) -> Unit,
     label: (T) -> String,
     modifier: Modifier = Modifier,
+    icon: (@Composable (T) -> ImageVector)? = null,
 ): Unit = Layout(
     contents = listOf(
         { Text(headline, style = MaterialTheme.typography.bodyLarge) },
@@ -262,7 +257,11 @@ public fun <T> SegmentedSettingsItem(
                         shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
                         // The check mark would widen the selected segment, its fill already tells it apart
                         icon = {},
-                        label = { Text(label(option)) },
+                        label = {
+                            icon
+                                ?.also { Icon(it(option), contentDescription = label(option)) }
+                                ?: Text(label(option))
+                        },
                     )
                 }
             }
@@ -507,7 +506,7 @@ internal fun SettingsGroupPreview() {
                 onCheckedChange = {},
             )
             ExpandSettingsItem(headline = "More choices", expanded = false, onClick = {})
-            TextSettingsItem(headline = "Page", supporting = "Current value", onClick = {}, opensPage = true)
+            TextSettingsItem(headline = "Page", supporting = "Current value", onClick = {})
             SegmentedSettingsItem(
                 headline = "Segments",
                 options = listOf("A", "B", "C"),

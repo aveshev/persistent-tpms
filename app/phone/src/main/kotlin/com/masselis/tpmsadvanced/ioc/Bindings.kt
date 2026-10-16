@@ -1,6 +1,7 @@
 package com.masselis.tpmsadvanced.ioc
 
 import com.masselis.tpmsadvanced.core.common.appGraph
+import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
 import com.masselis.tpmsadvanced.feature.main.usecase.NoveltyUseCase
 import com.masselis.tpmsadvanced.interfaces.viewmodel.HomeViewModel
 import com.masselis.tpmsadvanced.interfaces.viewmodel.VehicleHomeViewModel
@@ -22,11 +23,13 @@ public interface Bindings {
     @Inject
     public class Internal internal constructor(
         internal val homeViewModel: HomeViewModel.Factory,
-        internal val vehicleHomeViewModel: () -> VehicleHomeViewModel
+        internal val vehicleHomeViewModel: () -> VehicleHomeViewModel,
+        internal val appPreferences: AppPreferences,
     )
 
     public companion object : Bindings by appGraph as Bindings {
         internal val HomeViewModel = appPhoneInternal.homeViewModel
         internal fun VehicleHomeViewModel() = appPhoneInternal.vehicleHomeViewModel()
+        internal val appPreferences = appPhoneInternal.appPreferences
     }
 }

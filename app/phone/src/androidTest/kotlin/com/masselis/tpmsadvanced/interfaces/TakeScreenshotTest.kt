@@ -1,8 +1,5 @@
 package com.masselis.tpmsadvanced.interfaces
 
-import android.app.UiModeManager.MODE_NIGHT_NO
-import android.app.UiModeManager.MODE_NIGHT_YES
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.hasText
@@ -10,6 +7,10 @@ import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.core.graphics.writeToTestStorage
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.Theme
+import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.Theme.DARK
+import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.Theme.LIGHT
+import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.Theme.SYSTEM
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.Axle.FRONT
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.Axle.REAR
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.FRONT_LEFT
@@ -20,6 +21,8 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.MOTORCYCLE
 import com.masselis.tpmsadvanced.interfaces.screens.Home
 import com.masselis.tpmsadvanced.interfaces.screens.Home.Companion.home
+import com.masselis.tpmsadvanced.ioc.Bindings
+import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -30,11 +33,17 @@ internal class TakeScreenshotTest {
     @get:Rule
     val androidComposeTestRule = createAndroidComposeRule<RootActivity>()
 
+    // The theme is kept by the app, it would carry over to the next tests
+    @After
+    fun tearDown() {
+        Bindings.appPreferences.theme.value = SYSTEM
+    }
+
     @Test
     fun lightModeScreenshots() {
         androidComposeTestRule.home {
             takeScreenshots(
-                AppCompatDelegate.MODE_NIGHT_NO,
+                LIGHT,
                 listOf(FRONT_LEFT, FRONT_RIGHT, REAR_LEFT, REAR_RIGHT).map { Location.Wheel(it) },
             )
         }
@@ -50,7 +59,7 @@ internal class TakeScreenshotTest {
                     add()
                 }
             }
-            takeScreenshots(AppCompatDelegate.MODE_NIGHT_YES, listOf(FRONT, REAR).map { Location.Axle(it) })
+            takeScreenshots(DARK, listOf(FRONT, REAR).map { Location.Axle(it) })
         }
     }
 
@@ -58,15 +67,17 @@ internal class TakeScreenshotTest {
      * The Play Store listing's screenshots, see the app's `copyScreenshot` task. The demo sensors
      * detected at [locations] are assigned first, so the screens show their readings.
      */
-    private fun Home.takeScreenshots(@AppCompatDelegate.NightMode mode: Int, locations: List<Location>) {
+    private fun Home.takeScreenshots(theme: Theme, locations: List<Location>) {
+        // Chosen like from the settings: RootActivity applies it, recreating itself, and would undo
+        // a night mode set on AppCompatDelegate directly
         androidComposeTestRule.activityRule.scenario.onActivity {
-            AppCompatDelegate.setDefaultNightMode(mode)
+            Bindings.appPreferences.theme.value = theme
         }
         androidComposeTestRule.waitForIdle()
-        val prefix = when (mode) {
-            MODE_NIGHT_NO -> "light_"
-            MODE_NIGHT_YES -> "dark_"
-            else -> error("Unknown mode sent $mode")
+        val prefix = when (theme) {
+            LIGHT -> "light_"
+            DARK -> "dark_"
+            SYSTEM -> error("The screenshots need a theme which doesn't depend on the device")
         }
         locations.forEach { location ->
             wheel(location) {

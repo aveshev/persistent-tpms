@@ -15,7 +15,7 @@ import com.masselis.tpmsadvanced.core.ui.SettingsSectionHeader
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.TyreDisplaySettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.TyreDisplaySettingsViewModel
 
-/** The page opened from the "Dim when idle" item of [TyreDisplaySettings] */
+/** The page opened from the "Dim when idle" item of [DisplaySettings] */
 @Composable
 public fun DimDisplayDelay(modifier: Modifier = Modifier): Unit =
     DimDisplayDelay(modifier, viewModel { TyreDisplaySettingsViewModel() })
