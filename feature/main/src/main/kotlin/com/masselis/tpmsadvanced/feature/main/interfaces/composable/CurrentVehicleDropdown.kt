@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
@@ -375,7 +376,14 @@ private fun AddVehicle(
     }
     BasicAlertDialog(
         onDismissRequest = onDismissRequest,
-        modifier = modifier.testTag(CurrentVehicleDropdownTags.AddVehicle.root),
+        modifier = modifier
+            .testTag(CurrentVehicleDropdownTags.AddVehicle.root)
+            .run {
+                // Material caps a dialog at 560 dp, these margins are outside of it. In landscape,
+                // as wide as the assign sensor dialog, see OptionsDialog.
+                if (isWide) padding(horizontal = 48.dp, vertical = 24.dp)
+                else padding(horizontal = 16.dp).widthIn(max = 328.dp)
+            },
         // Sized by the dialog itself, the platform's width doesn't follow the keyboard's resize
         properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
@@ -394,11 +402,6 @@ private fun AddVehicle(
             // Ends the name's editing: cleared, the focus would come back to the name, the dialog's
             // first focusable. Also by tapping the dialog.
             modifier = Modifier
-                .run {
-                    // As wide as the assign sensor dialog in landscape, see OptionsDialog
-                    if (isWide) padding(horizontal = 48.dp, vertical = 24.dp).widthIn(max = 720.dp)
-                    else padding(horizontal = 16.dp).widthIn(max = 328.dp)
-                }
                 .focusRequester(dialogFocusRequester)
                 .focusable()
                 .clickable(
@@ -428,12 +431,18 @@ private fun AddVehicle(
                             .weight(2f)
                             .fillMaxHeight()
                     ) {
-                        if (isCompact.not()) title()
-                        nameField()
-                        if (isCompact.not()) {
-                            Spacer(modifier = Modifier.weight(1f))
-                            buttons(Modifier.padding(top = 24.dp))
+                        // The buttons stay at the bottom whatever the font size: short of room, the
+                        // title scrolls, the name keeps right under it
+                        Column(modifier = Modifier.weight(1f)) {
+                            if (isCompact.not())
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f, fill = false)
+                                        .verticalScroll(rememberScrollState())
+                                ) { title() }
+                            nameField()
                         }
+                        if (isCompact.not()) buttons(Modifier.padding(top = 24.dp))
                     }
                     if (isCompact.not())
                         kinds(
