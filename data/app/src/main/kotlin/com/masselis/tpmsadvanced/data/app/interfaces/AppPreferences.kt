@@ -130,6 +130,16 @@ public class AppPreferences internal constructor(
     }
 
     /**
+     * The tyre readouts' text size, multiplying the system's font size: 1 follows it. The readouts
+     * still shrink from there when they don't fit the screen.
+     */
+    public val readoutTextScale: MutableStateFlow<Float> = observableStateFlow(
+        sharedPreferences.getFloat("READOUT_TEXT_SCALE", 1f)
+    ) { _, newValue ->
+        sharedPreferences.edit { putFloat("READOUT_TEXT_SCALE", newValue) }
+    }
+
+    /**
      * Warns about a tyre losing at least [pressureLossMinDrop] kPa while riding. Experimental, so
      * off by default.
      */

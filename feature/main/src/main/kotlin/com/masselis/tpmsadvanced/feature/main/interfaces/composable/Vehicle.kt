@@ -56,6 +56,7 @@ import androidx.constraintlayout.compose.ConstraintLayoutScope
 import androidx.constraintlayout.compose.Dimension
 import com.masselis.tpmsadvanced.core.ui.KeepScreenOn
 import com.masselis.tpmsadvanced.core.ui.isWideWindow
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.masselis.tpmsadvanced.core.ui.viewModel
 import com.masselis.tpmsadvanced.data.unit.model.PressureUnit
 import com.masselis.tpmsadvanced.data.unit.model.PressureUnit.BAR
@@ -73,6 +74,7 @@ import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.Side.RIGHT
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location
 import com.masselis.tpmsadvanced.feature.main.R
+import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.TyreDisplaySettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleBindings.Companion.VehicleSettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent.Factory.Companion.key
@@ -170,6 +172,9 @@ private val SPARE_READOUT_GAP = 4.dp
 /** Between the rear right readout and the spare's, beside it, see [Vehicle]'s spareBeside */
 private val SPARE_BESIDE_GAP = 24.dp
 
+/** How far the line leading to the spare's readout beside keeps from the other readouts */
+private val SPARE_LINE_CLEARANCE = 6.dp
+
 
 
 /** A monowheel's tyre is drawn much taller and narrower than the others, its width following [MONOWHEEL_TYRE_RATIO] */
@@ -191,6 +196,9 @@ private const val CAR_FRONT_BODY = .91f
 private const val CAR_REAR_BODY = .92f
 private const val DELTA_REAR_BODY = .886f
 
+/** The tadpole's mirrors, past its front tyres, just behind them */
+private const val TADPOLE_FRONT_BODY = .818f
+
 /**
  * How far inside the image's edge the readouts' tyres or body reach, as a fraction of the image
  * width. The readouts sit against them, not against the image's edge: the image grows by as much,
@@ -203,7 +211,7 @@ private val Kind.readoutInset: Float
         Kind.DELTA_THREE_WHEELER -> DELTA_REAR_BODY
         Kind.CAR_WITH_SPARE -> CAR_WITH_SPARE_TRACK + tyreHeight * TYRE_ASPECT_RATIO / imageRatio
         Kind.SINGLE_AXLE_TRAILER -> TRAILER_TRACK + tyreHeight * TYRE_ASPECT_RATIO / imageRatio
-        Kind.TADPOLE_THREE_WHEELER -> TADPOLE_FRONT_TRACK + tyreHeight * TYRE_ASPECT_RATIO / imageRatio
+        Kind.TADPOLE_THREE_WHEELER -> TADPOLE_FRONT_BODY
         Kind.MOTORCYCLE, Kind.MONOWHEEL -> 1f
     }
         .let { span -> (1 - span) / 2 }
@@ -280,8 +288,16 @@ public fun Vehicle(
     corners: Pair<Dp, Dp>? = null,
 ) {
     KeepScreenOn()
+    // The readouts' text size setting, which the text is fitted from
+    val textScale by viewModel { TyreDisplaySettingsViewModel() }.readoutTextScale.collectAsState()
     BoxWithConstraints(modifier) {
-        FitsText(maxWidth, maxHeight, corners, taps.isManaging, modifier = Modifier.fillMaxSize()) {
+        FitsText(
+            maxWidth, maxHeight, corners, taps.isManaging,
+            modifier = Modifier.fillMaxSize(),
+            textScale = textScale,
+            // Managing them, each is in its outline
+            separates = taps.isManaging.not(),
+        ) {
             // From the readouts' fitted text: the image takes the room their text leaves it, the
             // larger the less text, see FitsText, which doesn't show it until that text is fitted
             val sizing = rememberVehicleSizing(component, taps.isManaging, rememberFittedTextDensity())
@@ -628,9 +644,18 @@ private fun ConstraintLayoutScope.imageGuideline(y: Float, imageHeight: Float): 
  */
 private fun Modifier.verticallyCenteredOn(
     y: Float,
-    /** The outline's around it, see [outlineCenteredOn]: centered with it, wherever it's raised to */
-    outline: Pair<Dp, Float>? = null,
+    /**
+     * The outline's around it, its minimum height and bottom, see [outlineCenteredOn]: centered
+     * with it, wherever it's raised to or pushed back inside the image. Only while it's drawn, see
+     * isOutlined: a readout without one is centered on its tyre.
+     */
+    outline: Pair<Dp, Float?>? = null,
     tyreHeight: Float = TYRE_HEIGHT,
+    /**
+     * A height (0..1) it keeps this far above, rather than the image's bottom: a readout taller
+     * than its outline, like one with debug lines, would otherwise grow past it
+     */
+    keepAbove: Pair<Float, Dp>? = null,
 ) = layout { measurable, constraints ->
     val placeable = measurable.measure(constraints.copy(minHeight = 0))
     val center = outline
@@ -639,15 +664,23 @@ private fun Modifier.verticallyCenteredOn(
                 .roundToInt()
                 .coerceAtLeast(minHeight.roundToPx())
                 .coerceAtMost(constraints.maxHeight)
-                .let { outlineCenter(constraints.maxHeight, y, it, bottomAt) }
+                .let { height ->
+                    (outlineCenter(constraints.maxHeight, y, height, bottomAt) - height / 2f)
+                        .coerceIn(0f, (constraints.maxHeight - height).toFloat())
+                        .plus(height / 2f)
+                }
         }
         ?: (constraints.maxHeight * y)
+    // The image's bottom, or higher to keep above what's under it
+    val bottom = keepAbove
+        ?.let { (above, gap) -> (constraints.maxHeight * above - gap.toPx()).roundToInt() }
+        ?: constraints.maxHeight
     layout(placeable.width, constraints.maxHeight) {
         placeable.place(
             x = 0,
             y = (center - placeable.height / 2f)
                 .roundToInt()
-                .coerceIn(0, (constraints.maxHeight - placeable.height).coerceAtLeast(0))
+                .coerceIn(0, (bottom - placeable.height).coerceAtLeast(0))
         )
     }
 }
@@ -733,7 +766,7 @@ private fun Car(
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
                     end.linkTo(frontBody.start, READOUT_GAP)
-                }.verticallyCenteredOn(frontY)
+                }.verticallyCenteredOn(frontY, (basicReadoutHeight to null).takeIf { isOutlined(taps.isManaging) })
             )
             TyreTapArea(
                 location = this,
@@ -770,7 +803,7 @@ private fun Car(
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
                     start.linkTo(frontBody.end, READOUT_GAP)
-                }.verticallyCenteredOn(frontY)
+                }.verticallyCenteredOn(frontY, (basicReadoutHeight to null).takeIf { isOutlined(taps.isManaging) })
             )
             TyreTapArea(
                 location = this,
@@ -807,7 +840,7 @@ private fun Car(
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
                     end.linkTo(rearBody.start, READOUT_GAP)
-                }.verticallyCenteredOn(rearY)
+                }.verticallyCenteredOn(rearY, (basicReadoutHeight to null).takeIf { isOutlined(taps.isManaging) })
             )
             TyreTapArea(
                 location = this,
@@ -844,7 +877,7 @@ private fun Car(
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
                     start.linkTo(rearBody.end, READOUT_GAP)
-                }.verticallyCenteredOn(rearY)
+                }.verticallyCenteredOn(rearY, (basicReadoutHeight to null).takeIf { isOutlined(taps.isManaging) })
             )
             TyreTapArea(
                 location = this,
@@ -924,6 +957,8 @@ private fun CarWithSpare(
         // The rear outlines grow up from their tyres' bottom rather than both ways, they'd reach
         // the spare's otherwise
         val rearBottom = rearY + SPARE_CAR_TYRE_HEIGHT / 2
+        // Beside, the spare's line runs under the rear readouts, which keep above it, both alike
+        val spareLine = (SPARE_Y to SPARE_LINE_CLEARANCE).takeIf { spareBeside }
         with(Location.Wheel(FRONT_LEFT)) {
             Tyre(
                 location = this,
@@ -944,7 +979,11 @@ private fun CarWithSpare(
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
                     end.linkTo(frontLeft.start, READOUT_GAP)
-                }.verticallyCenteredOn(frontY)
+                }.verticallyCenteredOn(
+                    frontY,
+                    (basicReadoutHeight to null).takeIf { isOutlined(taps.isManaging) },
+                    SPARE_CAR_TYRE_HEIGHT,
+                )
             )
             TyreTapArea(
                 location = this,
@@ -981,7 +1020,11 @@ private fun CarWithSpare(
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
                     start.linkTo(frontRight.end, READOUT_GAP)
-                }.verticallyCenteredOn(frontY)
+                }.verticallyCenteredOn(
+                    frontY,
+                    (basicReadoutHeight to null).takeIf { isOutlined(taps.isManaging) },
+                    SPARE_CAR_TYRE_HEIGHT,
+                )
             )
             TyreTapArea(
                 location = this,
@@ -1018,7 +1061,12 @@ private fun CarWithSpare(
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
                     end.linkTo(rearLeft.start, READOUT_GAP)
-                }.verticallyCenteredOn(rearY, basicReadoutHeight to rearBottom, SPARE_CAR_TYRE_HEIGHT)
+                }.verticallyCenteredOn(
+                    rearY,
+                    (basicReadoutHeight to rearBottom).takeIf { isOutlined(taps.isManaging) },
+                    SPARE_CAR_TYRE_HEIGHT,
+                    spareLine,
+                )
             )
             TyreTapArea(
                 location = this,
@@ -1055,7 +1103,12 @@ private fun CarWithSpare(
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
                     start.linkTo(rearRight.end, READOUT_GAP)
-                }.verticallyCenteredOn(rearY, basicReadoutHeight to rearBottom, SPARE_CAR_TYRE_HEIGHT)
+                }.verticallyCenteredOn(
+                    rearY,
+                    (basicReadoutHeight to rearBottom).takeIf { isOutlined(taps.isManaging) },
+                    SPARE_CAR_TYRE_HEIGHT,
+                    spareLine,
+                )
             )
             TyreTapArea(
                 location = this,
@@ -1076,7 +1129,7 @@ private fun CarWithSpare(
         val (spare, spareSpan, spareStats, spareTap) = createRefs()
         ImageSpan(spareSpan, .34f, imageHeight, SPARE_CAR_IMAGE_RATIO)
         // Beside, a line leads from the spare to under its readout's frame, then up to it
-        if (spareBeside) createRefs().let { (tyreSpan, line) ->
+        if (spareBeside) createRefs().let { (tyreSpan, line, lineClearance) ->
             // As wide as the spare's tyre drawn across
             ImageSpan(tyreSpan, SPARE_CAR_TYRE_HEIGHT / SPARE_CAR_IMAGE_RATIO, imageHeight, SPARE_CAR_IMAGE_RATIO)
             val color = MaterialTheme.colorScheme.onBackground
@@ -1108,6 +1161,20 @@ private fun CarWithSpare(
                 drawLine(color, Offset(0f, turn.y), turn, stroke)
                 drawLine(color, turn, Offset(turn.x, frameBottom), stroke)
             }
+            // Where it runs across, under the rear right readout, which keeps above it. Should the
+            // readout be too tall for that, the text's fitted to keep it clear, see FitsText.
+            val lineY = imageGuideline(SPARE_Y, imageHeight)
+            Box(
+                Modifier
+                    .constrainAs(lineClearance) {
+                        start.linkTo(tyreSpan.end)
+                        end.linkTo(spareStats.end)
+                        centerAround(lineY)
+                        width = Dimension.fillToConstraints
+                        height = Dimension.value(SPARE_LINE_CLEARANCE * 2)
+                    }
+                    .fitsText(Location.Spare, TextFitPart.LINE)
+            )
         }
         val spareAxle = imageGuideline(SPARE_Y, imageHeight)
         // Drawn across, the spare's tyre is as tall as a tyre is wide
@@ -1230,7 +1297,11 @@ private fun Monowheel(
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
                     start.linkTo(vehicleImage.end, READOUT_GAP)
-                }.verticallyCenteredOn(wheelY)
+                }.verticallyCenteredOn(
+                    wheelY,
+                    (basicReadoutHeight to null).takeIf { isOutlined(taps.isManaging) },
+                    MONOWHEEL_TYRE_HEIGHT,
+                )
             )
             TyreTapArea(
                 location = this,
@@ -1310,7 +1381,7 @@ private fun SingleAxleTrailer(
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
                     end.linkTo(tyreLeft.start, READOUT_GAP)
-                }.verticallyCenteredOn(axleY)
+                }.verticallyCenteredOn(axleY, (basicReadoutHeight to null).takeIf { isOutlined(taps.isManaging) })
             )
             TyreTapArea(
                 location = this,
@@ -1347,7 +1418,7 @@ private fun SingleAxleTrailer(
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
                     start.linkTo(tyreRight.end, READOUT_GAP)
-                }.verticallyCenteredOn(axleY)
+                }.verticallyCenteredOn(axleY, (basicReadoutHeight to null).takeIf { isOutlined(taps.isManaging) })
             )
             TyreTapArea(
                 location = this,
@@ -1428,7 +1499,7 @@ private fun Motorcycle(
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
                     start.linkTo(vehicleImage.end, READOUT_GAP)
-                }.verticallyCenteredOn(frontY)
+                }.verticallyCenteredOn(frontY, (basicReadoutHeight to null).takeIf { isOutlined(taps.isManaging) })
             )
             TyreTapArea(
                 location = this,
@@ -1465,7 +1536,7 @@ private fun Motorcycle(
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
                     start.linkTo(vehicleImage.end, READOUT_GAP)
-                }.verticallyCenteredOn(rearY)
+                }.verticallyCenteredOn(rearY, (basicReadoutHeight to null).takeIf { isOutlined(taps.isManaging) })
             )
             TyreTapArea(
                 location = this,
@@ -1509,7 +1580,6 @@ private fun TadpoleThreadWheeler(
         val (
             vehicleImage,
             frontTrack,
-            rearOutline,
             frontLeft,
             frontLeftStats,
             frontLeftTap,
@@ -1527,8 +1597,8 @@ private fun TadpoleThreadWheeler(
             imageHeight
         )
         ImageSpan(frontTrack, TADPOLE_FRONT_TRACK, imageHeight)
-        // Outline around the rear wheel (the exhaust on the right), the rear readout sits next to it
-        ImageSpan(rearOutline, .65f, imageHeight)
+        // The front readouts sit against the mirrors, which they'd reach otherwise as they grow
+        val frontBody = createRef().also { ImageSpan(it, TADPOLE_FRONT_BODY, imageHeight) }
         val frontY = .1005f
         val frontAxle = imageGuideline(frontY, imageHeight)
         val rearY = .845f
@@ -1552,8 +1622,8 @@ private fun TadpoleThreadWheeler(
                     bottom.linkTo(vehicleImage.bottom)
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
-                    end.linkTo(frontLeft.start, READOUT_GAP)
-                }.verticallyCenteredOn(frontY)
+                    end.linkTo(frontBody.start, READOUT_GAP)
+                }.verticallyCenteredOn(frontY, (basicReadoutHeight to null).takeIf { isOutlined(taps.isManaging) })
             )
             TyreTapArea(
                 location = this,
@@ -1589,8 +1659,8 @@ private fun TadpoleThreadWheeler(
                     bottom.linkTo(vehicleImage.bottom)
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
-                    start.linkTo(frontRight.end, READOUT_GAP)
-                }.verticallyCenteredOn(frontY)
+                    start.linkTo(frontBody.end, READOUT_GAP)
+                }.verticallyCenteredOn(frontY, (basicReadoutHeight to null).takeIf { isOutlined(taps.isManaging) })
             )
             TyreTapArea(
                 location = this,
@@ -1626,8 +1696,9 @@ private fun TadpoleThreadWheeler(
                     bottom.linkTo(vehicleImage.bottom)
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
-                    start.linkTo(rearOutline.end, READOUT_GAP)
-                }.verticallyCenteredOn(rearY)
+                    // Lined up with the front right one
+                    start.linkTo(frontRightStats.start)
+                }.verticallyCenteredOn(rearY, (basicReadoutHeight to null).takeIf { isOutlined(taps.isManaging) })
             )
             TyreTapArea(
                 location = this,
@@ -1671,7 +1742,6 @@ private fun DeltaThreeWheeler(
         val (
             vehicleImage,
             rearTrack,
-            frontOutline,
             tyreFront,
             frontStats,
             frontTap,
@@ -1691,8 +1761,6 @@ private fun DeltaThreeWheeler(
         ImageSpan(rearTrack, .713f, imageHeight)
         // The image has a margin past the body, the rear readouts sit against the body
         val rearBody = createRef().also { ImageSpan(it, DELTA_REAR_BODY, imageHeight) }
-        // Outline around the front wheel, the front readout sits next to it
-        ImageSpan(frontOutline, .22f, imageHeight)
         val frontY = .0865f
         val frontAxle = imageGuideline(frontY, imageHeight)
         val rearY = .835f
@@ -1716,8 +1784,9 @@ private fun DeltaThreeWheeler(
                     bottom.linkTo(vehicleImage.bottom)
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
-                    start.linkTo(frontOutline.end, READOUT_GAP)
-                }.verticallyCenteredOn(frontY)
+                    // Lined up with the rear right one
+                    start.linkTo(rearRightStats.start)
+                }.verticallyCenteredOn(frontY, (basicReadoutHeight to null).takeIf { isOutlined(taps.isManaging) })
             )
             TyreTapArea(
                 location = this,
@@ -1754,7 +1823,7 @@ private fun DeltaThreeWheeler(
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
                     end.linkTo(rearBody.start, READOUT_GAP)
-                }.verticallyCenteredOn(rearY)
+                }.verticallyCenteredOn(rearY, (basicReadoutHeight to null).takeIf { isOutlined(taps.isManaging) })
             )
             TyreTapArea(
                 location = this,
@@ -1791,7 +1860,7 @@ private fun DeltaThreeWheeler(
                     height = Dimension.fillToConstraints
                     width = Dimension.value(readoutSlotWidth)
                     start.linkTo(rearBody.end, READOUT_GAP)
-                }.verticallyCenteredOn(rearY)
+                }.verticallyCenteredOn(rearY, (basicReadoutHeight to null).takeIf { isOutlined(taps.isManaging) })
             )
             TyreTapArea(
                 location = this,
