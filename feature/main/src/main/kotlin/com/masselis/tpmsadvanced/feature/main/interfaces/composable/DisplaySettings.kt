@@ -111,12 +111,6 @@ private fun DisplaySettings(
         },
         modifier = Modifier.testTag(TyreDisplaySettingsTags.theme),
     )
-    TextSettingsItem(
-        headline = "Sensor readings text size",
-        supporting = readoutTextScale.textSizeLabel,
-        onClick = openTextSize,
-        modifier = Modifier.testTag(TyreDisplaySettingsTags.textSize),
-    )
     SwitchNavigationSettingsItem(
         headline = "Tap to magnify",
         supporting = listOf(AnnotatedString("for $magnifierSeconds seconds")),
@@ -132,6 +126,12 @@ private fun DisplaySettings(
         onCheckedChange = onDimDisplay,
         onClick = openDimDisplay,
         modifier = Modifier.testTag(TyreDisplaySettingsTags.dimDisplay),
+    )
+    TextSettingsItem(
+        headline = "Sensor readings text size",
+        supporting = readoutTextScale.textSizeLabel,
+        onClick = openTextSize,
+        modifier = Modifier.testTag(TyreDisplaySettingsTags.textSize),
     )
 }
 
