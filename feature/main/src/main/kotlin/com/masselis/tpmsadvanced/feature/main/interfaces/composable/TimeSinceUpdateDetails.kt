@@ -16,7 +16,7 @@ import com.masselis.tpmsadvanced.core.ui.SwitchSettingsItem
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.TyreDisplaySettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.TyreDisplaySettingsViewModel
 
-/** The page opened from the "Time since last update" item of [TyreDisplaySettings] */
+/** The page opened from the "Time since last update" item of [ReadingsSettings] */
 @Composable
 public fun TimeSinceUpdateDetails(modifier: Modifier = Modifier): Unit =
     TimeSinceUpdateDetails(modifier, viewModel { TyreDisplaySettingsViewModel() })

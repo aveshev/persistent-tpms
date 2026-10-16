@@ -39,18 +39,20 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.composable.Suspen
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.SuspendScanConditions
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.DebugSettings
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.DeveloperOptionsSettings
+import com.masselis.tpmsadvanced.feature.main.interfaces.composable.DisplaySettings
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.MagnifierDuration
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.DimDisplayDelay
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.PressureLossSettings
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.TextSize
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.TimeSinceUpdateDetails
-import com.masselis.tpmsadvanced.feature.main.interfaces.composable.TyreDisplaySettings
+import com.masselis.tpmsadvanced.feature.main.interfaces.composable.ReadingsSettings
 import com.masselis.tpmsadvanced.feature.unit.interfaces.UnitsSettingsItems
 import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.alerts
 import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.persistentMode
 import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.developerOptions
 import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.persistentScanning
-import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.tyreDisplay
+import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.display
+import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.readings
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
 import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
 
@@ -68,12 +70,16 @@ internal fun AppSettings(
     modifier: Modifier = Modifier,
 ) = SettingsPage(modifier) {
     SettingsSectionHeader("Display")
-    TyreDisplaySettings(
-        openTimeSinceUpdate = openTimeSinceUpdate,
+    DisplaySettings(
+        openTextSize = openTextSize,
         openMagnifier = openMagnifier,
         openDimDisplay = openDimDisplay,
-        openTextSize = openTextSize,
-        modifier = Modifier.testTag(tyreDisplay),
+        modifier = Modifier.testTag(display),
+    )
+    SettingsSectionHeader("Readings")
+    ReadingsSettings(
+        openTimeSinceUpdate = openTimeSinceUpdate,
+        modifier = Modifier.testTag(readings),
         leadingItems = { UnitsSettingsItems() },
     )
     SettingsSectionHeader("Alerts")
@@ -290,7 +296,8 @@ internal fun SettingsPage(
 )
 
 internal object AppSettingsTag {
-    const val tyreDisplay = "AppSettingsTag_tyreDisplay"
+    const val display = "AppSettingsTag_display"
+    const val readings = "AppSettingsTag_readings"
     const val alerts = "AppSettingsTag_alerts"
     const val persistentScanning = "AppSettingsTag_persistentScanning"
     const val persistentMode = "AppSettingsTag_persistentMode"

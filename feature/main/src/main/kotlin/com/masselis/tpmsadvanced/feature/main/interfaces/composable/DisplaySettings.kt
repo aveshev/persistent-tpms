@@ -1,6 +1,5 @@
 package com.masselis.tpmsadvanced.feature.main.interfaces.composable
 
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -14,7 +13,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.masselis.tpmsadvanced.core.ui.SegmentedSettingsItem
 import com.masselis.tpmsadvanced.core.ui.SettingsGroup
 import com.masselis.tpmsadvanced.core.ui.SwitchNavigationSettingsItem
-import com.masselis.tpmsadvanced.core.ui.SwitchSettingsItem
 import com.masselis.tpmsadvanced.core.ui.TextSettingsItem
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.Theme
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.Theme.DARK
@@ -25,127 +23,73 @@ import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.TyreDisplaySe
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.TyreDisplaySettingsViewModel
 
 /**
- * The "Display" group of the app settings, [openTimeSinceUpdate] opening the page explaining it,
- * [openMagnifier] the one choosing how long a reading stays magnified, see [MagnifierDuration],
- * [openDimDisplay] the one choosing how long the main screen waits before dimming, see [DimDisplayDelay],
- * [openTextSize] the one choosing the readouts' text size, see [TextSize].
- * [leadingItems] open the group, for display settings owned by other features.
+ * The "Display" group of the app settings, about the app and its main screen as a whole, see
+ * [ReadingsSettings] for what each reading shows. [openTextSize] opens the page choosing the
+ * readouts' text size, see [TextSize], [openMagnifier] the one choosing how long a reading stays
+ * magnified, see [MagnifierDuration], [openDimDisplay] the one choosing how long the main screen
+ * waits before dimming, see [DimDisplayDelay].
  */
 @Composable
-public fun TyreDisplaySettings(
-    openTimeSinceUpdate: () -> Unit,
+public fun DisplaySettings(
+    openTextSize: () -> Unit,
     openMagnifier: () -> Unit,
     openDimDisplay: () -> Unit,
-    openTextSize: () -> Unit,
     modifier: Modifier = Modifier,
-    leadingItems: @Composable ColumnScope.() -> Unit = {},
-): Unit =
-    TyreDisplaySettings(
-        openTimeSinceUpdate,
-        openMagnifier,
-        openDimDisplay,
-        openTextSize,
-        modifier,
-        leadingItems,
-        viewModel { TyreDisplaySettingsViewModel() },
-    )
+): Unit = DisplaySettings(
+    openTextSize,
+    openMagnifier,
+    openDimDisplay,
+    modifier,
+    viewModel { TyreDisplaySettingsViewModel() },
+)
 
 @Composable
-internal fun TyreDisplaySettings(
-    openTimeSinceUpdate: () -> Unit,
+internal fun DisplaySettings(
+    openTextSize: () -> Unit,
     openMagnifier: () -> Unit,
     openDimDisplay: () -> Unit,
-    openTextSize: () -> Unit,
     modifier: Modifier = Modifier,
-    leadingItems: @Composable ColumnScope.() -> Unit = {},
     viewModel: TyreDisplaySettingsViewModel = viewModel { TyreDisplaySettingsViewModel() },
 ) {
-    val showTimeSinceUpdate by viewModel.showTimeSinceUpdate.collectAsState()
-    val showBatteryVoltage by viewModel.showBatteryVoltage.collectAsState()
+    val theme by viewModel.theme.collectAsState()
+    val readoutTextScale by viewModel.readoutTextScale.collectAsState()
     val magnifier by viewModel.magnifier.collectAsState()
     val magnifierSeconds by viewModel.magnifierSeconds.collectAsState()
-    val theme by viewModel.theme.collectAsState()
     val dimDisplay by viewModel.dimDisplay.collectAsState()
     val dimDisplaySeconds by viewModel.dimDisplaySeconds.collectAsState()
-    val readoutTextScale by viewModel.readoutTextScale.collectAsState()
-    TyreDisplaySettings(
-        showTimeSinceUpdate = showTimeSinceUpdate,
-        onShowTimeSinceUpdate = { viewModel.showTimeSinceUpdate.value = it },
-        showBatteryVoltage = showBatteryVoltage,
-        onShowBatteryVoltage = { viewModel.showBatteryVoltage.value = it },
+    DisplaySettings(
+        theme = theme,
+        onTheme = { viewModel.theme.value = it },
+        readoutTextScale = readoutTextScale,
+        openTextSize = openTextSize,
         magnifier = magnifier,
         onMagnifier = { viewModel.magnifier.value = it },
         magnifierSeconds = magnifierSeconds,
-        theme = theme,
-        onTheme = { viewModel.theme.value = it },
+        openMagnifier = openMagnifier,
         dimDisplay = dimDisplay,
         onDimDisplay = { viewModel.dimDisplay.value = it },
         dimDisplaySeconds = dimDisplaySeconds,
-        openTimeSinceUpdate = openTimeSinceUpdate,
-        openMagnifier = openMagnifier,
         openDimDisplay = openDimDisplay,
-        readoutTextScale = readoutTextScale,
-        openTextSize = openTextSize,
         modifier = modifier,
-        leadingItems = leadingItems,
     )
 }
 
-@Suppress("LongMethod")
 @Composable
-private fun TyreDisplaySettings(
-    showTimeSinceUpdate: Boolean,
-    onShowTimeSinceUpdate: (Boolean) -> Unit,
-    showBatteryVoltage: Boolean,
-    onShowBatteryVoltage: (Boolean) -> Unit,
+private fun DisplaySettings(
+    theme: Theme,
+    onTheme: (Theme) -> Unit,
+    readoutTextScale: Float,
+    openTextSize: () -> Unit,
     magnifier: Boolean,
     onMagnifier: (Boolean) -> Unit,
     magnifierSeconds: Int,
-    theme: Theme,
-    onTheme: (Theme) -> Unit,
+    openMagnifier: () -> Unit,
     dimDisplay: Boolean,
     onDimDisplay: (Boolean) -> Unit,
     dimDisplaySeconds: Int,
-    openTimeSinceUpdate: () -> Unit,
-    openMagnifier: () -> Unit,
     openDimDisplay: () -> Unit,
-    readoutTextScale: Float,
-    openTextSize: () -> Unit,
     modifier: Modifier = Modifier,
-    leadingItems: @Composable ColumnScope.() -> Unit = {},
 ) = SettingsGroup(modifier) {
-    leadingItems()
-    SwitchNavigationSettingsItem(
-        headline = "Time since last update",
-        checked = showTimeSinceUpdate,
-        onCheckedChange = onShowTimeSinceUpdate,
-        onClick = openTimeSinceUpdate,
-        // The page explains why a sensor can stay silent, which matters whether shown or not
-        openableWhenOff = true,
-        modifier = Modifier.testTag(TyreDisplaySettingsTags.showTimeSinceUpdate),
-    )
-    SwitchSettingsItem(
-        headline = "Always show battery",
-        supporting = "(even when not low)",
-        checked = showBatteryVoltage,
-        onCheckedChange = onShowBatteryVoltage,
-        modifier = Modifier.testTag(TyreDisplaySettingsTags.showBatteryVoltage),
-    )
-    TextSettingsItem(
-        headline = "Text size",
-        supporting = readoutTextScale.textSizeLabel,
-        onClick = openTextSize,
-        opensPage = true,
-        modifier = Modifier.testTag(TyreDisplaySettingsTags.textSize),
-    )
-    SwitchNavigationSettingsItem(
-        headline = "Tap to magnify",
-        supporting = listOf(AnnotatedString("for $magnifierSeconds seconds")),
-        checked = magnifier,
-        onCheckedChange = onMagnifier,
-        onClick = openMagnifier,
-        modifier = Modifier.testTag(TyreDisplaySettingsTags.magnifier),
-    )
     SegmentedSettingsItem(
         headline = "Theme",
         options = Theme.entries,
@@ -167,6 +111,21 @@ private fun TyreDisplaySettings(
         },
         modifier = Modifier.testTag(TyreDisplaySettingsTags.theme),
     )
+    TextSettingsItem(
+        headline = "Text size",
+        supporting = readoutTextScale.textSizeLabel,
+        onClick = openTextSize,
+        opensPage = true,
+        modifier = Modifier.testTag(TyreDisplaySettingsTags.textSize),
+    )
+    SwitchNavigationSettingsItem(
+        headline = "Tap to magnify",
+        supporting = listOf(AnnotatedString("for $magnifierSeconds seconds")),
+        checked = magnifier,
+        onCheckedChange = onMagnifier,
+        onClick = openMagnifier,
+        modifier = Modifier.testTag(TyreDisplaySettingsTags.magnifier),
+    )
     SwitchNavigationSettingsItem(
         headline = "Dim when idle",
         supporting = listOf(AnnotatedString("after ${dimDisplaySeconds.asDimDelay()}")),
@@ -179,28 +138,24 @@ private fun TyreDisplaySettings(
 
 @Preview
 @Composable
-internal fun TyreDisplaySettingsPreview() {
-    TyreDisplaySettings(
-        showTimeSinceUpdate = true,
-        onShowTimeSinceUpdate = {},
-        showBatteryVoltage = false,
-        onShowBatteryVoltage = {},
+internal fun DisplaySettingsPreview() {
+    DisplaySettings(
+        theme = SYSTEM,
+        onTheme = {},
+        readoutTextScale = 1f,
+        openTextSize = {},
         magnifier = true,
         onMagnifier = {},
         magnifierSeconds = 5,
-        theme = SYSTEM,
-        onTheme = {},
+        openMagnifier = {},
         dimDisplay = true,
         onDimDisplay = {},
         dimDisplaySeconds = 60,
-        openTimeSinceUpdate = {},
-        openMagnifier = {},
         openDimDisplay = {},
-        readoutTextScale = 1f,
-        openTextSize = {},
     )
 }
 
+/** Test tags of [DisplaySettings], [ReadingsSettings] and the pages they open */
 @Suppress("ConstPropertyName")
 internal object TyreDisplaySettingsTags {
     const val showTimeSinceUpdate = "TyreDisplaySettingsTags_showTimeSinceUpdate"

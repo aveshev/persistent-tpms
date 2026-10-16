@@ -15,7 +15,7 @@ import com.masselis.tpmsadvanced.core.ui.SettingsSectionHeader
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.TyreDisplaySettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.TyreDisplaySettingsViewModel
 
-/** The page opened from the "Tap to magnify" item of [TyreDisplaySettings] */
+/** The page opened from the "Tap to magnify" item of [DisplaySettings] */
 @Composable
 public fun MagnifierDuration(modifier: Modifier = Modifier): Unit =
     MagnifierDuration(modifier, viewModel { TyreDisplaySettingsViewModel() })
