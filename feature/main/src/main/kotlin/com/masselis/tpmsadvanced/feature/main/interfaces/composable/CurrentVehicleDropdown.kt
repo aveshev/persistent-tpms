@@ -160,7 +160,8 @@ private fun CurrentVehicleDropdown(
         modifier = modifier
     ) {
         Row(
-            verticalAlignment = Alignment.Bottom,
+            // Centred on the name's line, which grows with the font size while the arrow doesn't
+            verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
         ) {
             // On one line, giving way to the arrow when the room's short
