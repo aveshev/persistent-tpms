@@ -29,6 +29,10 @@ import com.masselis.tpmsadvanced.data.vehicle.model.TyreAtmosphere
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location.Wheel
 import com.masselis.tpmsadvanced.data.vehicle.model.Voltage
 import com.masselis.tpmsadvanced.data.vehicle.model.Voltage.CREATOR.volts
+import com.masselis.tpmsadvanced.feature.main.usecase.ListenTyreWithDatabaseUseCase.StoredLatest
+import com.masselis.tpmsadvanced.feature.main.usecase.ListenTyreWithDatabaseUseCase.StoredLatest.FOUND
+import com.masselis.tpmsadvanced.feature.main.usecase.ListenTyreWithDatabaseUseCase.StoredLatest.NONE
+import com.masselis.tpmsadvanced.feature.main.usecase.ListenTyreWithDatabaseUseCase.StoredLatest.NOT_LOOKED_UP
 import com.masselis.tpmsadvanced.feature.main.usecase.TyreStatsStateFlow.State
 import io.mockk.every
 import io.mockk.mockk
@@ -60,6 +64,7 @@ internal class TyreStatsStateFlowTest {
     private lateinit var unitPreferences: UnitPreferences
     private lateinit var pressureLoss: MutableStateFlow<PressureLoss?>
     private lateinit var sensorBindingUseCase: SensorBindingUseCase
+    private lateinit var storedLatest: MutableStateFlow<StoredLatest>
 
     @Before
     fun setup() {
@@ -79,6 +84,7 @@ internal class TyreStatsStateFlowTest {
         }
         pressureLoss = MutableStateFlow(null)
         sensorBindingUseCase = SensorBindingUseCase.NoOp
+        storedLatest = MutableStateFlow(NONE)
     }
 
     context(scope: TestScope)
@@ -88,6 +94,7 @@ internal class TyreStatsStateFlowTest {
         unitPreferences,
         sensorBindingUseCase,
         scope.backgroundScope,
+        storedLatest,
     )
 
     private fun setAtmosphere(
@@ -116,6 +123,26 @@ internal class TyreStatsStateFlowTest {
     @Test
     fun notDetected(): Unit = runTest {
         assertIs<State.NotDetected>(test().value)
+    }
+
+    @Test
+    fun `loading until the stored reading is looked up`(): Unit = runTest {
+        storedLatest.value = NOT_LOOKED_UP
+        test().isLoading.test {
+            assertTrue(awaitItem())
+            storedLatest.value = NONE
+            assertFalse(awaitItem())
+        }
+    }
+
+    @Test
+    fun `loading until the stored reading found is detected`(): Unit = runTest {
+        storedLatest.value = FOUND
+        setAtmosphere(2f.bar, 45f.celsius)
+        test().isLoading.test {
+            assertTrue(awaitItem())
+            assertFalse(awaitItem())
+        }
     }
 
     @Test

@@ -43,6 +43,7 @@ import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -76,6 +77,7 @@ import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleBindings.Compan
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent.Factory.Companion.key
 import com.masselis.tpmsadvanced.feature.main.model.MoveChain
+import java.text.DecimalFormatSymbols
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
@@ -121,6 +123,15 @@ private val PressureUnit.widestReadout: String
 
 /** Widest plausible detail lines of a readout, see [TyreStat] */
 private val WIDEST_DETAILS = listOf("188°F", "188°C", "88 hours", "99+ days")
+
+/**
+ * This widest line with every digit in place of its digits, and the locale's decimal separator, as
+ * readouts are formatted: digits aren't all as wide in every font, nor a comma as a period
+ */
+private val String.withEveryDigit: List<String>
+    get() = DecimalFormatSymbols.getInstance().decimalSeparator.let { separator ->
+        ('0'..'9').map { digit -> map { if (it.isDigit()) digit else it }.joinToString("").replace('.', separator) }
+    }
 
 /** Height of a tyre as a fraction of the image height, its width follows TYRE_ASPECT_RATIO */
 private const val TYRE_HEIGHT = .165f
@@ -269,47 +280,51 @@ public fun Vehicle(
     corners: Pair<Dp, Dp>? = null,
 ) {
     KeepScreenOn()
-    val sizing = rememberVehicleSizing(component, taps.isManaging)
-    val readoutSlotWidth = sizing.readoutSlotWidth
-    val basicReadoutHeight = sizing.basicReadoutHeight
-    val readoutWidth = sizing.readoutWidth
-    val readoutSides = sizing.readoutSides
-    val spareRoom = sizing.spareRoom(corners)
     BoxWithConstraints(modifier) {
-        val imageHeight = sizing.imageHeight(maxWidth, maxHeight, corners)
-        // How far the spare's readout goes past the image's bottom
-        val spareOverflow = spareRoom
-            ?.minus(maxHeight * imageHeight * (1 - SPARE_BOTTOM))
-            ?.coerceAtLeast(0.dp)
-            ?: 0.dp
-        // Centers the image and its readouts together when readouts are only on one side
-        val fill = Modifier
-            .fillMaxSize()
-            .offset(
-                x = listOfNotNull(
-                    readoutWidth.takeIf { LEFT in readoutSides },
-                    readoutWidth.takeIf { RIGHT in readoutSides }?.unaryMinus(),
-                    // Between the corners
-                    corners?.let { (start, end) -> start - end },
-                ).fold(0.dp, Dp::plus) / 2,
-                // Up by half of what the spare's readout adds, it's centered with the image
-                y = -spareOverflow / 2,
-            )
-        when (component.vehicle.kind) {
-            Kind.CAR ->
-                Car(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, fill)
-            Kind.SINGLE_AXLE_TRAILER ->
-                SingleAxleTrailer(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, fill)
-            Kind.MOTORCYCLE ->
-                Motorcycle(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, fill)
-            Kind.TADPOLE_THREE_WHEELER ->
-                TadpoleThreadWheeler(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, fill)
-            Kind.DELTA_THREE_WHEELER ->
-                DeltaThreeWheeler(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, fill)
-            Kind.CAR_WITH_SPARE ->
-                CarWithSpare(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, corners != null, fill)
-            Kind.MONOWHEEL ->
-                Monowheel(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, fill)
+        FitsText(maxWidth, maxHeight, corners, taps.isManaging, modifier = Modifier.fillMaxSize()) {
+            // From the readouts' fitted text: the image takes the room their text leaves it, the
+            // larger the less text, see FitsText, which doesn't show it until that text is fitted
+            val sizing = rememberVehicleSizing(component, taps.isManaging, rememberFittedTextDensity())
+            val readoutSlotWidth = sizing.readoutSlotWidth
+            val basicReadoutHeight = sizing.basicReadoutHeight
+            val readoutWidth = sizing.readoutWidth
+            val readoutSides = sizing.readoutSides
+            val spareRoom = sizing.spareRoom(corners)
+            val imageHeight = sizing.imageHeight(maxWidth, maxHeight, corners)
+            // How far the spare's readout goes past the image's bottom
+            val spareOverflow = spareRoom
+                ?.minus(maxHeight * imageHeight * (1 - SPARE_BOTTOM))
+                ?.coerceAtLeast(0.dp)
+                ?: 0.dp
+            // Centers the image and its readouts together when readouts are only on one side
+            val fill = Modifier
+                .fillMaxSize()
+                .offset(
+                    x = listOfNotNull(
+                        readoutWidth.takeIf { LEFT in readoutSides },
+                        readoutWidth.takeIf { RIGHT in readoutSides }?.unaryMinus(),
+                        // Between the corners
+                        corners?.let { (start, end) -> start - end },
+                    ).fold(0.dp, Dp::plus) / 2,
+                    // Up by half of what the spare's readout adds, it's centered with the image
+                    y = -spareOverflow / 2,
+                )
+            when (component.vehicle.kind) {
+                Kind.CAR ->
+                    Car(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, fill)
+                Kind.SINGLE_AXLE_TRAILER ->
+                    SingleAxleTrailer(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, fill)
+                Kind.MOTORCYCLE ->
+                    Motorcycle(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, fill)
+                Kind.TADPOLE_THREE_WHEELER ->
+                    TadpoleThreadWheeler(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, fill)
+                Kind.DELTA_THREE_WHEELER ->
+                    DeltaThreeWheeler(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, fill)
+                Kind.CAR_WITH_SPARE ->
+                    CarWithSpare(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, corners != null, fill)
+                Kind.MONOWHEEL ->
+                    Monowheel(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, fill)
+            }
         }
     }
 }
@@ -393,16 +408,23 @@ internal class VehicleSizing(
     }
 }
 
-/** Sizes [component]'s vehicle as its settings and the text size have it, see [VehicleSizing] */
+/**
+ * Sizes [component]'s vehicle as its settings and the text size have it, its text measured with
+ * [density], see [VehicleSizing]
+ */
 @Composable
-internal fun rememberVehicleSizing(component: VehicleComponent, isManaging: Boolean): VehicleSizing {
+internal fun rememberVehicleSizing(
+    component: VehicleComponent,
+    isManaging: Boolean,
+    density: Density = LocalDensity.current,
+): VehicleSizing {
     val settings = component.viewModel(component.key()) { it.VehicleSettingsViewModel() }
     val pressureUnit by settings.pressureUnit.collectAsState()
     // Without any outline, the readouts need no room for them and the image grows by as much
     val isOutlined = isManaging || settings.isFullyAssigned.collectAsState().value.not()
-    val readoutSlotWidth = rememberWidestReadoutWidth(pressureUnit, isOutlined)
+    val readoutSlotWidth = rememberWidestReadoutWidth(pressureUnit, isOutlined, density)
         .plus(OUTLINE_PADDING.takeIf { isOutlined } ?: 0.dp)
-    val basicReadoutHeight = rememberBasicReadoutHeight()
+    val basicReadoutHeight = rememberBasicReadoutHeight(density)
     return remember(component.vehicle.kind, readoutSlotWidth, basicReadoutHeight, isOutlined) {
         VehicleSizing(component.vehicle.kind, readoutSlotWidth, basicReadoutHeight, isOutlined)
     }
@@ -509,34 +531,46 @@ internal val Location.readoutSide: SensorLocation.Side
         is Location.Side -> side
     }
 
-/** Height of a [TyreStat] showing only its pressure, temperature and time since update */
+/** Height of a [TyreStat] showing only its pressure, temperature and time since update, measured with [density] */
 @Composable
-private fun rememberBasicReadoutHeight(): Dp {
+private fun rememberBasicReadoutHeight(density: Density): Dp {
     val measurer = rememberTextMeasurer()
     val pressureStyle = LocalTextStyle.current.copy(fontWeight = FontWeight.SemiBold)
-    val density = LocalDensity.current
     return remember(measurer, pressureStyle, density) {
-        measurer.measure("0", pressureStyle).size.height
-            .plus(measurer.measure("0", pressureStyle.copy(fontSize = 16.sp)).size.height * 2)
+        measurer.measure("0", pressureStyle, density = density).size.height
+            .plus(measurer.measure("0", pressureStyle.copy(fontSize = 16.sp), density = density).size.height * 2)
             .let { with(density) { it.toDp() } }
     }
 }
 
 /**
- * Width of the widest line a [TyreReadout] can show, with the current font and font scale. Only a
+ * Width of the widest line a [TyreReadout] can show, with the current font and [density]'s font scale. Only a
  * location without a sensor, outlined, shows what it shows instead ([isOutlined]).
  */
 @Composable
-internal fun rememberWidestReadoutWidth(pressureUnit: PressureUnit, isOutlined: Boolean): Dp {
+internal fun rememberWidestReadoutWidth(
+    pressureUnit: PressureUnit,
+    isOutlined: Boolean,
+    density: Density = LocalDensity.current,
+): Dp {
     val measurer = rememberTextMeasurer()
     val pressureStyle = LocalTextStyle.current.copy(fontWeight = FontWeight.SemiBold)
-    val density = LocalDensity.current
-    return remember(measurer, pressureStyle, density, pressureUnit, isOutlined) {
-        listOf(measurer.measure(pressureUnit.widestReadout, pressureStyle))
-            .plus(WIDEST_DETAILS.map { measurer.measure(it, pressureStyle.copy(fontSize = 16.sp)) })
+    val systemDensity = LocalDensity.current
+    // Each style's widest line, found once at the system's size: glyphs keep their proportions at
+    // any size, so only these are measured again while FitsText tries smaller ones
+    val widestLines = remember(measurer, pressureStyle, systemDensity, pressureUnit, isOutlined) {
+        listOfNotNull(
+            pressureStyle to pressureUnit.widestReadout.withEveryDigit,
+            pressureStyle.copy(fontSize = 16.sp) to WIDEST_DETAILS.flatMap { it.withEveryDigit },
             // What a location without a sensor shows instead, see TyreReadout
-            .plus(listOfNotNull(measurer.measure("Tap to", pressureStyle.copy(fontSize = 20.sp)).takeIf { isOutlined }))
-            .maxOf { it.size.width }
+            (pressureStyle.copy(fontSize = 20.sp) to listOf("Tap to")).takeIf { isOutlined },
+        ).map { (style, lines) ->
+            style to lines.maxBy { measurer.measure(it, style, density = systemDensity).size.width }
+        }
+    }
+    return remember(measurer, widestLines, density) {
+        widestLines
+            .maxOf { (style, line) -> measurer.measure(line, style, density = density).size.width }
             .let { with(density) { it.toDp() } }
     }
 }

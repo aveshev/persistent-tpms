@@ -81,6 +81,8 @@ internal fun TyreStat(
     val showSensorFlags by viewModel.showSensorFlags.collectAsState()
     val showTimeSinceUpdate by viewModel.showTimeSinceUpdate.collectAsState()
     val showBatteryVoltage by viewModel.showBatteryVoltage.collectAsState()
+    // "-:-" until its reading's read, not worth fitting the text to
+    HoldTextFit(viewModel.isLoading.collectAsState().value)
     if (isBasic) TyreStat(location, state, isBasic = true, isCentered = isCentered, modifier = modifier)
     else TyreStat(
         location, state, showSensorId, showTimeSinceUpdate, showBatteryVoltage, showSensorFlags,

@@ -10,6 +10,8 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Pressure
 import com.masselis.tpmsadvanced.data.vehicle.model.Temperature
 import com.masselis.tpmsadvanced.data.vehicle.model.TyreAtmosphere
 import com.masselis.tpmsadvanced.data.vehicle.model.Voltage
+import com.masselis.tpmsadvanced.feature.main.usecase.ListenTyreWithDatabaseUseCase.StoredLatest
+import com.masselis.tpmsadvanced.feature.main.usecase.ListenTyreWithDatabaseUseCase.StoredLatest.NONE
 import com.masselis.tpmsadvanced.feature.main.usecase.TyreStatsStateFlow.State
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -28,6 +30,7 @@ public class TyreStatsStateFlow internal constructor(
     unitPreferences: UnitPreferences,
     sensorBindingUseCase: SensorBindingUseCase,
     scope: CoroutineScope,
+    storedLatest: StateFlow<StoredLatest>,
     // Starts over with the sensor bound, moved or swapped here: its own latest reading, if any. A
     // screen coming back keeps showing the last one until then.
     stateFlow: StateFlow<State> = sensorBindingUseCase
@@ -61,6 +64,17 @@ public class TyreStatsStateFlow internal constructor(
         .catch { emit(State.NotDetected) }
         .stateIn(scope, WhileSubscribed(), State.NotDetected),
 ) : StateFlow<State> by stateFlow {
+
+    /**
+     * While it's [State.NotDetected] only for not having its stored reading yet: until it's looked
+     * up, or until what was found gets here
+     */
+    public val isLoading: StateFlow<Boolean> = combine(stateFlow, storedLatest) { state, stored ->
+        state.isLoading(stored)
+    }
+        .stateIn(scope, WhileSubscribed(), stateFlow.value.isLoading(storedLatest.value))
+
+    private fun State.isLoading(storedLatest: StoredLatest) = this is State.NotDetected && storedLatest != NONE
 
     public sealed class State : Parcelable {
         // Shows "-:-" texts

@@ -40,18 +40,21 @@ internal fun TyreReadout(
         .let { viewModel(it.keyed()) { it.TyreActionsViewModel() } },
 ) {
     val state by viewModel.stateFlow.collectAsState()
+    val fitted = modifier.fitsText(location, TextFitPart.READOUT)
     // What's centered in the outline keeps away from its outer edge, the tyre's side is far enough
     // The spare's readout is under it, centered with no outer edge. An assigned location isn't
     // outlined outside of managing its sensors, see TyreTapArea.
     val isOutlined = location != Location.Spare && (state !is State.Assigned || isBasic)
-    val outlined = if (isOutlined.not()) modifier else modifier.padding(
+    val outlined = if (isOutlined.not()) fitted else fitted.padding(
         start = OUTLINE_PADDING.takeIf { location.readoutSide == LEFT } ?: 0.dp,
         end = OUTLINE_PADDING.takeIf { location.readoutSide == RIGHT } ?: 0.dp,
     )
-    when (val state = state) {
-        is State.Unassigned -> TapToAssign(location, state.detected != null, outlined)
-        State.Demo, is State.Assigned ->
-            TyreStat(location = location, modifier = if (isBasic) outlined else modifier, isBasic = isBasic)
+    FittedText {
+        when (val state = state) {
+            is State.Unassigned -> TapToAssign(location, state.detected != null, outlined)
+            State.Demo, is State.Assigned ->
+                TyreStat(location = location, modifier = if (isBasic) outlined else fitted, isBasic = isBasic)
+        }
     }
 }
 

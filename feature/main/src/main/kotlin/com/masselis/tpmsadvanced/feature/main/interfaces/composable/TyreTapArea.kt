@@ -107,6 +107,9 @@ internal fun TyreTapArea(
     Box(
         modifier
             .outset(OUTLINE_OUTSET)
+            // Only where it's drawn: where it isn't, nothing can be seen going past the screen or
+            // under another
+            .run { if (frame != null) fitsText(location, TextFitPart.TAP_AREA) else this }
             .run {
                 onOutlinePositioned
                     ?.let { report -> onGloballyPositioned { report(location, it.boundsInWindow()) } }
@@ -122,21 +125,23 @@ internal fun TyreTapArea(
                 .testTag(TyreTapAreaTags.root(location))
         )
         // Over the border, which draws over what it's around, and out of its clip
-        if (title != null && frame != null) Text(
-            text = title,
-            color = frame,
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier
-                .padding(start = 12.dp)
-                // Centered on the border
-                .layout { measurable, constraints ->
-                    val placeable = measurable.measure(constraints)
-                    layout(placeable.width, placeable.height) { placeable.place(0, -placeable.height / 2) }
-                }
-                // Cuts the border
-                .background(MaterialTheme.colorScheme.background)
-                .padding(horizontal = 4.dp),
-        )
+        if (title != null && frame != null) FittedText {
+            Text(
+                text = title,
+                color = frame,
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier
+                    .padding(start = 12.dp)
+                    // Centered on the border
+                    .layout { measurable, constraints ->
+                        val placeable = measurable.measure(constraints)
+                        layout(placeable.width, placeable.height) { placeable.place(0, -placeable.height / 2) }
+                    }
+                    // Cuts the border
+                    .background(MaterialTheme.colorScheme.background)
+                    .padding(horizontal = 4.dp),
+            )
+        }
     }
     (state as? State.Assigned)
         ?.takeIf { isOpen }
