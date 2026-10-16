@@ -163,12 +163,14 @@ public interface TyreBindings {
         unitPreferences: UnitPreferences,
         sensorBindingUseCase: SensorBindingUseCase,
         @VehicleLifecycle scope: CoroutineScope,
+        listenTyreWithDatabaseUseCase: ListenTyreWithDatabaseUseCase,
     ): TyreStatsStateFlow = TyreStatsStateFlow(
         alertsUseCase,
         calibrationUseCase,
         unitPreferences,
         sensorBindingUseCase,
-        scope
+        scope,
+        listenTyreWithDatabaseUseCase.storedLatest,
     )
 
     @SingleIn(TyreComponent.Scope::class)

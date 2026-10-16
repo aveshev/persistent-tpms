@@ -7,10 +7,15 @@ import com.masselis.tpmsadvanced.data.vehicle.interfaces.ReadingDatabase
 import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location
+import com.masselis.tpmsadvanced.feature.main.usecase.ListenTyreWithDatabaseUseCase.StoredLatest.FOUND
+import com.masselis.tpmsadvanced.feature.main.usecase.ListenTyreWithDatabaseUseCase.StoredLatest.NONE
+import com.masselis.tpmsadvanced.feature.main.usecase.ListenTyreWithDatabaseUseCase.StoredLatest.NOT_LOOKED_UP
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
@@ -18,6 +23,12 @@ import kotlinx.coroutines.flow.shareIn
 import kotlin.time.DurationUnit
 
 internal interface ListenTyreWithDatabaseUseCase : ListenTyreUseCase {
+
+    /** What looking up the bound sensor's latest stored reading, which [listen] starts with, found */
+    val storedLatest: StateFlow<StoredLatest>
+
+    enum class StoredLatest { NOT_LOOKED_UP, FOUND, NONE }
+
     class Impl(
         vehicle: Vehicle,
         location: Location,
@@ -30,6 +41,8 @@ internal interface ListenTyreWithDatabaseUseCase : ListenTyreUseCase {
         // Only touched by the shared upstream, a single collector
         private var lastStored: Tyre.Located? = null
         private var storedCount = 0
+
+        override val storedLatest = MutableStateFlow(NOT_LOOKED_UP)
 
         private val flow = listenTyreUseCase
             .listen()
@@ -65,6 +78,7 @@ internal interface ListenTyreWithDatabaseUseCase : ListenTyreUseCase {
                     .value
                     ?.let { readingDatabase.latestBySensorByLocation(it.id, location, vehicle.uuid) }
                     ?.execute()
+                    .also { storedLatest.value = if (it != null) FOUND else NONE }
                     ?.also { emit(it) }
             }
             .flowOn(Dispatchers.IO)
@@ -78,6 +92,8 @@ internal interface ListenTyreWithDatabaseUseCase : ListenTyreUseCase {
     }
 
     class Wrapper(private val source: ListenTyreUseCase) : ListenTyreWithDatabaseUseCase {
+        override val storedLatest = MutableStateFlow(NONE)
+
         override fun listen(): Flow<Tyre.Located> = source.listen()
     }
 }

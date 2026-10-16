@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 internal interface TyreStatsViewModel {
     val stateFlow: StateFlow<State>
+    val isLoading: StateFlow<Boolean>
     val showSensorId: StateFlow<Boolean>
     val showSensorFlags: StateFlow<Boolean>
     val showTimeSinceUpdate: StateFlow<Boolean>

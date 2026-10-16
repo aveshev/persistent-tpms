@@ -37,6 +37,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableIntStateOf
@@ -108,9 +109,14 @@ internal fun Home(
 ) {
     val vehicleComponent by viewModel.vehicleComponentStateFlow.collectAsState()
     PersistentScanningHost {
-        VehicleHome(
-            vehicleComponent = vehicleComponent
-        )
+        // Another vehicle starts over with its own screens: its routes carry its id, a new start
+        // destination would be a new screen fading in over the previous one, which shows the new
+        // vehicle as well, each fitting its text, see CurrentVehicle
+        key(vehicleComponent.vehicle.uuid) {
+            VehicleHome(
+                vehicleComponent = vehicleComponent
+            )
+        }
     }
 }
 
@@ -239,7 +245,15 @@ internal fun VehicleHome(
                                 navController.navigate("${Path.BluetoothAssign(vehicleUuid, locations.indexOf(it))}")
                             },
                             calibrate = { navController.navigate("${Path.Calibration(vehicleUuid, it)}") },
-                            modifier = modifier,
+                            // Like the main screen, without the room of a bar it won't have: the
+                            // vehicle is then sized once, not again when the bar's gone, see topBar
+                            modifier = if (isWideWindow()) {
+                                Modifier
+                                    .windowInsetsPadding(ScaffoldDefaults.contentWindowInsets)
+                                    .fillMaxSize()
+                            } else {
+                                modifier
+                            },
                             navigationIcon = { BackButton() },
                         )
                     }
