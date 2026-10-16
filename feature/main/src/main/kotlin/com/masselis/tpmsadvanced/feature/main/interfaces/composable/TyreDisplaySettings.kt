@@ -5,13 +5,21 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.masselis.tpmsadvanced.core.ui.SegmentedSettingsItem
 import com.masselis.tpmsadvanced.core.ui.SettingsGroup
 import com.masselis.tpmsadvanced.core.ui.SwitchNavigationSettingsItem
 import com.masselis.tpmsadvanced.core.ui.SwitchSettingsItem
+import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.Theme
+import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.Theme.DARK
+import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.Theme.LIGHT
+import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.Theme.SYSTEM
+import com.masselis.tpmsadvanced.feature.main.R
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.TyreDisplaySettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.TyreDisplaySettingsViewModel
 
@@ -51,6 +59,7 @@ internal fun TyreDisplaySettings(
     val showBatteryVoltage by viewModel.showBatteryVoltage.collectAsState()
     val magnifier by viewModel.magnifier.collectAsState()
     val magnifierSeconds by viewModel.magnifierSeconds.collectAsState()
+    val theme by viewModel.theme.collectAsState()
     val dimDisplay by viewModel.dimDisplay.collectAsState()
     val dimDisplaySeconds by viewModel.dimDisplaySeconds.collectAsState()
     TyreDisplaySettings(
@@ -61,6 +70,8 @@ internal fun TyreDisplaySettings(
         magnifier = magnifier,
         onMagnifier = { viewModel.magnifier.value = it },
         magnifierSeconds = magnifierSeconds,
+        theme = theme,
+        onTheme = { viewModel.theme.value = it },
         dimDisplay = dimDisplay,
         onDimDisplay = { viewModel.dimDisplay.value = it },
         dimDisplaySeconds = dimDisplaySeconds,
@@ -81,6 +92,8 @@ private fun TyreDisplaySettings(
     magnifier: Boolean,
     onMagnifier: (Boolean) -> Unit,
     magnifierSeconds: Int,
+    theme: Theme,
+    onTheme: (Theme) -> Unit,
     dimDisplay: Boolean,
     onDimDisplay: (Boolean) -> Unit,
     dimDisplaySeconds: Int,
@@ -115,6 +128,27 @@ private fun TyreDisplaySettings(
         onClick = openMagnifier,
         modifier = Modifier.testTag(TyreDisplaySettingsTags.magnifier),
     )
+    SegmentedSettingsItem(
+        headline = "Theme",
+        options = Theme.entries,
+        selected = theme,
+        onSelect = onTheme,
+        label = {
+            when (it) {
+                SYSTEM -> "System"
+                LIGHT -> "Light"
+                DARK -> "Dark"
+            }
+        },
+        icon = {
+            when (it) {
+                SYSTEM -> R.drawable.brightness_auto_24px
+                LIGHT -> R.drawable.light_mode_24px
+                DARK -> R.drawable.dark_mode_24px
+            }.let { id -> ImageVector.vectorResource(id) }
+        },
+        modifier = Modifier.testTag(TyreDisplaySettingsTags.theme),
+    )
     SwitchNavigationSettingsItem(
         headline = "Dim when idle",
         supporting = listOf(AnnotatedString("after ${dimDisplaySeconds.asDimDelay()}")),
@@ -136,7 +170,9 @@ internal fun TyreDisplaySettingsPreview() {
         magnifier = true,
         onMagnifier = {},
         magnifierSeconds = 5,
-        dimDisplay = false,
+        theme = SYSTEM,
+        onTheme = {},
+        dimDisplay = true,
         onDimDisplay = {},
         dimDisplaySeconds = 60,
         openTimeSinceUpdate = {},
@@ -151,6 +187,7 @@ internal object TyreDisplaySettingsTags {
     const val showBatteryVoltage = "TyreDisplaySettingsTags_showBatteryVoltage"
     const val magnifier = "TyreDisplaySettingsTags_magnifier"
     const val magnifierDuration = "TyreDisplaySettingsTags_magnifierDuration"
+    const val theme = "TyreDisplaySettingsTags_theme"
     const val dimDisplay = "TyreDisplaySettingsTags_dimDisplay"
     const val dimDisplayDelay = "TyreDisplaySettingsTags_dimDisplayDelay"
     const val timeSinceUpdateDetails = "TyreDisplaySettingsTags_timeSinceUpdateDetails"

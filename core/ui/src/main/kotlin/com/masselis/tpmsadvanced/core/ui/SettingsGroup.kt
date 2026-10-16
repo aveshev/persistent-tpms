@@ -239,7 +239,8 @@ public fun TextSettingsItem(
 /**
  * A [SettingsGroup] item choosing one of a few [options] with segmented buttons. The buttons sit at
  * the item's end while the headline fits next to them on one line. Otherwise, as with a large font
- * or display size, they go below it and take the item's whole width.
+ * or display size, they go below it and take the item's whole width. With an [icon], a segment
+ * shows it instead of its [label], which then only describes it to accessibility services.
  */
 @Suppress("LongMethod")
 @Composable
@@ -250,6 +251,7 @@ public fun <T> SegmentedSettingsItem(
     onSelect: (T) -> Unit,
     label: (T) -> String,
     modifier: Modifier = Modifier,
+    icon: (@Composable (T) -> ImageVector)? = null,
 ): Unit = Layout(
     contents = listOf(
         { Text(headline, style = MaterialTheme.typography.bodyLarge) },
@@ -262,7 +264,11 @@ public fun <T> SegmentedSettingsItem(
                         shape = SegmentedButtonDefaults.itemShape(index = index, count = options.size),
                         // The check mark would widen the selected segment, its fill already tells it apart
                         icon = {},
-                        label = { Text(label(option)) },
+                        label = {
+                            icon
+                                ?.also { Icon(it(option), contentDescription = label(option)) }
+                                ?: Text(label(option))
+                        },
                     )
                 }
             }

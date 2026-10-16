@@ -101,7 +101,7 @@ public class AppPreferences internal constructor(
      * [dimDisplaySeconds], to keep a phone mounted in a car from glaring at night
      */
     public val dimDisplay: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("DIM_DISPLAY", false)
+        sharedPreferences.getBoolean("DIM_DISPLAY", true)
     ) { _, newValue ->
         sharedPreferences.edit { putBoolean("DIM_DISPLAY", newValue) }
     }
@@ -111,6 +111,22 @@ public class AppPreferences internal constructor(
         sharedPreferences.getInt("DIM_DISPLAY_SECONDS", DEFAULT_DIM_DISPLAY_SECONDS)
     ) { _, newValue ->
         sharedPreferences.edit { putInt("DIM_DISPLAY_SECONDS", newValue) }
+    }
+
+    /** Whether the app is light or dark, [Theme.SYSTEM] following the phone's own setting */
+    public val theme: MutableStateFlow<Theme> = observableStateFlow(
+        sharedPreferences
+            .getString("THEME", null)
+            ?.let { name -> Theme.entries.firstOrNull { it.name == name } }
+            ?: Theme.SYSTEM
+    ) { _, newValue ->
+        sharedPreferences.edit { putString("THEME", newValue.name) }
+    }
+
+    public enum class Theme {
+        SYSTEM,
+        LIGHT,
+        DARK,
     }
 
     /**

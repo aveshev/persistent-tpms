@@ -8,6 +8,7 @@ internal class TyreDisplaySettingsViewModel(appPreferences: AppPreferences) : Vi
     val showBatteryVoltage = appPreferences.showBatteryVoltage
     val magnifier = appPreferences.magnifier
     val magnifierSeconds = appPreferences.magnifierSeconds
+    val theme = appPreferences.theme
     val dimDisplay = appPreferences.dimDisplay
     val dimDisplaySeconds = appPreferences.dimDisplaySeconds
 }
