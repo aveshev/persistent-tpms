@@ -229,7 +229,7 @@ public fun CurrentVehicle(
                 navigationIcon = navigationIcon,
                 title = title,
                 actions = actions,
-                vehicle = { spareReadout ->
+                vehicle = { corners ->
                     Vehicle(
                         component = component,
                         snackbarHostState = snackbarHostState,
@@ -241,7 +241,7 @@ public fun CurrentVehicle(
                             onTyrePositioned = reports.onTyrePositioned,
                             onOutlinePositioned = reports.onOutlinePositioned,
                         ),
-                        spareReadout = spareReadout,
+                        corners = corners,
                     )
                 },
                 // Fills the magnifier's box, its top bar is where the magnifier finds it
@@ -261,8 +261,12 @@ public fun Vehicle(
     /** Placed over the vehicle, between its axles or in the middle of a single axle one */
     center: @Composable (Modifier) -> Unit = {},
     taps: TyreTaps = TyreTaps(),
-    /** Where a vehicle with a spare shows the spare's readout */
-    spareReadout: SpareReadout = SpareReadout.UNDER,
+    /**
+     * The widths of the top bar's corners beside the vehicle, at its start then its end, see
+     * [VehicleWithTopBar]. The vehicle's top keeps clear of them, centered between them, and a
+     * spare's readout goes beside the rear right one, under the end corner when there's room.
+     */
+    corners: Pair<Dp, Dp>? = null,
 ) {
     KeepScreenOn()
     val sizing = rememberVehicleSizing(component, taps.isManaging)
@@ -270,9 +274,9 @@ public fun Vehicle(
     val basicReadoutHeight = sizing.basicReadoutHeight
     val readoutWidth = sizing.readoutWidth
     val readoutSides = sizing.readoutSides
-    val spareRoom = sizing.spareRoom(spareReadout)
+    val spareRoom = sizing.spareRoom(corners)
     BoxWithConstraints(modifier) {
-        val imageHeight = sizing.imageHeight(maxWidth, maxHeight, spareReadout)
+        val imageHeight = sizing.imageHeight(maxWidth, maxHeight, corners)
         // How far the spare's readout goes past the image's bottom
         val spareOverflow = spareRoom
             ?.minus(maxHeight * imageHeight * (1 - SPARE_BOTTOM))
@@ -285,8 +289,8 @@ public fun Vehicle(
                 x = listOfNotNull(
                     readoutWidth.takeIf { LEFT in readoutSides },
                     readoutWidth.takeIf { RIGHT in readoutSides }?.unaryMinus(),
-                    // Left of the spare's readout beside it, see SpareReadout.BESIDE
-                    sizing.spareBesideWidth(spareReadout).takeIf { spareReadout == SpareReadout.BESIDE }?.unaryMinus(),
+                    // Between the corners
+                    corners?.let { (start, end) -> start - end },
                 ).fold(0.dp, Dp::plus) / 2,
                 // Up by half of what the spare's readout adds, it's centered with the image
                 y = -spareOverflow / 2,
@@ -303,7 +307,7 @@ public fun Vehicle(
             Kind.DELTA_THREE_WHEELER ->
                 DeltaThreeWheeler(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, fill)
             Kind.CAR_WITH_SPARE ->
-                CarWithSpare(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, spareReadout != SpareReadout.UNDER, fill)
+                CarWithSpare(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, corners != null, fill)
             Kind.MONOWHEEL ->
                 Monowheel(imageHeight, snackbarHostState, center, taps, readoutSlotWidth, basicReadoutHeight, fill)
         }
@@ -336,12 +340,12 @@ internal class VehicleSizing(
      * there's room for them while the screen is taller than wide, where the width decides of the
      * image's height.
      */
-    fun spareRoom(spareReadout: SpareReadout): Dp? = (SPARE_READOUT_GAP + basicReadoutHeight + OUTLINE_OUTSET)
-        .takeIf { hasSpare && spareReadout == SpareReadout.UNDER }
+    fun spareRoom(corners: Pair<Dp, Dp>?): Dp? = (SPARE_READOUT_GAP + basicReadoutHeight + OUTLINE_OUTSET)
+        .takeIf { hasSpare && corners == null }
 
     /** Past the rear right readout, the spare's readout beside it, always framed, see TyreTapArea's title */
-    fun spareBesideWidth(spareReadout: SpareReadout): Dp = (SPARE_BESIDE_GAP + readoutSlotWidth + OUTLINE_OUTSET)
-        .takeIf { hasSpare && spareReadout != SpareReadout.UNDER }
+    private val spareBesideWidth: Dp = (SPARE_BESIDE_GAP + readoutSlotWidth + OUTLINE_OUTSET)
+        .takeIf { hasSpare }
         ?: 0.dp
 
     /**
@@ -351,24 +355,42 @@ internal class VehicleSizing(
     fun imageHeight(
         maxWidth: Dp,
         maxHeight: Dp,
-        spareReadout: SpareReadout,
+        /** See [Vehicle]'s */
+        corners: Pair<Dp, Dp>?,
         atLeast: Float = MIN_IMAGE_HEIGHT,
-    ): Float = maxWidth
-        .minus(readoutWidth * readoutSides.size)
-        // Kept on both sides when the vehicle is centered without it
-        .minus(spareBesideWidth(spareReadout) * if (spareReadout == SpareReadout.BESIDE_CENTERED) 2 else 1)
-        .minus(SCREEN_MARGIN * 2)
-        .div(1 - kind.readoutInset * readoutSides.size)
-        .div(maxHeight * kind.imageRatio)
-        // (imageHeight * maxHeight)² * imageRatio <= MAX_IMAGE_AREA * maxWidth * maxHeight
-        .coerceAtMost(sqrt(MAX_IMAGE_AREA * maxWidth.value / (kind.imageRatio * maxHeight.value)))
-        .coerceAtLeast(atLeast)
-        // Down to the spare's readout rather than to the image's bottom, see Vehicle's offset
-        .coerceAtMost(
-            spareRoom(spareReadout)
-                ?.let { (maxHeight - VERTICAL_MARGIN * 2 - it) / (maxHeight * SPARE_BOTTOM) }
-                ?: ((maxHeight - VERTICAL_MARGIN * 2) / maxHeight)
-        )
+    ): Float {
+        val (start, end) = corners ?: (0.dp to 0.dp)
+        // Between the corners, where the vehicle's top is
+        val between = maxWidth - start - end
+        return between
+            .minus(readoutWidth * readoutSides.size)
+            .minus(SCREEN_MARGIN * 2)
+            .div(1 - kind.readoutInset * readoutSides.size)
+            .div(maxHeight * kind.imageRatio)
+            // Its rear, the spare's readout past the rear right one, can go under the end corner:
+            // the image's tyres span half as much as what's left from the middle between the
+            // corners to the window's end
+            .coerceAtMost(
+                corners
+                    ?.takeIf { hasSpare }
+                    ?.let {
+                        (maxWidth - start - between / 2 - readoutWidth - spareBesideWidth - SCREEN_MARGIN)
+                            .times(2)
+                            .div(1 - kind.readoutInset * readoutSides.size)
+                            .div(maxHeight * kind.imageRatio)
+                    }
+                    ?: Float.MAX_VALUE
+            )
+            // (imageHeight * maxHeight)² * imageRatio <= MAX_IMAGE_AREA * between * maxHeight
+            .coerceAtMost(sqrt(MAX_IMAGE_AREA * between.value.coerceAtLeast(0f) / (kind.imageRatio * maxHeight.value)))
+            .coerceAtLeast(atLeast)
+            // Down to the spare's readout rather than to the image's bottom, see Vehicle's offset
+            .coerceAtMost(
+                spareRoom(corners)
+                    ?.let { (maxHeight - VERTICAL_MARGIN * 2 - it) / (maxHeight * SPARE_BOTTOM) }
+                    ?: ((maxHeight - VERTICAL_MARGIN * 2) / maxHeight)
+            )
+    }
 }
 
 /** Sizes [component]'s vehicle as its settings and the text size have it, see [VehicleSizing] */
