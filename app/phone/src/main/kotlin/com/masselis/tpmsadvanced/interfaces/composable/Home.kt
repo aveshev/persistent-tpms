@@ -565,7 +565,7 @@ private fun TopAppBar(
                 is Path.TimeSinceUpdate -> Text(text = "Time since last update")
                 is Path.MagnifierDuration -> Text(text = "Tap to magnify")
                 is Path.DimDisplayDelay -> Text(text = "Dim when idle")
-                is Path.TextSize -> Text(text = "Text size")
+                is Path.TextSize -> Text(text = "Sensor readings text size")
                 is Path.AlertSound -> Text(text = "Alert sound")
                 is Path.PersistentMode -> Text(text = "Persistent mode")
                 is Path.Debug -> Text(text = "Debug")
