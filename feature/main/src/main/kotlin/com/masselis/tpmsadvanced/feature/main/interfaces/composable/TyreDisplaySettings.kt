@@ -17,21 +17,24 @@ import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.TyreDisplay
 
 /**
  * The "Display" group of the app settings, [openTimeSinceUpdate] opening the page explaining it,
- * [openMagnifier] the one choosing how long a reading stays magnified, see [MagnifierDuration].
- * [additionalItems] are appended to the group, for display settings owned by other features.
+ * [openMagnifier] the one choosing how long a reading stays magnified, see [MagnifierDuration],
+ * [openDimDisplay] the one choosing how long the main screen waits before dimming, see [DimDisplayDelay].
+ * [leadingItems] open the group, for display settings owned by other features.
  */
 @Composable
 public fun TyreDisplaySettings(
     openTimeSinceUpdate: () -> Unit,
     openMagnifier: () -> Unit,
+    openDimDisplay: () -> Unit,
     modifier: Modifier = Modifier,
-    additionalItems: @Composable ColumnScope.() -> Unit = {},
+    leadingItems: @Composable ColumnScope.() -> Unit = {},
 ): Unit =
     TyreDisplaySettings(
         openTimeSinceUpdate,
         openMagnifier,
+        openDimDisplay,
         modifier,
-        additionalItems,
+        leadingItems,
         viewModel { TyreDisplaySettingsViewModel() },
     )
 
@@ -39,14 +42,17 @@ public fun TyreDisplaySettings(
 internal fun TyreDisplaySettings(
     openTimeSinceUpdate: () -> Unit,
     openMagnifier: () -> Unit,
+    openDimDisplay: () -> Unit,
     modifier: Modifier = Modifier,
-    additionalItems: @Composable ColumnScope.() -> Unit = {},
+    leadingItems: @Composable ColumnScope.() -> Unit = {},
     viewModel: TyreDisplaySettingsViewModel = viewModel { TyreDisplaySettingsViewModel() },
 ) {
     val showTimeSinceUpdate by viewModel.showTimeSinceUpdate.collectAsState()
     val showBatteryVoltage by viewModel.showBatteryVoltage.collectAsState()
     val magnifier by viewModel.magnifier.collectAsState()
     val magnifierSeconds by viewModel.magnifierSeconds.collectAsState()
+    val dimDisplay by viewModel.dimDisplay.collectAsState()
+    val dimDisplaySeconds by viewModel.dimDisplaySeconds.collectAsState()
     TyreDisplaySettings(
         showTimeSinceUpdate = showTimeSinceUpdate,
         onShowTimeSinceUpdate = { viewModel.showTimeSinceUpdate.value = it },
@@ -55,10 +61,14 @@ internal fun TyreDisplaySettings(
         magnifier = magnifier,
         onMagnifier = { viewModel.magnifier.value = it },
         magnifierSeconds = magnifierSeconds,
+        dimDisplay = dimDisplay,
+        onDimDisplay = { viewModel.dimDisplay.value = it },
+        dimDisplaySeconds = dimDisplaySeconds,
         openTimeSinceUpdate = openTimeSinceUpdate,
         openMagnifier = openMagnifier,
+        openDimDisplay = openDimDisplay,
         modifier = modifier,
-        additionalItems = additionalItems,
+        leadingItems = leadingItems,
     )
 }
 
@@ -71,11 +81,16 @@ private fun TyreDisplaySettings(
     magnifier: Boolean,
     onMagnifier: (Boolean) -> Unit,
     magnifierSeconds: Int,
+    dimDisplay: Boolean,
+    onDimDisplay: (Boolean) -> Unit,
+    dimDisplaySeconds: Int,
     openTimeSinceUpdate: () -> Unit,
     openMagnifier: () -> Unit,
+    openDimDisplay: () -> Unit,
     modifier: Modifier = Modifier,
-    additionalItems: @Composable ColumnScope.() -> Unit = {},
+    leadingItems: @Composable ColumnScope.() -> Unit = {},
 ) = SettingsGroup(modifier) {
+    leadingItems()
     SwitchNavigationSettingsItem(
         headline = "Time since last update",
         checked = showTimeSinceUpdate,
@@ -100,7 +115,14 @@ private fun TyreDisplaySettings(
         onClick = openMagnifier,
         modifier = Modifier.testTag(TyreDisplaySettingsTags.magnifier),
     )
-    additionalItems()
+    SwitchNavigationSettingsItem(
+        headline = "Dim when idle",
+        supporting = listOf(AnnotatedString("after ${dimDisplaySeconds.asDimDelay()}")),
+        checked = dimDisplay,
+        onCheckedChange = onDimDisplay,
+        onClick = openDimDisplay,
+        modifier = Modifier.testTag(TyreDisplaySettingsTags.dimDisplay),
+    )
 }
 
 @Preview
@@ -114,8 +136,12 @@ internal fun TyreDisplaySettingsPreview() {
         magnifier = true,
         onMagnifier = {},
         magnifierSeconds = 5,
+        dimDisplay = false,
+        onDimDisplay = {},
+        dimDisplaySeconds = 60,
         openTimeSinceUpdate = {},
         openMagnifier = {},
+        openDimDisplay = {},
     )
 }
 
@@ -125,5 +151,7 @@ internal object TyreDisplaySettingsTags {
     const val showBatteryVoltage = "TyreDisplaySettingsTags_showBatteryVoltage"
     const val magnifier = "TyreDisplaySettingsTags_magnifier"
     const val magnifierDuration = "TyreDisplaySettingsTags_magnifierDuration"
+    const val dimDisplay = "TyreDisplaySettingsTags_dimDisplay"
+    const val dimDisplayDelay = "TyreDisplaySettingsTags_dimDisplayDelay"
     const val timeSinceUpdateDetails = "TyreDisplaySettingsTags_timeSinceUpdateDetails"
 }
