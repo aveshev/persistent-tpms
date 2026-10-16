@@ -206,7 +206,7 @@ private fun Modifier.outset(outset: Dp) = layout { measurable, constraints ->
     }
 }
 
-/** What can be done with the [sensor] assigned to [location], under its position and id */
+/** What can be done with the [sensor] assigned to [location], under its position, brand and id */
 @Composable
 private fun ManageSensorDialog(
     location: Location,
@@ -224,7 +224,13 @@ private fun ManageSensorDialog(
             Column {
                 Text(buildString { appendLoc(location, withType = false, capitalized = true) })
                 Text(
-                    "Sensor ID ${sensor.id.asSensorId()}",
+                    "Type: ${sensor.brand.label}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag(TyreTapAreaTags.brand),
+                )
+                Text(
+                    "ID: ${sensor.id.asSensorId()}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -288,6 +294,7 @@ internal fun ManageSensorDialogPreview() {
 internal object TyreTapAreaTags {
     fun root(location: Location) = "TyreTapAreaTags_root_$location"
     const val manageDialog = "TyreTapAreaTags_manageDialog"
+    const val brand = "TyreTapAreaTags_brand"
     const val move = "TyreTapAreaTags_move"
     const val calibrate = "TyreTapAreaTags_calibrate"
     const val delete = "TyreTapAreaTags_delete"
