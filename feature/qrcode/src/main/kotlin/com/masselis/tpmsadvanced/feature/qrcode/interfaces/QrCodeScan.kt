@@ -1,6 +1,9 @@
 package com.masselis.tpmsadvanced.feature.qrcode.interfaces
 
 import android.Manifest.permission.CAMERA
+import android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+import android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+import androidx.activity.compose.LocalActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.CameraSelector.DEFAULT_BACK_CAMERA
 import androidx.camera.view.LifecycleCameraController
@@ -49,6 +52,17 @@ public fun QrCodeScan(
     onFound: (QrCodeResult) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // The scanner's layout isn't made for landscape, so the screen stays in portrait while it's shown
+    LocalActivity.current?.also { activity ->
+        DisposableEffect(activity) {
+            activity.requestedOrientation = SCREEN_ORIENTATION_PORTRAIT
+            onDispose {
+                // Rotating to portrait recreates the activity: the new one locks it again, so only unlock on leave
+                if (activity.isChangingConfigurations.not())
+                    activity.requestedOrientation = SCREEN_ORIENTATION_UNSPECIFIED
+            }
+        }
+    }
     val permissionState = rememberMultiplePermissionsState(listOf(CAMERA))
     when {
         permissionState.allPermissionsGranted.not() -> MissingPermission(
