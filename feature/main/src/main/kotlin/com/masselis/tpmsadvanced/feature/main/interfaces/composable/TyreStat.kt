@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.masselis.tpmsadvanced.core.common.now
 import com.masselis.tpmsadvanced.core.ui.Orange
@@ -91,9 +92,10 @@ internal fun TyreStat(
     )
 }
 
+/** A readout of [state], also shown as a sample of the text size, see [TextSize] */
 @Suppress("LongMethod", "CyclomaticComplexMethod")
 @Composable
-private fun TyreStat(
+internal fun TyreStat(
     location: Location,
     state: State,
     showSensorId: Boolean = false,
@@ -171,6 +173,7 @@ private fun TyreStat(
             Text(
                 text = sensorId.asSensorId(),
                 fontSize = 9.sp,
+                lineHeight = SMALL_LINE_HEIGHT,
                 maxLines = 1,
                 color = onSurfaceColor,
                 modifier = Modifier.align(alignment),
@@ -192,6 +195,7 @@ private fun TyreStat(
                 },
                 fontSize = 11.sp,
                 fontFamily = FontFamily.Monospace,
+                lineHeight = SMALL_LINE_HEIGHT,
                 maxLines = 1,
                 color = onSurfaceColor,
                 modifier = Modifier.align(alignment),
@@ -227,6 +231,12 @@ private fun Reading(
 )
 
 private const val UNSET_FLAG_ALPHA = 0.3f
+
+/**
+ * The smaller lines' height, in proportion to their own size like the readings' 24 sp for 16 sp,
+ * rather than the readings' height, which spaced them out
+ */
+private val SMALL_LINE_HEIGHT = 1.5.em
 
 // Re-emits on every tier boundary crossed (each minute, then each hour, then each day) so the
 // label stays live without waiting for a new sensor packet. A new `timestamp` (new packet)

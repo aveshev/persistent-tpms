@@ -300,6 +300,9 @@ internal fun VehicleHome(
                             openDimDisplay = {
                                 navController.navigate("${Path.DimDisplayDelay}")
                             },
+                            openTextSize = {
+                                navController.navigate("${Path.TextSize}")
+                            },
                             openAlertSound = {
                                 navController.navigate("${Path.AlertSound}")
                             },
@@ -364,6 +367,11 @@ internal fun VehicleHome(
                     }
                     composable("${Path.DimDisplayDelay}") {
                         DimDisplayDelaySettings(
+                            modifier = modifier
+                        )
+                    }
+                    composable("${Path.TextSize}") {
+                        TextSizeSettings(
                             modifier = modifier
                         )
                     }
@@ -557,6 +565,7 @@ private fun TopAppBar(
                 is Path.TimeSinceUpdate -> Text(text = "Time since last update")
                 is Path.MagnifierDuration -> Text(text = "Tap to magnify")
                 is Path.DimDisplayDelay -> Text(text = "Dim when idle")
+                is Path.TextSize -> Text(text = "Text size")
                 is Path.AlertSound -> Text(text = "Alert sound")
                 is Path.PersistentMode -> Text(text = "Persistent mode")
                 is Path.Debug -> Text(text = "Debug")
@@ -587,6 +596,7 @@ private fun TopAppBar(
                 is Path.TimeSinceUpdate,
                 is Path.MagnifierDuration,
                 is Path.DimDisplayDelay,
+                is Path.TextSize,
                 is Path.AlertSound,
                 is Path.PersistentMode,
                 is Path.Debug,
@@ -625,6 +635,7 @@ private fun TopAppBar(
                 is Path.TimeSinceUpdate,
                 is Path.MagnifierDuration,
                 is Path.DimDisplayDelay,
+                is Path.TextSize,
                 is Path.AlertSound,
                 is Path.PersistentMode,
                 is Path.Debug,

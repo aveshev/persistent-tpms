@@ -12,13 +12,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.masselis.tpmsadvanced.core.ui.SettingsGroup
 import com.masselis.tpmsadvanced.core.ui.SwitchNavigationSettingsItem
 import com.masselis.tpmsadvanced.core.ui.SwitchSettingsItem
+import com.masselis.tpmsadvanced.core.ui.TextSettingsItem
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.TyreDisplaySettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.TyreDisplaySettingsViewModel
 
 /**
  * The "Display" group of the app settings, [openTimeSinceUpdate] opening the page explaining it,
  * [openMagnifier] the one choosing how long a reading stays magnified, see [MagnifierDuration],
- * [openDimDisplay] the one choosing how long the main screen waits before dimming, see [DimDisplayDelay].
+ * [openDimDisplay] the one choosing how long the main screen waits before dimming, see [DimDisplayDelay],
+ * [openTextSize] the one choosing the readouts' text size, see [TextSize].
  * [leadingItems] open the group, for display settings owned by other features.
  */
 @Composable
@@ -26,6 +28,7 @@ public fun TyreDisplaySettings(
     openTimeSinceUpdate: () -> Unit,
     openMagnifier: () -> Unit,
     openDimDisplay: () -> Unit,
+    openTextSize: () -> Unit,
     modifier: Modifier = Modifier,
     leadingItems: @Composable ColumnScope.() -> Unit = {},
 ): Unit =
@@ -33,6 +36,7 @@ public fun TyreDisplaySettings(
         openTimeSinceUpdate,
         openMagnifier,
         openDimDisplay,
+        openTextSize,
         modifier,
         leadingItems,
         viewModel { TyreDisplaySettingsViewModel() },
@@ -43,6 +47,7 @@ internal fun TyreDisplaySettings(
     openTimeSinceUpdate: () -> Unit,
     openMagnifier: () -> Unit,
     openDimDisplay: () -> Unit,
+    openTextSize: () -> Unit,
     modifier: Modifier = Modifier,
     leadingItems: @Composable ColumnScope.() -> Unit = {},
     viewModel: TyreDisplaySettingsViewModel = viewModel { TyreDisplaySettingsViewModel() },
@@ -53,6 +58,7 @@ internal fun TyreDisplaySettings(
     val magnifierSeconds by viewModel.magnifierSeconds.collectAsState()
     val dimDisplay by viewModel.dimDisplay.collectAsState()
     val dimDisplaySeconds by viewModel.dimDisplaySeconds.collectAsState()
+    val readoutTextScale by viewModel.readoutTextScale.collectAsState()
     TyreDisplaySettings(
         showTimeSinceUpdate = showTimeSinceUpdate,
         onShowTimeSinceUpdate = { viewModel.showTimeSinceUpdate.value = it },
@@ -67,6 +73,8 @@ internal fun TyreDisplaySettings(
         openTimeSinceUpdate = openTimeSinceUpdate,
         openMagnifier = openMagnifier,
         openDimDisplay = openDimDisplay,
+        readoutTextScale = readoutTextScale,
+        openTextSize = openTextSize,
         modifier = modifier,
         leadingItems = leadingItems,
     )
@@ -87,6 +95,8 @@ private fun TyreDisplaySettings(
     openTimeSinceUpdate: () -> Unit,
     openMagnifier: () -> Unit,
     openDimDisplay: () -> Unit,
+    readoutTextScale: Float,
+    openTextSize: () -> Unit,
     modifier: Modifier = Modifier,
     leadingItems: @Composable ColumnScope.() -> Unit = {},
 ) = SettingsGroup(modifier) {
@@ -106,6 +116,13 @@ private fun TyreDisplaySettings(
         checked = showBatteryVoltage,
         onCheckedChange = onShowBatteryVoltage,
         modifier = Modifier.testTag(TyreDisplaySettingsTags.showBatteryVoltage),
+    )
+    TextSettingsItem(
+        headline = "Text size",
+        supporting = readoutTextScale.textSizeLabel,
+        onClick = openTextSize,
+        opensPage = true,
+        modifier = Modifier.testTag(TyreDisplaySettingsTags.textSize),
     )
     SwitchNavigationSettingsItem(
         headline = "Tap to magnify",
@@ -142,6 +159,8 @@ internal fun TyreDisplaySettingsPreview() {
         openTimeSinceUpdate = {},
         openMagnifier = {},
         openDimDisplay = {},
+        readoutTextScale = 1f,
+        openTextSize = {},
     )
 }
 
@@ -153,5 +172,7 @@ internal object TyreDisplaySettingsTags {
     const val magnifierDuration = "TyreDisplaySettingsTags_magnifierDuration"
     const val dimDisplay = "TyreDisplaySettingsTags_dimDisplay"
     const val dimDisplayDelay = "TyreDisplaySettingsTags_dimDisplayDelay"
+    const val textSize = "TyreDisplaySettingsTags_textSize"
+    const val textSizeSlider = "TyreDisplaySettingsTags_textSizeSlider"
     const val timeSinceUpdateDetails = "TyreDisplaySettingsTags_timeSinceUpdateDetails"
 }

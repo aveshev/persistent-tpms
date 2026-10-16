@@ -1,6 +1,8 @@
 package com.masselis.tpmsadvanced.feature.main.interfaces.composable
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -18,10 +20,14 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.AlignmentLine
+import androidx.compose.ui.layout.FirstBaseline
+import androidx.compose.ui.layout.LastBaseline
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -29,14 +35,15 @@ import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.toSize
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.absoluteValue
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withTimeoutOrNull
 
-/** Text is never shrunk below this share of the size the system's font size gives it */
+/** Text is never shrunk below this share of the size it's given, see [FitsText]'s textScale */
 private const val MIN_TEXT_SCALE = .5f
 
 /** The search for the text's scale stops once it's known to this much */
@@ -54,13 +61,22 @@ private const val MAX_TRIES = 6
 /** A readout still loading doesn't keep its vehicle hidden longer than this, see [HoldTextFit] */
 private val MAX_HOLD = 1.seconds
 
+/** Readouts closer than this many of their pressure lines get a line between them, see [TextFit.separators] */
+private const val SEPARATED_LINES = 2
+
+private val SEPARATOR_WIDTH = 1.dp
+
+/** The readouts' font's capitals' height, as a share of its size: Roboto's 1456 units per 2048 */
+private const val CAP_HEIGHT = 1456f / 2048
+
 /** Rounding to pixels makes neighbors touch by a pixel, which isn't an overlap */
 private const val OVERLAP_TOLERANCE_PX = 1f
 
 /**
  * Shrinks the text of [content]'s readouts and tap areas, see [FittedText], until those it reports,
- * see [fitsText], neither overlap another location's nor go past this box or the window, down to
- * [MIN_TEXT_SCALE] of the system's size. What's sized from that text, like the image taking the
+ * see [fitsText], neither overlap another location's nor go past this box or the window, from
+ * [textScale] times the system's size, the readouts' text size setting, down to [MIN_TEXT_SCALE] of
+ * that. What's sized from that text, like the image taking the
  * room its readouts leave, is sized from the text tried, see [rememberFittedTextDensity].
  *
  * [content] is laid out but not drawn until that size is found, so it's first seen as it ends up:
@@ -70,19 +86,25 @@ private const val OVERLAP_TOLERANCE_PX = 1f
  * sized in dp keeps its size, the readouts' slots, measured from their text, shrink with it, and the
  * rest, like dialogs, keeps the system's size.
  *
- * Once shown, the text only shrinks, it isn't grown back until one of [restartOn] or the density
- * changes, so it never goes back and forth between two sizes. Whatever's added to a readout then,
+ * Once shown, the text only shrinks, it isn't grown back until one of [restartOn], [textScale] or
+ * the density changes, so it never goes back and forth between two sizes. Whatever's added to a readout then,
  * like an alert's line, can shrink it more.
  */
 @Composable
 internal fun FitsText(
     vararg restartOn: Any?,
     modifier: Modifier = Modifier,
+    textScale: Float = 1f,
+    /** Draws a line between a readout and the one under it when they're close, see [TextFit.separators] */
+    separates: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val density = LocalDensity.current
+    // A readout's pressure line, in the text's style, see TyreStat
+    val textStyle = LocalTextStyle.current
+    val separatorColor = MaterialTheme.colorScheme.outlineVariant
     val windowSize = LocalWindowInfo.current.containerSize
-    val fit = remember(density, *restartOn) { TextFit() }
+    val fit = remember(density, textScale, *restartOn) { TextFit(textScale) }
     LaunchedEffect(fit, windowSize) {
         val window = Rect(Offset.Zero, windowSize.toSize())
         snapshotFlow { fit.box }.first { it != null }
@@ -112,6 +134,23 @@ internal fun FitsText(
                     }
                 }
                 .graphicsLayer { alpha = if (fit.isShown) 1f else 0f }
+                .run {
+                    if (separates.not()) this
+                    else drawWithContent {
+                        drawContent()
+                        // Read to draw them again as the readouts move
+                        fit.reports
+                        Density(density.density, density.fontScale * fit.scale)
+                            .run {
+                                textStyle.lineHeight.takeIf { it.isSp }?.toPx()?.let { lineHeight ->
+                                    textStyle.fontSize.takeIf { it.isSp }?.toPx()?.let { fontSize ->
+                                        fit.separators(lineHeight * SEPARATED_LINES, fontSize * CAP_HEIGHT)
+                                    }
+                                }
+                            }
+                            ?.forEach { (start, end) -> drawLine(separatorColor, start, end, SEPARATOR_WIDTH.toPx()) }
+                    }
+                }
         ) {
             val composing = fit.scale
             SideEffect { fit.composed = composing }
@@ -120,11 +159,14 @@ internal fun FitsText(
     }
 }
 
-/** What [FitsText] finds out from the layout, and what it settles on */
-private class TextFit {
+/** What [FitsText] finds out from the layout, and what it settles on, from its [initial] scale */
+private class TextFit(initial: Float) {
     /** The text's, see [FittedText] */
-    var scale by mutableFloatStateOf(1f)
+    var scale by mutableFloatStateOf(initial)
         private set
+
+    /** Below which [scale] never goes, see [MIN_TEXT_SCALE] */
+    private val floor = initial * MIN_TEXT_SCALE
 
     /** The [scale] [FitsText]'s content was last composed with */
     var composed by mutableStateOf<Float?>(null)
@@ -191,6 +233,47 @@ private class TextFit {
             .toMap()
     }
 
+    /**
+     * A line between each readout and the next one under it, across both, when they share some
+     * width and are less than [maxGap] apart: close enough to be read as one, otherwise. Midway
+     * between what's seen of them, the upper one's last baseline and the top of the lower one's
+     * capitals, [capHeight] above its first baseline: their lines' leading differs.
+     */
+    fun separators(maxGap: Float, capHeight: Float): List<Pair<Offset, Offset>> {
+        val box = box?.takeIf { it.isAttached } ?: return emptyList()
+        val origin = box.positionInWindow()
+        val readouts = parts
+            .filterKeys { (_, part) -> part == TextFitPart.READOUT }
+            .values
+            .filter { it.isAttached }
+            .map { coordinates ->
+                val bounds = coordinates.unclippedBoundsInWindow().translate(-origin)
+                Readout(
+                    bounds,
+                    inkTop = coordinates[FirstBaseline]
+                        .takeIf { it != AlignmentLine.Unspecified }
+                        ?.let { bounds.top + it - capHeight }
+                        ?: bounds.top,
+                    inkBottom = coordinates[LastBaseline]
+                        .takeIf { it != AlignmentLine.Unspecified }
+                        ?.let { bounds.top + it }
+                        ?: bounds.bottom,
+                )
+            }
+        return readouts.mapNotNull { (upper, _, upperInk) ->
+            readouts
+                // Touching it counts, as fitted readouts can, see OVERLAP_TOLERANCE_PX
+                .filter { it.bounds.top >= upper.bottom - OVERLAP_TOLERANCE_PX * 2 }
+                .filter { minOf(it.bounds.right, upper.right) > maxOf(it.bounds.left, upper.left) }
+                .minByOrNull { it.bounds.top }
+                ?.takeIf { it.bounds.top - upper.bottom < maxGap }
+                ?.let { lower ->
+                    val y = (upperInk + lower.inkTop) / 2
+                    Offset(minOf(upper.left, lower.bounds.left), y) to Offset(maxOf(upper.right, lower.bounds.right), y)
+                }
+        }
+    }
+
     fun isOverflowing(window: Rect): Boolean = gaps(window).values.any { it.distance < 0 }
 
     /**
@@ -203,17 +286,17 @@ private class TextFit {
         var tried = Tried(scale, gaps(window))
         var previous: Tried? = null
         // The largest scale known to fit, or the floor, which isn't known to until it's tried
-        var fits = scale.takeIf { tried.fits } ?: MIN_TEXT_SCALE
+        var fits = scale.takeIf { tried.fits } ?: floor
         var isFloorTried = false
         // The smallest known not to
         var overflows = scale
         var tries = 0
         while (overflows - fits > SEARCH_PRECISION && tries++ < MAX_TRIES) {
             scale = tried.predicted(previous)
-                .coerceAtLeast(MIN_TEXT_SCALE)
+                .coerceAtLeast(floor)
                 .takeIf { it < overflows && (it > fits || isFloorTried.not()) }
                 ?: ((fits + overflows) / 2)
-            isFloorTried = isFloorTried || scale == MIN_TEXT_SCALE
+            isFloorTried = isFloorTried || scale == floor
             awaitLayout()
             previous = tried
             tried = Tried(scale, gaps(window))
@@ -266,13 +349,22 @@ private class Tried(val value: Float, val gaps: Map<Any, Gap>) {
         ?: Float.POSITIVE_INFINITY
 }
 
+/** A readout's [bounds], and where its text is seen from and to, see [TextFit.separators] */
+private data class Readout(val bounds: Rect, val inkTop: Float, val inkBottom: Float)
+
 /** How far apart two parts are, or a part from an edge, and the size along it of what's measured */
 private data class Gap(val distance: Float, val size: Float)
 
 private enum class Edge { LEFT, RIGHT, TOP, BOTTOM }
 
 /** What [fitsText] reports of a location */
-internal enum class TextFitPart { READOUT, TAP_AREA }
+internal enum class TextFitPart {
+    READOUT,
+    TAP_AREA,
+
+    /** A line drawn from it, which another location's readout mustn't cross */
+    LINE,
+}
 
 private val LocalTextFit = staticCompositionLocalOf<TextFit?> { null }
 
