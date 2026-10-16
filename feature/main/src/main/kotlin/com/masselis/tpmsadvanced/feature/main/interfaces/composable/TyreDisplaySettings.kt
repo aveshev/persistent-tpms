@@ -91,6 +91,7 @@ internal fun TyreDisplaySettings(
     )
 }
 
+@Suppress("LongMethod")
 @Composable
 private fun TyreDisplaySettings(
     showTimeSinceUpdate: Boolean,
