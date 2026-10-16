@@ -42,6 +42,7 @@ import com.masselis.tpmsadvanced.feature.main.interfaces.composable.DeveloperOpt
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.MagnifierDuration
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.DimDisplayDelay
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.PressureLossSettings
+import com.masselis.tpmsadvanced.feature.main.interfaces.composable.TextSize
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.TimeSinceUpdateDetails
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.TyreDisplaySettings
 import com.masselis.tpmsadvanced.feature.unit.interfaces.UnitsSettingsItems
@@ -58,6 +59,7 @@ internal fun AppSettings(
     openTimeSinceUpdate: () -> Unit,
     openMagnifier: () -> Unit,
     openDimDisplay: () -> Unit,
+    openTextSize: () -> Unit,
     openAlertSound: () -> Unit,
     openPersistentMode: () -> Unit,
     openDebug: () -> Unit,
@@ -70,6 +72,7 @@ internal fun AppSettings(
         openTimeSinceUpdate = openTimeSinceUpdate,
         openMagnifier = openMagnifier,
         openDimDisplay = openDimDisplay,
+        openTextSize = openTextSize,
         modifier = Modifier.testTag(tyreDisplay),
         leadingItems = { UnitsSettingsItems() },
     )
@@ -197,6 +200,13 @@ internal fun DimDisplayDelaySettings(
     modifier: Modifier = Modifier
 ) = SettingsPage(modifier) {
     DimDisplayDelay()
+}
+
+@Composable
+internal fun TextSizeSettings(
+    modifier: Modifier = Modifier
+) = SettingsPage(modifier) {
+    TextSize()
 }
 
 @Composable

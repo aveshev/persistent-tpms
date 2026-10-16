@@ -16,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -28,6 +29,7 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.vectorResource
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -104,9 +106,17 @@ internal fun TyreTapArea(
         else -> null
     }
     val frame = outline ?: MaterialTheme.colorScheme.onBackground.takeIf { title != null }
+    val titleStyle = MaterialTheme.typography.labelMedium
+    val measurer = rememberTextMeasurer()
+    val fittedDensity = rememberFittedTextDensity()
+    // The title's lower half is inside the outline, which reaches that much higher to keep it off
+    // the readout, however large the text is
+    val titleInset = remember(title, titleStyle, fittedDensity) {
+        title?.let { measurer.measure(it, titleStyle, density = fittedDensity).size.height / 2 } ?: 0
+    }
     Box(
         modifier
-            .outset(OUTLINE_OUTSET)
+            .outset(OUTLINE_OUTSET, extraTop = titleInset)
             // Only where it's drawn: where it isn't, nothing can be seen going past the screen or
             // under another
             .run { if (frame != null) fitsText(location, TextFitPart.TAP_AREA) else this }
@@ -129,7 +139,7 @@ internal fun TyreTapArea(
             Text(
                 text = title,
                 color = frame,
-                style = MaterialTheme.typography.labelMedium,
+                style = titleStyle,
                 modifier = Modifier
                     .padding(start = 12.dp)
                     // Centered on the border
@@ -195,19 +205,38 @@ internal fun TyreTapArea(
     )
 }
 
-/** Grows by [outset] on every side, around what it's laid out on */
-private fun Modifier.outset(outset: Dp) = layout { measurable, constraints ->
-    val extra = outset.roundToPx() * 2
+/**
+ * Whether this location's outline is drawn, see [TyreTapArea]: while it has no sensor, or while
+ * its sensors are managed
+ */
+@Composable
+internal fun Location.isOutlined(
+    isManaging: Boolean,
+    vehicleComponent: VehicleComponent = LocalVehicleComponent.current,
+): Boolean {
+    val state by vehicleComponent
+        .TyreComponent(this)
+        .let { component -> viewModel(component.keyed()) { component.TyreActionsViewModel() } }
+        .stateFlow
+        .collectAsState()
+    return isManaging || state is State.Unassigned
+}
+
+/** Grows by [outset] on every side, and [extraTop] pixels more on top, around what it's laid out on */
+private fun Modifier.outset(outset: Dp, extraTop: Int = 0) = layout { measurable, constraints ->
+    val side = outset.roundToPx()
+    val extraWidth = side * 2
+    val extraHeight = side * 2 + extraTop
     val placeable = measurable.measure(
         constraints.copy(
-            minWidth = constraints.minWidth + extra,
-            maxWidth = constraints.maxWidth + extra,
-            minHeight = constraints.minHeight + extra,
-            maxHeight = constraints.maxHeight + extra,
+            minWidth = constraints.minWidth + extraWidth,
+            maxWidth = constraints.maxWidth + extraWidth,
+            minHeight = constraints.minHeight + extraHeight,
+            maxHeight = constraints.maxHeight + extraHeight,
         )
     )
-    layout(placeable.width - extra, placeable.height - extra) {
-        placeable.place(-extra / 2, -extra / 2)
+    layout(placeable.width - extraWidth, placeable.height - extraHeight) {
+        placeable.place(-side, -side - extraTop)
     }
 }
 

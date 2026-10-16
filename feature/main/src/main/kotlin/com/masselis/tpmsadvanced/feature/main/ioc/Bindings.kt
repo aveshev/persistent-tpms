@@ -54,8 +54,10 @@ public interface Bindings {
         PreconditionsViewModel(bluetoothLeScanner)
 
     @Provides
-    private fun tyreDisplaySettingsViewModel(appPreferences: AppPreferences): TyreDisplaySettingsViewModel =
-        TyreDisplaySettingsViewModel(appPreferences)
+    private fun tyreDisplaySettingsViewModel(
+        appPreferences: AppPreferences,
+        unitPreferences: UnitPreferences,
+    ): TyreDisplaySettingsViewModel = TyreDisplaySettingsViewModel(appPreferences, unitPreferences)
 
     @Provides
     private fun debugSettingsViewModel(
