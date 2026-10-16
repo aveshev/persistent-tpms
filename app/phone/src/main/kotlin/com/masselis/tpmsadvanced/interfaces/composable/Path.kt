@@ -47,6 +47,10 @@ internal sealed interface Path {
         override fun toString(): String = "app_settings/magnifier"
     }
 
+    data object DimDisplayDelay : Path {
+        override fun toString(): String = "app_settings/dim_display"
+    }
+
     data object AlertSound : Path {
         override fun toString(): String = "app_settings/alert_sound"
     }
@@ -137,6 +141,7 @@ internal sealed interface Path {
                 AppSettings,
                 TimeSinceUpdate,
                 MagnifierDuration,
+                DimDisplayDelay,
                 AlertSound,
                 PersistentMode,
                 Debug,

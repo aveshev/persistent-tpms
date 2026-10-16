@@ -40,6 +40,7 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.composable.Suspen
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.DebugSettings
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.DeveloperOptionsSettings
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.MagnifierDuration
+import com.masselis.tpmsadvanced.feature.main.interfaces.composable.DimDisplayDelay
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.PressureLossSettings
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.TimeSinceUpdateDetails
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.TyreDisplaySettings
@@ -56,6 +57,7 @@ import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
 internal fun AppSettings(
     openTimeSinceUpdate: () -> Unit,
     openMagnifier: () -> Unit,
+    openDimDisplay: () -> Unit,
     openAlertSound: () -> Unit,
     openPersistentMode: () -> Unit,
     openDebug: () -> Unit,
@@ -67,8 +69,9 @@ internal fun AppSettings(
     TyreDisplaySettings(
         openTimeSinceUpdate = openTimeSinceUpdate,
         openMagnifier = openMagnifier,
+        openDimDisplay = openDimDisplay,
         modifier = Modifier.testTag(tyreDisplay),
-        additionalItems = { UnitsSettingsItems() },
+        leadingItems = { UnitsSettingsItems() },
     )
     SettingsSectionHeader("Alerts")
     AlertsSettings(openAlertSound, Modifier.testTag(alerts))
@@ -187,6 +190,13 @@ internal fun MagnifierDurationSettings(
     modifier: Modifier = Modifier
 ) = SettingsPage(modifier) {
     MagnifierDuration()
+}
+
+@Composable
+internal fun DimDisplayDelaySettings(
+    modifier: Modifier = Modifier
+) = SettingsPage(modifier) {
+    DimDisplayDelay()
 }
 
 @Composable

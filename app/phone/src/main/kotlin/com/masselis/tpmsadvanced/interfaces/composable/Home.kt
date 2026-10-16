@@ -82,6 +82,7 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.ui.QuietScanStatu
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.SilenceAlertsButton
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.CurrentVehicle
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.CurrentVehicleDropdown
+import com.masselis.tpmsadvanced.feature.main.interfaces.composable.DimWhenIdle
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.SimulateReadingDialog
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.isReadingSimulationAvailable
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.LocalVehicleComponent
@@ -193,30 +194,35 @@ internal fun VehicleHome(
                     composable(route = "${Path.Home(vehicleComponent.vehicle.uuid)}") {
                         // The bell tells the status here, nothing to hear
                         QuietScanStatusAnnouncementsEffect()
-                        CurrentVehicle(
-                            snackbarHostState = snackbarHostState,
-                            // Without the top bar's room, it's never shown with its own, see topBar
-                            modifier = Modifier
-                                .windowInsetsPadding(ScaffoldDefaults.contentWindowInsets)
-                                .fillMaxSize(),
-                            center = { SilenceAlertsButton(it) },
-                            scanQrCode = {
-                                navController.navigate("${Path.QrCode(vehicleUuid, locations.indexOf(it))}")
-                            },
-                            scanBluetooth = {
-                                navController.navigate("${Path.BluetoothAssign(vehicleUuid, locations.indexOf(it))}")
-                            },
-                            navigationIcon = { DetectedActivitiesIndicator() },
-                            title = {
-                                CurrentVehicleDropdown(
-                                    modifier = Modifier.testTag(carListDropdownMenu),
-                                    alerts = alertingVehicles(),
-                                )
-                            },
-                            actions = {
-                                HomeActions(vehicleUuid, manualBackgroundButtonModifier)
-                            },
-                        )
+                        val alerts = alertingVehicles()
+                        DimWhenIdle(isAlerting = alerts.isNotEmpty()) {
+                            CurrentVehicle(
+                                snackbarHostState = snackbarHostState,
+                                // Without the top bar's room, it's never shown with its own, see topBar
+                                modifier = Modifier
+                                    .windowInsetsPadding(ScaffoldDefaults.contentWindowInsets)
+                                    .fillMaxSize(),
+                                center = { SilenceAlertsButton(it) },
+                                scanQrCode = {
+                                    navController.navigate("${Path.QrCode(vehicleUuid, locations.indexOf(it))}")
+                                },
+                                scanBluetooth = {
+                                    navController.navigate(
+                                        "${Path.BluetoothAssign(vehicleUuid, locations.indexOf(it))}"
+                                    )
+                                },
+                                navigationIcon = { DetectedActivitiesIndicator() },
+                                title = {
+                                    CurrentVehicleDropdown(
+                                        modifier = Modifier.testTag(carListDropdownMenu),
+                                        alerts = alerts,
+                                    )
+                                },
+                                actions = {
+                                    HomeActions(vehicleUuid, manualBackgroundButtonModifier)
+                                },
+                            )
+                        }
                     }
                     composable("${Path.Settings(vehicleComponent.vehicle.uuid)}") {
                         Settings(
@@ -291,6 +297,9 @@ internal fun VehicleHome(
                             openMagnifier = {
                                 navController.navigate("${Path.MagnifierDuration}")
                             },
+                            openDimDisplay = {
+                                navController.navigate("${Path.DimDisplayDelay}")
+                            },
                             openAlertSound = {
                                 navController.navigate("${Path.AlertSound}")
                             },
@@ -350,6 +359,11 @@ internal fun VehicleHome(
                     }
                     composable("${Path.MagnifierDuration}") {
                         MagnifierDurationSettings(
+                            modifier = modifier
+                        )
+                    }
+                    composable("${Path.DimDisplayDelay}") {
+                        DimDisplayDelaySettings(
                             modifier = modifier
                         )
                     }
@@ -542,6 +556,7 @@ private fun TopAppBar(
                 is Path.AppSettings -> Text(text = "App settings")
                 is Path.TimeSinceUpdate -> Text(text = "Time since last update")
                 is Path.MagnifierDuration -> Text(text = "Tap to magnify")
+                is Path.DimDisplayDelay -> Text(text = "Dim when idle")
                 is Path.AlertSound -> Text(text = "Alert sound")
                 is Path.PersistentMode -> Text(text = "Persistent mode")
                 is Path.Debug -> Text(text = "Debug")
@@ -571,6 +586,7 @@ private fun TopAppBar(
                 is Path.AppSettings,
                 is Path.TimeSinceUpdate,
                 is Path.MagnifierDuration,
+                is Path.DimDisplayDelay,
                 is Path.AlertSound,
                 is Path.PersistentMode,
                 is Path.Debug,
@@ -608,6 +624,7 @@ private fun TopAppBar(
                 is Path.AppSettings,
                 is Path.TimeSinceUpdate,
                 is Path.MagnifierDuration,
+                is Path.DimDisplayDelay,
                 is Path.AlertSound,
                 is Path.PersistentMode,
                 is Path.Debug,

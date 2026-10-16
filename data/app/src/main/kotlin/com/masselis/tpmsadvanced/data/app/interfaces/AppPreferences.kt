@@ -97,6 +97,23 @@ public class AppPreferences internal constructor(
     }
 
     /**
+     * Dims the main screen once nothing new was alerted or warned about, nor touched, for
+     * [dimDisplaySeconds], to keep a phone mounted in a car from glaring at night
+     */
+    public val dimDisplay: MutableStateFlow<Boolean> = observableStateFlow(
+        sharedPreferences.getBoolean("DIM_DISPLAY", false)
+    ) { _, newValue ->
+        sharedPreferences.edit { putBoolean("DIM_DISPLAY", newValue) }
+    }
+
+    /** How long, in seconds, the main screen waits before dimming, see [dimDisplay] */
+    public val dimDisplaySeconds: MutableStateFlow<Int> = observableStateFlow(
+        sharedPreferences.getInt("DIM_DISPLAY_SECONDS", DEFAULT_DIM_DISPLAY_SECONDS)
+    ) { _, newValue ->
+        sharedPreferences.edit { putInt("DIM_DISPLAY_SECONDS", newValue) }
+    }
+
+    /**
      * Warns about a tyre losing at least [pressureLossMinDrop] kPa while riding. Experimental, so
      * off by default.
      */
@@ -402,5 +419,6 @@ public class AppPreferences internal constructor(
         private const val DEFAULT_STAY_ACTIVE_MINUTES = 10
         private const val DEFAULT_PRESSURE_LOSS_MIN_DROP = 7f
         private const val DEFAULT_MAGNIFIER_SECONDS = 5
+        private const val DEFAULT_DIM_DISPLAY_SECONDS = 60
     }
 }
