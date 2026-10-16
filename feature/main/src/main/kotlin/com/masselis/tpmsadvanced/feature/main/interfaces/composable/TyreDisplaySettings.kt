@@ -114,7 +114,7 @@ private fun TyreDisplaySettings(
         modifier = Modifier.testTag(TyreDisplaySettingsTags.showTimeSinceUpdate),
     )
     SwitchSettingsItem(
-        headline = "Battery voltage",
+        headline = "Always show battery",
         supporting = "(even when not low)",
         checked = showBatteryVoltage,
         onCheckedChange = onShowBatteryVoltage,
