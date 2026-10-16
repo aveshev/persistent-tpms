@@ -190,7 +190,6 @@ private fun Beacons(
             headline = "Add a beacon",
             supporting = "Lists the Bluetooth devices around",
             onClick = openBeaconScan,
-            opensPage = true,
             modifier = Modifier.testTag(BeaconsTags.addBeacon),
         )
     }

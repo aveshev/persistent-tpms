@@ -112,10 +112,9 @@ private fun DisplaySettings(
         modifier = Modifier.testTag(TyreDisplaySettingsTags.theme),
     )
     TextSettingsItem(
-        headline = "Text size",
+        headline = "Sensor readings text size",
         supporting = readoutTextScale.textSizeLabel,
         onClick = openTextSize,
-        opensPage = true,
         modifier = Modifier.testTag(TyreDisplaySettingsTags.textSize),
     )
     SwitchNavigationSettingsItem(

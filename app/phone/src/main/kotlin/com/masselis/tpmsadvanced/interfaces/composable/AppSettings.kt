@@ -91,7 +91,6 @@ internal fun AppSettings(
             headline = "Persistent mode",
             supporting = "Persistent scanning and its scan conditions",
             onClick = openPersistentMode,
-            opensPage = true,
             modifier = Modifier.testTag(persistentMode),
         )
     }
@@ -122,7 +121,6 @@ internal fun AppSettings(
             TextSettingsItem(
                 headline = "Open-source licenses",
                 onClick = openLicenses,
-                opensPage = true,
             )
         }
     }

@@ -46,7 +46,7 @@ import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
 
 /**
- * The page opened from the "Text size" item of [DisplaySettings], like the system's font size
+ * The page opened from the "Sensor readings text size" item of [DisplaySettings], like the system's font size
  * page: sample readouts, in the units chosen, above a slider stepping through [TEXT_SCALES]
  */
 @Composable

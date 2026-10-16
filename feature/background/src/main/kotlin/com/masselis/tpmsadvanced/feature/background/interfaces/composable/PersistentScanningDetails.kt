@@ -79,7 +79,6 @@ private fun PersistentScanningDetails(
             headline = "Keep monitoring running on this phone",
             supporting = "Some phones stop background apps on their own, see which settings prevent it",
             onClick = onKeepAliveInstructions,
-            opensPage = true,
         )
     }
     SettingsGroup(Modifier.padding(top = 24.dp)) {
