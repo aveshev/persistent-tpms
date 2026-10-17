@@ -9,14 +9,18 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.WICARLINK
+import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.appendLoc
+import com.masselis.tpmsadvanced.feature.main.interfaces.composable.asSensorId
 import com.masselis.tpmsadvanced.feature.qrcode.interfaces.QrCodeResultViewModel.State
 import com.masselis.tpmsadvanced.feature.qrcode.ioc.Bindings.Companion.QrCodeResultViewModel
 import com.masselis.tpmsadvanced.feature.qrcode.model.QrCodeResult
 import java.util.UUID
 
 /**
- * What [result], a scanned QR code, leads to on the vehicle [vehicleUuid] it was scanned for, shown
+ * What [result], a scanned QR code, leads to on the vehicle [vehicleUuid] it was scanned for, at
+ * [location] for a code with a single sensor, shown
  * on the screen the scan started from once the camera is closed. [scan] tells one scan from the
  * next, so a code scanned again is worked out again. [onDismiss] once answered, [scanBluetooth] for
  * a code the app can't use.
@@ -25,13 +29,14 @@ import java.util.UUID
 @Composable
 public fun QrCodeResultDialog(
     vehicleUuid: UUID,
+    location: Location,
     result: QrCodeResult,
     scan: Int,
     scanBluetooth: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val viewModel: QrCodeResultViewModel = viewModel(key = "QrCodeResult_$scan") {
-        QrCodeResultViewModel(vehicleUuid, result)
+        QrCodeResultViewModel(vehicleUuid, location, result)
     }
     val state by viewModel.stateFlow.collectAsState()
     when (val state = state) {
@@ -42,7 +47,19 @@ public fun QrCodeResultDialog(
             text = {
                 Text(
                     buildAnnotatedString {
-                        append("Assign the ${state.sensors.size} Sysgration sensors from this QR to ")
+                        state
+                            .sensors
+                            .singleOrNull()
+                            ?.takeIf { it.brand == WICARLINK }
+                            ?.also { sensor ->
+                                append("Assign the Wicarlink sensor ")
+                                appendBold(sensor.id.asSensorId(sensor.brand))
+                                append(" to the ")
+                                if (sensor.location == Location.Single) append("wheel")
+                                else appendBold(buildString { appendLoc(sensor.location) })
+                                append(" of ")
+                            }
+                            ?: append("Assign the ${state.sensors.size} Sysgration sensors from this QR to ")
                         appendBold(state.vehicle.name)
                         append("?")
                         if (state.overwrites) append("\n\n⚠️ Warning: this will overwrite already assigned sensors")
@@ -106,18 +123,13 @@ private fun UnusableAlert(
                         is QrCodeResult.DuplicateId ->
                             append("\n\n⚠️ Filled QR Code contains the same sensor id multiple time")
 
-                        QrCodeResult.UnsupportedWicarlink ->
-                            append("\n\n⚠️ QR codes made by Wicarlink aren't supported yet\nAssign each sensor with Scan via Bluetooth instead")
-
-                        is QrCodeResult.Sensors -> {}
+                        is QrCodeResult.Sensors, is QrCodeResult.Wicarlink -> {}
                     }
                 }
             )
         },
         onDismissRequest = onDismiss,
-        dismissButton = if (result is QrCodeResult.UnsupportedWicarlink) {
-            { TextButton(onClick = { onDismiss(); scanBluetooth() }) { Text(text = "Scan via Bluetooth") } }
-        } else null,
+        dismissButton = { TextButton(onClick = { onDismiss(); scanBluetooth() }) { Text(text = "Scan via Bluetooth") } },
         confirmButton = { TextButton(onClick = onDismiss) { Text(text = "OK") } },
     )
 }

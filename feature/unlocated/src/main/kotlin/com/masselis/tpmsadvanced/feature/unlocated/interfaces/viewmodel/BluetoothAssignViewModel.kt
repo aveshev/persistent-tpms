@@ -6,6 +6,7 @@ import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorDatabase
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.VehicleDatabase
 import com.masselis.tpmsadvanced.data.vehicle.model.Sensor
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand
 import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location
@@ -69,6 +70,8 @@ internal class BluetoothAssignViewModel(
         val offersLowPressure: Boolean = false,
         /** The sensor found was assigned, the flow is done */
         val isAssigned: Boolean = false,
+        /** The found sensor's, to show its id the way it's printed */
+        val foundBrand: SensorBrand? = null,
     )
 
     /** Asked before going on: on the page itself, but [BoundElsewhere] in a dialog */
@@ -188,7 +191,7 @@ internal class BluetoothAssignViewModel(
     }
 
     private fun found(sensorId: Int) = viewModelScope.launch {
-        mutableStateFlow.update { it.copy(step = AssignStep.Found(sensorId)) }
+        mutableStateFlow.update { it.copy(step = AssignStep.Found(sensorId), foundBrand = heard[sensorId]?.brand) }
         withContext(IO) { vehicleDatabase.selectBySensorId(sensorId).execute() }
             ?.takeIf { it.uuid != vehicleUuid }
             ?.also { vehicle -> mutableStateFlow.update { it.copy(dialog = Dialog.BoundElsewhere(vehicle)) } }

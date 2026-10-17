@@ -22,6 +22,8 @@ public sealed interface QrCodeResult : Parcelable {
     @JvmInline
     public value class DuplicateId internal constructor(internal val ids: List<Int>) : QrCodeResult
 
+    /** A Wicarlink code holds a single sensor, assigned to the wheel the scan was started from */
     @Parcelize
-    public data object UnsupportedWicarlink : QrCodeResult
+    @JvmInline
+    public value class Wicarlink internal constructor(internal val id: Int) : QrCodeResult
 }

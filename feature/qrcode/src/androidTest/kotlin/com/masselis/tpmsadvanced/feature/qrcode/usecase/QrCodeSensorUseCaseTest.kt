@@ -18,6 +18,7 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.MONOWHEEL
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.MOTORCYCLE
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.TADPOLE_THREE_WHEELER
 import com.masselis.tpmsadvanced.feature.qrcode.interfaces.CameraAnalyser
+import com.masselis.tpmsadvanced.feature.qrcode.model.QrCodeResult
 import com.masselis.tpmsadvanced.feature.qrcode.model.QrCodeSensor
 import com.masselis.tpmsadvanced.feature.qrcode.model.QrCodeSensors
 import com.masselis.tpmsadvanced.feature.qrcode.model.sensorsFor
@@ -57,7 +58,7 @@ internal class QrCodeSensorUseCaseTest {
     fun fourWheels() = runTest {
         every { cameraAnalyser.findQrCode(any()) } returns MutableStateFlow("11AD8B&21563D&31A4F0&41A552")
         test().analyse(mockk()).test {
-            assertEquals(fourWheel, awaitItem())
+            assertEquals(QrCodeResult.Sensors(fourWheel), awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
     }
@@ -67,12 +68,24 @@ internal class QrCodeSensorUseCaseTest {
         every { cameraAnalyser.findQrCode(any()) } returns MutableStateFlow("11AD8B&41A552")
         test().analyse(mockk()).test {
             assertEquals(
-                QrCodeSensors.TwoWheel(
-                    QrCodeSensor(-1951592192, Wheel(FRONT_LEFT)),
-                    QrCodeSensor(1386561792, Wheel(REAR_RIGHT)),
+                QrCodeResult.Sensors(
+                    QrCodeSensors.TwoWheel(
+                        QrCodeSensor(-1951592192, Wheel(FRONT_LEFT)),
+                        QrCodeSensor(1386561792, Wheel(REAR_RIGHT)),
+                    )
                 ),
                 awaitItem()
             )
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    // The cap reads 2221C5 too, the sensor advertises C5 21 22
+    @Test
+    fun wicarlink() = runTest {
+        every { cameraAnalyser.findQrCode(any()) } returns MutableStateFlow("2221C5")
+        test().analyse(mockk()).test {
+            assertEquals(QrCodeResult.Wicarlink(0x2221C5), awaitItem())
             cancelAndIgnoreRemainingEvents()
         }
     }

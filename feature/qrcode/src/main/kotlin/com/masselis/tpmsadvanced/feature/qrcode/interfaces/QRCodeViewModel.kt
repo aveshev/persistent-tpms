@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.transformLatest
@@ -57,21 +56,18 @@ internal class QRCodeViewModel(
         qrCodeSensorUseCase
             .analyse(controller)
             // The camera reports a code at every frame it's in: the flag stays up while it's in view
-            .transformLatest { sensors ->
-                mutableIsUnknownCode.value = sensors == null
-                sensors
+            .transformLatest { result ->
+                mutableIsUnknownCode.value = result == null
+                result
                     ?.also { emit(it) }
                     ?: run {
                         delay(UNKNOWN_CODE_LINGER)
                         mutableIsUnknownCode.value = false
                     }
             }
-            .map { QrCodeResult.Sensors(it) as QrCodeResult }
             .catch { exc ->
                 when (exc) {
                     is CameraAnalyser.CameraUnavailable -> channel.send(Event.LeaveBecauseCameraUnavailable)
-
-                    is QrCodeSensorUseCase.UnsupportedWircarlinkQrCode -> emit(QrCodeResult.UnsupportedWicarlink)
 
                     is QrCodeSensors.DuplicateWheelLocation ->
                         emit(QrCodeResult.DuplicateWheelLocation(exc.wheels.duplicates()))
