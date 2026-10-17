@@ -34,8 +34,9 @@ internal enum class MockSensor {
     },
 
     /**
-     * `flags` is refused: which bytes carry the status is unknown (bytes 9, 10, 14 and 15 are the
-     * candidates shown on the tyre), replay raw bytes to set them. Byte 17 carries the pressure's
+     * `flags` is byte 14, the sensor's state: 0x01 "leakage" is the alarm, which real sensors set
+     * on the packets they send at once when the pressure drops, 0x02 "inflating". It replaces
+     * `isAlarm`. Byte 17 carries the pressure's
      * 9th bit, the decoder adding 256 to the pressure when it is exactly 1.
      */
     WICARLINK {
@@ -47,13 +48,16 @@ internal enum class MockSensor {
                     .roundToInt()
                     .let { pressure ->
                         bytes[12] = pressure.toByte()
-                        require(reading.flags == null) {
-                            "WICARLINK takes no flags, its status bytes are unknown: replay raw bytes to set bytes 9, 10, 14 or 15"
-                        }
                         bytes[17] = (pressure shr 8).toByte()
                     }
                 bytes[11] = reading.voltageByte(default = 33)
                 bytes[13] = reading.celsius.within("celsius", -55f..200f).roundToInt().plus(55).toByte()
+                bytes[14] = (
+                    reading.flags
+                        ?.also { require(reading.isAlarm.not()) { "Send either flags or alarm for WICARLINK, flags 1 is the alarm" } }
+                        ?.within("flags", 0..255)
+                        ?: if (reading.isAlarm) 0x01 else 0x00
+                    ).toByte()
                 reading.id.within("id", 0..0xFFFFFF).let { id ->
                     bytes[23] = id.toByte()
                     bytes[24] = (id shr 8).toByte()
@@ -119,8 +123,8 @@ internal enum class MockSensor {
      * but SYSGRATION, a percentage for it. `null` picks a healthy value.
      * @param id The sensor ID the app shows. Ignored by PECHAM and BEKUBEE_KY, see their doc.
      * @param location Only SYSGRATION advertises its location.
-     * @param isAlarm Only SYSGRATION advertises an alarm, the others report their battery as a voltage
-     * which the app compares to the vehicle's low voltage alarm.
+     * @param isAlarm Only SYSGRATION and WICARLINK advertise an alarm. The others report their battery
+     * as a voltage, which the app compares to the vehicle's low voltage alarm.
      * @param flags The raw status byte, 0 to 255. `null` sends what real sensors do, see each entry.
      */
     data class Reading(

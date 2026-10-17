@@ -3,6 +3,7 @@ package com.masselis.tpmsadvanced.data.vehicle.interfaces.impl
 import com.masselis.tpmsadvanced.core.common.now
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.SYSGRATION
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.WICARLINK
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation
 import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import kotlinx.coroutines.flow.Flow
@@ -26,7 +27,7 @@ public object SimulatedReadings {
 
     /**
      * [battery] is in decivolts, or a percentage for Sysgration, null for a healthy one. Only
-     * Sysgration sends [location] and [isAlarm]. Throws when a value can't be carried by the
+     * Sysgration sends [location], only Sysgration and Wicarlink [isAlarm]. Throws when a value can't be carried by the
      * brand's advertisement, see [MockSensor].
      */
     @OptIn(ExperimentalStdlibApi::class)
@@ -42,7 +43,7 @@ public object SimulatedReadings {
     ) {
         MockSensor
             .valueOf(brand.name)
-            .advertisement(MockSensor.Reading(kpa, celsius, battery, sensorId, location, isAlarm && brand == SYSGRATION))
+            .advertisement(MockSensor.Reading(kpa, celsius, battery, sensorId, location, isAlarm && brand in listOf(SYSGRATION, WICARLINK)))
             .let { bytes ->
                 AdvertisingPacket(bytes)
                     .decode()

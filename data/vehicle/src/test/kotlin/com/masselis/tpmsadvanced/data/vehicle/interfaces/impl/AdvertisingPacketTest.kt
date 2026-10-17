@@ -24,9 +24,12 @@ internal class AdvertisingPacketTest {
     }
 
     @Test
-    fun `wicarlink gives its four candidate bytes`() {
-        // The live advertisement of WircarlinkTest: bytes 9, 10, 14 and 15
-        assertEquals(bytes(0xAC, 0x00, 0x00, 0x08), statusBytes("0201060303B0FB12FFAC00D043520008DA001D10FF1100AF2206"))
+    fun `wicarlink gives its pressure drop byte`() {
+        // A real sensor on a test stand: a scheduled packet, then the one sent at once when it was
+        // unscrewed, and the one sent at once when some air was let out
+        assertEquals(bytes(0x00), statusBytes("0201060303B0FB12FFAC00C78952000D3800D510FF1100C42122"))
+        assertEquals(bytes(0x01), statusBytes("0201060303B0FB12FFAC00C70053010D4F00DE10FF1100C42122"))
+        assertEquals(bytes(0x01), statusBytes("0201060303B0FB12FFAC00C67C53010D0400F010FF1100C42122"))
     }
 
     @Test

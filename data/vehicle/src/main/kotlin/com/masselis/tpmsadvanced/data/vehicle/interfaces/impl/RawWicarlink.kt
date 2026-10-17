@@ -26,6 +26,10 @@ internal class RawWicarlink private constructor(private val data: ByteArray) : R
 
     fun temperature() = ((data[13].toInt() and 0xFF) - 55).toFloat().celsius
 
+    // The state the official app shows as "leakage": set on the packets sent at once when the
+    // pressure drops, which a fall in temperature may cause too. 0x02, "inflating", isn't an alarm.
+    fun isAlarm() = data[14] == LEAKAGE_STATE
+
     override fun asTyre(timestamp: Double, rssi: Int, sensorId: Int, raw: String): Tyre.SensorInput = Tyre.Unlocated(
         timestamp,
         rssi,
@@ -33,13 +37,14 @@ internal class RawWicarlink private constructor(private val data: ByteArray) : R
         pressure(),
         temperature(),
         brand,
-        // The low battery is reported through batteryVoltage, these sensors send no alarm
-        false,
+        isAlarm(),
         voltage().volts,
         raw,
     )
 
     companion object {
+        private const val LEAKAGE_STATE: Byte = 0x01
+
         internal val SERVICE_UUID = ParcelUuid(fromString("0000fbb0-0000-1000-8000-00805f9b34fb"))
 
         operator fun invoke(packet: AdvertisingPacket): RawWicarlink? = packet
