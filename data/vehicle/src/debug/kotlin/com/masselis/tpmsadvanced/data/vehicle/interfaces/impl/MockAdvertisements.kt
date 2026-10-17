@@ -70,7 +70,8 @@ private val logger = Logger.withTag("MockAdvertisements")
  * ```
  * - `brand`: pecham, bekubee_ky, wicarlink, bekubee_tpms or sysgration. `kpa` is required,
  *   `celsius` (20), `battery` (a healthy value) and `id` (0x123400) are optional.
- * - Sysgration only: `wheel` (FL, FR, RL or RR, default FL) and `alarm` (`--ez`, default false).
+ * - Sysgration only: `wheel` (FL, FR, RL or RR, default FL). Sysgration and Wicarlink only:
+ *   `alarm` (`--ez`, default false).
  * - `flags`: the raw status byte (0 to 255, in decimal), see [MockSensor] for where each brand
  *   carries it. Defaults to what real sensors send.
  * - Both forms: `address` (the ID of Pecham and Bekubee KY sensors) and `rssi` are optional.

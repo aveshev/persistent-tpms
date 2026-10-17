@@ -9,6 +9,6 @@ public enum class AlertClass {
     /** A tyre losing pressure while riding, see [PressureLoss.Tracker] */
     PRESSURE_LOSS,
 
-    /** Raised by the sensor itself (Sysgration), see [Tyre.isAlarm] */
+    /** Raised by the sensor itself (Sysgration, Wicarlink), see [Tyre.isAlarm] */
     SENSOR_ALARM,
 }

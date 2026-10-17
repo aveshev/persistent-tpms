@@ -14,7 +14,7 @@ public sealed interface Tyre : Parcelable {
 
     public val brand: SensorBrand
 
-    /** An alarm raised by the sensor itself, only Sysgration sensors send one */
+    /** An alarm raised by the sensor itself, only Sysgration and Wicarlink sensors send one */
     public val isAlarm: Boolean
 
     /** Null for the sensors which don't report their battery as a voltage, see [SensorBrand.batteryUnit] */
@@ -93,8 +93,8 @@ public sealed interface Tyre : Parcelable {
 
 /**
  * The status bytes of the packet, as broadcast, read from [Tyre.raw]: shown for debugging, since
- * what most of their bits mean is unknown. One byte for most sensors, several candidates for the
- * ones whose status byte isn't found yet. null when the sensor has none, or without [Tyre.raw].
+ * what most of their bits mean is unknown. One byte for every sensor so far. null when the sensor
+ * has none, or without [Tyre.raw].
  */
 @OptIn(ExperimentalStdlibApi::class)
 public val Tyre.flags: List<UByte>?

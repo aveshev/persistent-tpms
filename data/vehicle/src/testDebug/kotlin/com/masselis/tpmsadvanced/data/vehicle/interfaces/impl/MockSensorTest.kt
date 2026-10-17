@@ -132,7 +132,7 @@ internal class MockSensorTest {
     @Test
     fun `flags go to the status byte the tyre shows`() {
         reading(kpa = 200f, celsius = 20f, flags = 0x5A).let { reading ->
-            listOf(PECHAM, BEKUBEE_KY, BEKUBEE_TPMS, SYSGRATION).forEach { sensor ->
+            listOf(PECHAM, BEKUBEE_KY, WICARLINK, BEKUBEE_TPMS, SYSGRATION).forEach { sensor ->
                 val advertisement = sensor.advertisement(reading)
                 assertNotNull(advertisement.decoded(), "$sensor with flags")
                 assertEquals(listOf<UByte>(0x5Au), AdvertisingPacket(advertisement).statusBytes, "$sensor")
@@ -141,15 +141,20 @@ internal class MockSensorTest {
         // Wicarlink's 9th pressure bit is byte 17 being 1
         assertEquals(1.toByte(), WICARLINK.advertisement(reading(kpa = 900f, celsius = 20f))[17])
         assertEquals(0.toByte(), WICARLINK.advertisement(reading(kpa = 200f, celsius = 20f))[17])
-        // Sysgration's alarm is its flags byte being 1
-        assertTrue(SYSGRATION.advertisement(reading(kpa = 200f, celsius = 20f, flags = 1)).decodedTyre()!!.isAlarm)
+        // Sysgration's and Wicarlink's alarm is their flags byte being 1
+        listOf(SYSGRATION, WICARLINK).forEach { sensor ->
+            assertTrue(sensor.advertisement(reading(kpa = 200f, celsius = 20f, flags = 1)).decodedTyre()!!.isAlarm, "$sensor")
+            assertTrue(sensor.advertisement(reading(kpa = 200f, celsius = 20f, isAlarm = true)).decodedTyre()!!.isAlarm, "$sensor")
+            assertFalse(sensor.advertisement(reading(kpa = 200f, celsius = 20f)).decodedTyre()!!.isAlarm, "$sensor")
+        }
     }
 
     @Test
     fun `values an advertisement cannot carry are rejected`() {
         assertFailsWith<IllegalArgumentException> { PECHAM.advertisement(reading(kpa = 200f, celsius = 20f, flags = 256)) }
-        assertFailsWith<IllegalArgumentException> { WICARLINK.advertisement(reading(kpa = 200f, celsius = 20f, flags = 0)) }
+        assertFailsWith<IllegalArgumentException> { WICARLINK.advertisement(reading(kpa = 200f, celsius = 20f, flags = 256)) }
         assertFailsWith<IllegalArgumentException> { SYSGRATION.advertisement(reading(kpa = 200f, celsius = 20f, isAlarm = true, flags = 3)) }
+        assertFailsWith<IllegalArgumentException> { WICARLINK.advertisement(reading(kpa = 200f, celsius = 20f, isAlarm = true, flags = 3)) }
         assertFailsWith<IllegalArgumentException> { PECHAM.advertisement(reading(kpa = -1f, celsius = 20f)) }
         assertFailsWith<IllegalArgumentException> { WICARLINK.advertisement(reading(kpa = 200f, celsius = -60f)) }
         assertFailsWith<IllegalArgumentException> { BEKUBEE_TPMS.advertisement(reading(kpa = 200f, celsius = 20f, battery = 40)) }

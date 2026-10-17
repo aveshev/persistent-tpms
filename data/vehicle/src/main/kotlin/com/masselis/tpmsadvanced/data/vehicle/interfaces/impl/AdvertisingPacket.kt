@@ -61,10 +61,11 @@ internal class AdvertisingPacket(val bytes: ByteArray) {
         manufacturer?.second?.let { it.size > 15 && it[1] == 0xEA.toByte() && it[2] == 0xCA.toByte() } == true ->
             listOf(manufacturer.second[15].toUByte())
 
-        // Not decoded by anything yet: 9-10 sit where a company ID usually is, 14-15 after the
-        // pressure and the temperature, where a status byte usually is
-        SERVICE_FBB0 in serviceUuids16 -> listOf(9, 10, 14, 15)
-            .takeIf { bytes.size > 15 }
+        // Wicarlink's state, as the official app names it: 0x01 "leakage", on the packets sent at once
+        // when the pressure drops, 0x02 "inflating", 0x00 on the ones it sends every 5 and a half
+        // minutes (TPMS-advanced#428, bkbilly/tpms_ble#27)
+        SERVICE_FBB0 in serviceUuids16 -> listOf(14)
+            .takeIf { bytes.size > 14 }
             ?.map { bytes[it].toUByte() }
 
         else -> null
