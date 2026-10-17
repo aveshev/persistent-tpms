@@ -46,7 +46,7 @@ internal fun AssignSensorDialog(
                             append("Sysgration, ")
                             appendLoc(location, withType = false)
                             append(", ID: ")
-                            append(sensor.id.asSensorId())
+                            append(sensor.id.asSensorId(sensor.brand))
                         },
                         onClick = { assignDetected(sensor) },
                         isHighlighted = true,

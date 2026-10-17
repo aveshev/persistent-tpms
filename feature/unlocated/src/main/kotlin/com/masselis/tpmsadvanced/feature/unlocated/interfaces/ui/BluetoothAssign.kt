@@ -110,7 +110,8 @@ private fun Steps(
             val dialog = state.dialog
             if (state.isAssigned) Instruction(
                 buildAnnotatedString {
-                    (step as? AssignStep.Found)?.also { append("Sensor ${it.sensorId.asSensorId()} assigned to ") }
+                    (step as? AssignStep.Found)
+                        ?.also { append("Sensor ${it.sensorId.asSensorId(state.foundBrand)} assigned to ") }
                     appendWheelOn(location, state.vehicle)
                 }
             )

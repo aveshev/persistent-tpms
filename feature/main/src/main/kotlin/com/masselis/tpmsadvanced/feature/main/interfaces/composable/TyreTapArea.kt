@@ -264,7 +264,7 @@ private fun ManageSensorDialog(
                     modifier = Modifier.testTag(TyreTapAreaTags.brand),
                 )
                 Text(
-                    "ID: ${sensor.id.asSensorId()}",
+                    "ID: ${sensor.id.asSensorId(sensor.brand)}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

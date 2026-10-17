@@ -7,6 +7,7 @@ import com.masselis.tpmsadvanced.data.unit.model.TemperatureUnit
 import com.masselis.tpmsadvanced.data.vehicle.model.AlertClass
 import com.masselis.tpmsadvanced.data.vehicle.model.AlertLevel
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand
 import com.masselis.tpmsadvanced.data.vehicle.model.Temperature
 import com.masselis.tpmsadvanced.data.vehicle.model.TyreAtmosphere
 import com.masselis.tpmsadvanced.data.vehicle.model.Voltage
@@ -42,7 +43,8 @@ public class TyreStatsStateFlow internal constructor(
             unitPreferences.pressure,
             unitPreferences.temperature,
             calibrationUseCase.calibrations,
-        ) { alerts, pressureUnit, temperatureUnit, calibrations ->
+            sensorBindingUseCase.boundSensor(),
+        ) { alerts, pressureUnit, temperatureUnit, calibrations, bound ->
         requireNotNull(alerts.latest).let<TyreAtmosphere, State> { atmosphere ->
             State.Detected(
                 atmosphere.timestamp,
@@ -57,6 +59,7 @@ public class TyreStatsStateFlow internal constructor(
                 alerts.levels,
                 atmosphere.batteryPercent,
                 alerts.isHighPressure,
+                bound?.brand,
             )
         }
         }
@@ -102,6 +105,8 @@ public class TyreStatsStateFlow internal constructor(
             public val batteryPercent: Int? = null,
             /** Which way the pressure is off, for the critical alert's label */
             public val isHighPressure: Boolean = false,
+            /** The bound sensor's, to show its id the way it's printed */
+            public val brand: SensorBrand? = null,
         ) : State()
     }
 }

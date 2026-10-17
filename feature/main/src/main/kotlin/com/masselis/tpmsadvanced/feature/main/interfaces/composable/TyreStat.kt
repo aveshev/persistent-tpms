@@ -40,6 +40,8 @@ import com.masselis.tpmsadvanced.data.vehicle.model.AlertLevel.CRIMSON
 import com.masselis.tpmsadvanced.data.vehicle.model.AlertLevel.RED
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.bar
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.WICARLINK
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.Side.LEFT
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.Side.RIGHT
@@ -58,11 +60,17 @@ import kotlinx.coroutines.delay
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-/** A sensor id the way the readout shows it: its 3 bytes in order when it fits, in hex otherwise */
+/**
+ * A sensor id the way its [brand] prints it, on the sensor or its QR code, in hex when it doesn't
+ * fit 3 bytes. Sysgration prints the bytes in the order they're advertised, Wicarlink the other way
+ * round: its cap reads 2221C5 for C5 21 22.
+ */
 @Suppress("MagicNumber")
-public fun Int.asSensorId(): String =
-    if ((this ushr 24) == 0) "%02X%02X%02X".format(this and 0xFF, (this shr 8) and 0xFF, (this shr 16) and 0xFF)
-    else "0x%08X".format(this)
+public fun Int.asSensorId(brand: SensorBrand?): String = when {
+    (this ushr 24) != 0 -> "0x%08X".format(this)
+    brand == WICARLINK -> "%06X".format(this)
+    else -> "%02X%02X%02X".format(this and 0xFF, (this shr 8) and 0xFF, (this shr 16) and 0xFF)
+}
 
 @Composable
 internal fun TyreStat(
@@ -108,7 +116,6 @@ internal fun TyreStat(
 ) {
     val detected = state as? State.Detected
     val levels = detected?.levels.orEmpty()
-    val sensorId = detected?.sensorId
     val onSurfaceColor = MaterialTheme.colorScheme.onSurface
     val alignment = remember(isBasic, isCentered) {
         // Centered inside its outline on the sensors' page, under the spare, or magnified, against
@@ -169,16 +176,18 @@ internal fun TyreStat(
             ?.takeIf { showBatteryVoltage || (isBasic.not() && BATTERY in levels) }
             ?.also { Reading(it, levels[BATTERY], Modifier.align(alignment), fontSize = 16.sp) }
 
-        if (sensorId != null && showSensorId) {
-            Text(
-                text = sensorId.asSensorId(),
-                fontSize = 9.sp,
-                lineHeight = SMALL_LINE_HEIGHT,
-                maxLines = 1,
-                color = onSurfaceColor,
-                modifier = Modifier.align(alignment),
-            )
-        }
+        detected
+            ?.takeIf { showSensorId }
+            ?.also {
+                Text(
+                    text = it.sensorId.asSensorId(it.brand),
+                    fontSize = 9.sp,
+                    lineHeight = SMALL_LINE_HEIGHT,
+                    maxLines = 1,
+                    color = onSurfaceColor,
+                    modifier = Modifier.align(alignment),
+                )
+            }
 
         // A line per status byte, bit 7 first like the byte written in binary (0x80 lights the
         // leftmost digit), the bits which are not set in the last packet greyed out

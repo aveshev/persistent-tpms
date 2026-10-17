@@ -476,6 +476,7 @@ internal fun VehicleHome(
         qrCodeResult?.also { result ->
             QrCodeResultDialog(
                 vehicleUuid = vehicleComponent.vehicle.uuid,
+                location = vehicleComponent.vehicle.kind.locations.elementAt(qrCodeLocation),
                 result = result,
                 scan = qrCodeScan,
                 scanBluetooth = {
