@@ -97,7 +97,7 @@ private fun VehiclePressureSettings(
     onSeparateSpare: (Boolean) -> Unit = {},
 ) = Column(modifier) {
     TyreLegend(
-        text = "While the pressure stays in range, the tyre's colour shows its temperature. Within 3% of the minimum or of the maximum, its reading turns orange. At or below the minimum, or at or above the maximum, it blinks red to alert you, and faster from 25% below the minimum or 20% above the maximum.\n\nSet the minimum to the pressure the manufacturer recommends: critical then comes where a car's own tyre pressure warning light turns on, 25% below it. Set the maximum to the maximum inflation pressure marked on the tyre's sidewall.",
+        text = "When a sensor reports pressure outside of the range set here, it will raise an alert and blink the affected tyre indicator in red. If it's more than 20% above the maximum, or more than 25% below the minimum, it will be a critical alert. Getting within 3% of the minimum or maximum will raise a warning.",
         entries = listOf(
             State.Normal.BlueToGreen(Fraction(1f)) to "In range",
             State.Alerting() to "Out of range",
