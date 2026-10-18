@@ -51,13 +51,11 @@ LIMIT 1;
 -- tyre it was on before stay there, and one left from an earlier time at this tyre is stale. Its
 -- readings follow it on a move, see parkSensor.
 latestBySensorByLocation:
-SELECT * FROM (
-    SELECT * FROM Reading
-    WHERE sensorId = :sensorId AND timestamp > 0
-    ORDER BY timestamp DESC
-    LIMIT 1
+SELECT * FROM Reading
+WHERE vehicleId = :vehicleId AND location = :location AND sensorId = :sensorId AND timestamp = (
+    SELECT MAX(latest.timestamp) FROM Reading AS latest WHERE latest.sensorId = :sensorId
 )
-WHERE vehicleId = :vehicleId AND location = :location;
+LIMIT 1;
 
 allByLocation:
 SELECT * FROM Reading
