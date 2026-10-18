@@ -33,13 +33,16 @@ public class ReadingDatabase internal constructor(
         .latestByLocation(vehicleId, location)
         .asOneOrNull { it.decoded() }
 
-    /** Same as [latestByLocation], only among the readings of the sensor [sensorId] */
+    /**
+     * The latest reading of the sensor [sensorId], if it was read at [location]: null once it was
+     * read elsewhere, after it was reassigned, rather than a stale reading of this tyre
+     */
     public fun latestBySensorByLocation(
         sensorId: Int,
         location: Location,
         vehicleId: UUID,
     ): QueryOneOrNull<Tyre.Located> = queries
-        .latestBySensorByLocation(vehicleId, location, sensorId)
+        .latestBySensorByLocation(sensorId = sensorId, vehicleId = vehicleId, location = location)
         .asOneOrNull { it.decoded() }
 
     /** All the stored readings of [location], oldest first, at most [CAP] of them */
