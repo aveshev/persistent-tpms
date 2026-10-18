@@ -109,6 +109,8 @@ New feature/fix work always branches from `develop`, never `main` — before cre
 ### Remotes
 This checkout has two remotes: `origin` (the user's fork, `aveshev/persistent-tpms`, formerly `TPMS-advanced-NE`) and `upstream` (`VincentMasselis/TPMS-advanced`, the original project). Nothing from this project — branches, pushes, PRs — should go to `upstream` unless specifically asked to do so. Default to `origin` for pushes and PRs (`gh repo set-default aveshev/persistent-tpms` keeps `gh pr create` from guessing wrong).
 
+Before pushing to a branch that has a PR, check that the PR is still open (`gh pr view <branch> --json state`). PRs are often merged while work goes on, mostly as a squash. Commits pushed after that sit on the closed PR and never reach `develop`. If it's merged, cut a new branch from `origin/develop`, cherry-pick the commits that came after the merge, and open a new PR.
+
 Features are built in this fork, then downported onto branches cut from `upstream/develop` for upstream PRs. Those branches carry upstream's older UI and upstream's own CLAUDE.md, which lacks these rules. Before opening an upstream PR, or pushing to a branch that is already the head of one (draft or not), the exact commit being proposed must have been installed on a physical device and signed off by the user. This applies even when a cloud session prepared and tested it. If there's no record of that sign-off, stop and ask. Build downports in a separate worktree, and check `migrations/` before installing across the fork and upstream bases, since their database versions can differ.
 
 ## Code Style
