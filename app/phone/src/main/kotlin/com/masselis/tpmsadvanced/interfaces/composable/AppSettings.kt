@@ -20,6 +20,9 @@ import com.masselis.tpmsadvanced.core.ui.SettingsGroup
 import com.masselis.tpmsadvanced.core.ui.SettingsIntro
 import com.masselis.tpmsadvanced.core.ui.SettingsSectionHeader
 import com.masselis.tpmsadvanced.core.ui.TextSettingsItem
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.LITE
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.PRO
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.ActivateBluetoothDevices
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.AlertSoundSettings
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.AlertsSettings
@@ -33,6 +36,7 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.composable.PhoneI
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.ScanStatusAnnouncementsSettingsItem
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.ExceptedWifis
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.PersistentScanningDetails
+import com.masselis.tpmsadvanced.feature.background.interfaces.composable.LitePersistentScanningSettings
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.PersistentScanningSettings
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.StayActiveDuration
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.SuspendBluetoothDevices
@@ -128,24 +132,41 @@ internal fun AppSettings(
 
 /** Persistent scanning and its scan conditions, opened from the app settings or the main screen's menu */
 @Composable
+@Suppress("LongParameterList")
 internal fun PersistentModeSettings(
     openPersistentScanning: () -> Unit,
     openActivateScanConditions: () -> Unit,
     openSuspendScanConditions: () -> Unit,
+    openBluetoothDevices: () -> Unit,
+    openBeacons: () -> Unit,
+    openStayActiveDuration: () -> Unit,
     modifier: Modifier = Modifier,
 ) = SettingsPage(modifier) {
     @Suppress("MaxLineLength")
     SettingsIntro(
-        "Automatically starts monitoring your tyres when you're riding your vehicle, and stops when you leave it, without the need to manually launch the app each ride to make it happen."
+        "When on, keeps monitoring your tyres in the background, even after the phone restarts, starting and suspending scanning based on the options below. That way you don't have to open the app manually each ride."
     )
-    PersistentScanningSettings(
-        openPersistentScanning = openPersistentScanning,
-        openActivateConditions = openActivateScanConditions,
-        openSuspendConditions = openSuspendScanConditions,
-        modifier = Modifier
-            .padding(top = 16.dp)
-            .testTag(persistentScanning),
-    )
+    when (AppTier.current) {
+        // Its few conditions are right on this page, the condition pages aren't reachable
+        LITE -> LitePersistentScanningSettings(
+            openPersistentScanning = openPersistentScanning,
+            openBluetoothDevices = openBluetoothDevices,
+            openBeacons = openBeacons,
+            openStayActiveDuration = openStayActiveDuration,
+            modifier = Modifier
+                .padding(top = 16.dp)
+                .testTag(persistentScanning),
+        )
+
+        PRO -> PersistentScanningSettings(
+            openPersistentScanning = openPersistentScanning,
+            openActivateConditions = openActivateScanConditions,
+            openSuspendConditions = openSuspendScanConditions,
+            modifier = Modifier
+                .padding(top = 16.dp)
+                .testTag(persistentScanning),
+        )
+    }
 }
 
 @Composable

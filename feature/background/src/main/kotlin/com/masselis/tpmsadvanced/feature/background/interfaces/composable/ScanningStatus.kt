@@ -58,6 +58,7 @@ internal val BellState?.label: String
         null -> "Off"
         BellState.NeedsPermission -> "Permissions missing"
         BellState.Active -> "Active"
+        BellState.Always -> "Always"
         BellState.Suspended -> "Suspended"
         BellState.Idle -> "Idle"
     }

@@ -59,10 +59,15 @@ android {
         // TPMS Advanced instead: another app ID with its own data, so a change can be tried on a
         // phone beside the Persistent TPMS that runs there, without touching it. Only the ID, the
         // name and the launcher icon's colours change.
+        // `-Papp.tier=lite` builds Lite: a separate app beside Pro, with its own data. data/app reads
+        // the same property for the code (AppTier).
+        val lite = providers.gradleProperty("app.tier").orNull == "lite"
+        val tierName = if (lite) " Lite" else ""
+        if (lite) applicationIdSuffix = ".lite"
         when (val brand = providers.gradleProperty("app.brand").getOrElse("persistenttpms")) {
             "persistenttpms" -> {
                 applicationId = "com.aveshev.persistenttpms"
-                resValue("string", "app_name", "Persistent TPMS")
+                resValue("string", "app_name", "Persistent TPMS$tierName")
                 // Near black rather than black, so the icon's edge stays visible on dark wallpapers
                 resValue("color", "ic_launcher_background", "#FF101410")
                 resValue("color", "ic_launcher_glyph", "#FF4CAF50")
@@ -71,7 +76,7 @@ android {
 
             "tpmsadvanced" -> {
                 applicationId = "com.masselis.tpmsadvanced"
-                resValue("string", "app_name", "TPMS Advanced")
+                resValue("string", "app_name", "TPMS Advanced$tierName")
                 // The stock look, black on green, and no "always on" dot
                 resValue("color", "ic_launcher_background", "#FF4CAF50")
                 resValue("color", "ic_launcher_glyph", "#FF000000")

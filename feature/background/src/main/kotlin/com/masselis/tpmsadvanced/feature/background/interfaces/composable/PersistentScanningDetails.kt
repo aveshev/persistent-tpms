@@ -16,7 +16,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.masselis.tpmsadvanced.core.ui.SettingsGroup
-import com.masselis.tpmsadvanced.core.ui.SettingsIntro
 import com.masselis.tpmsadvanced.core.ui.SwitchSettingsItem
 import com.masselis.tpmsadvanced.core.ui.TextSettingsItem
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.BellState
@@ -70,18 +69,7 @@ private fun PersistentScanningDetails(
     onKeepAliveInstructions: () -> Unit,
     modifier: Modifier = Modifier,
 ) = Column(modifier) {
-    @Suppress("MaxLineLength")
-    SettingsIntro(
-        "Persistent scanning monitors your tyres in the background, even after the phone restarts, without having to start it by hand. To save battery it only scans when it is useful: whenever any of the activate scan conditions is true, such as the phone charging in its mount or Android Auto being connected. The suspend scan conditions, such as being connected to your home (or any other) WiFi, override activate conditions and suspend scanning whenever any of them is true. Scanning while the app is open is never affected."
-    )
     SettingsGroup(Modifier.padding(top = 16.dp)) {
-        TextSettingsItem(
-            headline = "Keep monitoring running on this phone",
-            supporting = "Some phones stop background apps on their own, see which settings prevent it",
-            onClick = onKeepAliveInstructions,
-        )
-    }
-    SettingsGroup(Modifier.padding(top = 24.dp)) {
         SwitchSettingsItem(
             headline = "Persistent scanning",
             checked = persistentScanning,
@@ -106,13 +94,20 @@ private fun PersistentScanningDetails(
             "Notifications or the unrestricted battery usage are missing, tap the bell on the main " +
                 "screen to grant them"
 
-        BellState.Active, BellState.Suspended, BellState.Idle -> decision.rationale()
+        BellState.Active, BellState.Always, BellState.Suspended, BellState.Idle -> decision.rationale()
     }.let {
         Text(
             text = it,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp),
+        )
+    }
+    SettingsGroup(Modifier.padding(top = 24.dp)) {
+        TextSettingsItem(
+            headline = "Keep monitoring running on this phone",
+            supporting = "Some phones stop background apps on their own, see which settings prevent it",
+            onClick = onKeepAliveInstructions,
         )
     }
 }

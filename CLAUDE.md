@@ -77,8 +77,11 @@ A crash on launch leaves the data untouched, because the failed upgrade rolls ba
 
 **Rear pressure migration squash (2026-09-26, aveshev/persistent-tpms#27, merge commit `b52d6fa`).** The rear pressure columns used to be two migrations, `5.sqm` + `6.sqm`. They are now a single `5.sqm`, matching upstream PR VincentMasselis/TPMS-advanced#469. Later migrations reused the numbers from `6.sqm` on, so a branch that doesn't contain `b52d6fa` has a different `6.sqm` (`separateRearPressure`) than `develop` (pressure calibration). Installed on a newer device, such a build crashes with `duplicate column name: separateRearPressure` or `Can't downgrade database`. Check with `git merge-base --is-ancestor b52d6fa HEAD`, and merge `develop` into the branch if it fails.
 
+### Lite and Pro
+No Gradle product flavors: like `app.brand`, the tier is a Gradle property. A plain build is Pro, the full app. `-Papp.tier=lite` builds Lite, with `.lite` appended to the app ID and " Lite" to its name, so it's a separate app with its own data beside Pro (`./gradlew :app:phone:installDebug -Papp.brand=tpmsadvanced -Papp.tier=lite` installs `com.masselis.tpmsadvanced.lite`, for trying Lite on a phone). `data/app` reads the same property into `AppTier.current`. Classes that behave differently take an `AppTier` constructor parameter defaulting to it, so tests cover both tiers in one run. Lite's persistent scanning only activates on a connected Bluetooth device or a nearby beacon (none of them set up means always), with "Stay active", and only suspends while the phone is idle (`ScanPolicyUseCase`, `ScanSuspensionUseCase`). Its persistent mode page holds those settings itself (`LitePersistentScanningSettings`) instead of the activate and suspend condition pages.
+
 ### Demo Mode
-No build flavors — a single build. Demo mode (used for Play Store screenshots/testing) is a runtime setting toggled from the app's settings screen, backed by `ScannerDatabase.isDemo` in `data/vehicle`.
+A single build per tier. Demo mode (used for Play Store screenshots/testing) is a runtime setting toggled from the app's settings screen, backed by `ScannerDatabase.isDemo` in `data/vehicle`.
 
 ### Mock BLE packets
 Debug builds accept BLE advertisements over adb, merged into the real scan so they go through the same scan filters and decoders as over-the-air packets (`data/vehicle/src/debug/.../MockAdvertisements.kt`; the release source set is a no-op). Either have the app encode a reading (`MockSensor.kt`, round-trip tested against the decoders), or replay raw bytes:

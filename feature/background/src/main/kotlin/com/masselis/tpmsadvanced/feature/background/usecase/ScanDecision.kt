@@ -1,5 +1,7 @@
 package com.masselis.tpmsadvanced.feature.background.usecase
 
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.LITE
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.ALWAYS
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.BEACON
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.BLUETOOTH
@@ -57,11 +59,14 @@ internal fun decide(
     }
 }
 
-internal fun ScanDecision.explanation(): String = when (this) {
-    is ScanDecision.Active ->
+internal fun ScanDecision.explanation(tier: AppTier = AppTier.current): String = when (this) {
+    is ScanDecision.Active -> when {
         // Nothing to explain besides the user's own choice, the "due to" wording would sound odd
-        if (ALWAYS in causes) "Background scanning is active because you chose it to be always active"
-        else "Background scanning is active due to ${
+        ALWAYS in causes && tier == LITE ->
+            "Background scanning is always active because no Bluetooth device or beacon is set to activate it"
+
+        ALWAYS in causes -> "Background scanning is active because you chose it to be always active"
+        else -> "Background scanning is active due to ${
             causes.joinToString(", ") {
                 when (it) {
                     BLUETOOTH -> bluetoothDevices.connectedLabel()
@@ -70,6 +75,7 @@ internal fun ScanDecision.explanation(): String = when (this) {
                 }
             }
         }"
+    }
 
     is ScanDecision.Suspended ->
         "Background scanning is suspended due to ${
@@ -86,11 +92,11 @@ internal fun ScanDecision.explanation(): String = when (this) {
 }
 
 /** What the user reads when tapping the bell. */
-internal fun ScanDecision.rationale(): String = when (this) {
-    is ScanDecision.Active -> explanation()
+internal fun ScanDecision.rationale(tier: AppTier = AppTier.current): String = when (this) {
+    is ScanDecision.Active -> explanation(tier)
     // The foreground UI scans by itself, whatever the decision is
     is ScanDecision.Suspended, ScanDecision.Idle ->
-        "${explanation()}.\nNote: Scanning is still active while the app is opened!"
+        "${explanation(tier)}.\nNote: Scanning is still active while the app is opened!"
 }
 
 private val ScanDecision.ActivateCause.label

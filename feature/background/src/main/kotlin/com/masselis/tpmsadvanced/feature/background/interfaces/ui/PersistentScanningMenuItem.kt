@@ -13,6 +13,9 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.TransformOrigin
@@ -24,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.masselis.tpmsadvanced.feature.background.R
 import com.masselis.tpmsadvanced.core.ui.R as CoreUiR
+import com.masselis.tpmsadvanced.feature.background.interfaces.composable.AlwaysOnWarning
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.BellState.NeedsPermission
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningViewModel
 import com.masselis.tpmsadvanced.feature.background.ioc.Bindings
@@ -58,13 +62,28 @@ internal fun PersistentScanningMenuItem(
     val setUp by viewModel.persistentScanningSetUp.collectAsState()
     val decision by viewModel.decision.collectAsState(initial = viewModel.currentDecision ?: ScanDecision.Idle)
     val permissionsOk = LocalMonitoringPermissions.current.status == MonitoringPermissions.Status.Ok
+    var alwaysOnWarning by rememberSaveable { mutableStateOf(false) }
     PersistentScanningMenuItem(
         state = BellState.of(permissionsOk, decision).takeIf { persistentScanning },
         setUp = setUp,
-        onPersistentScanning = viewModel::setPersistentScanning,
+        onPersistentScanning = { enabled ->
+            if (enabled && viewModel.scansAlwaysOnceOn()) alwaysOnWarning = true
+            else viewModel.setPersistentScanning(enabled)
+        },
         onClick = onClick,
         modifier = modifier,
     )
+    // Lite only: tells before turning it on that nothing would ever stop the scan
+    if (alwaysOnWarning) {
+        AlwaysOnWarning(
+            onKeepAlwaysOn = {
+                alwaysOnWarning = false
+                viewModel.setPersistentScanning(true)
+            },
+            onDisable = { alwaysOnWarning = false },
+            onDismiss = { alwaysOnWarning = false },
+        )
+    }
 }
 
 /** [state] is the bell's, null while persistent scanning is off */

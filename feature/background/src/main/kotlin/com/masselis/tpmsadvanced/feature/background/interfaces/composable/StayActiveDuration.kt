@@ -12,6 +12,9 @@ import com.masselis.tpmsadvanced.core.ui.RadioSettingsItem
 import com.masselis.tpmsadvanced.core.ui.SettingsGroup
 import com.masselis.tpmsadvanced.core.ui.SettingsIntro
 import com.masselis.tpmsadvanced.core.ui.SettingsSectionHeader
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.LITE
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.PRO
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.SettingsOnScreenEffect
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningSettingsViewModel
 import com.masselis.tpmsadvanced.feature.background.ioc.Bindings.Companion.PersistentScanningSettingsViewModel
@@ -43,7 +46,11 @@ private fun StayActiveDuration(
 ) = Column(modifier) {
     @Suppress("MaxLineLength")
     SettingsIntro(
-        "Once every activate condition has ended, for example when the phone is unplugged, keep scanning for a while longer. Only applies if no suspend scan conditions were active at that moment."
+        when (AppTier.current) {
+            // Lite has no suspend scan conditions to tell about, nor charging
+            LITE -> "Once every activate condition has ended, for example when the Bluetooth device disconnects, keep scanning for a while longer."
+            PRO -> "Once every activate condition has ended, for example when the phone is unplugged, keep scanning for a while longer. Only applies if no suspend scan conditions were active at that moment."
+        }
     )
     SettingsSectionHeader("Keep scanning for")
     SettingsGroup {

@@ -1,6 +1,9 @@
 package com.masselis.tpmsadvanced.feature.background.interfaces.ui
 
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.LITE
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.PRO
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision
+import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.ALWAYS
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.CABLE
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanSuspensionUseCase.Reason.WIFI
 import org.junit.Test
@@ -32,5 +35,15 @@ internal class BellStateTest {
     @Test
     fun `an idle decision is neutral`() {
         assertEquals(BellState.Idle, BellState.of(true, ScanDecision.Idle))
+    }
+
+    @Test
+    fun `Lite scanning without a trigger is blue`() {
+        assertEquals(BellState.Always, BellState.of(true, ScanDecision.Active(setOf(ALWAYS)), LITE))
+    }
+
+    @Test
+    fun `Pro's always condition stays green`() {
+        assertEquals(BellState.Active, BellState.of(true, ScanDecision.Active(setOf(ALWAYS)), PRO))
     }
 }

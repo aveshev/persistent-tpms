@@ -3,6 +3,9 @@ package com.masselis.tpmsadvanced.feature.background.usecase
 import app.cash.turbine.test
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.Beacon
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.LITE
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.PRO
 import com.masselis.tpmsadvanced.feature.background.usecase.ChargingStateUseCase.State
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.ANDROID_AUTO
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.BEACON
@@ -49,6 +52,7 @@ internal class ScanPolicyUseCaseTest {
     private lateinit var beacons: MutableStateFlow<List<Beacon>>
     private lateinit var beaconOverridesSuspend: MutableStateFlow<Boolean>
     private lateinit var nearbyBeacons: MutableStateFlow<Map<String, Int>>
+    private lateinit var tier: AppTier
 
     context(scope: TestScope)
     private fun test() = ScanPolicyUseCase(
@@ -82,6 +86,7 @@ internal class ScanPolicyUseCaseTest {
         mockk<BeaconPresenceUseCase> { every { nearby(any(), any()) } returns nearbyBeacons },
         scope.backgroundScope,
         scope.testScheduler.timeSource,
+        tier,
     )
 
     @Before
@@ -104,6 +109,7 @@ internal class ScanPolicyUseCaseTest {
         beacons = MutableStateFlow(emptyList())
         beaconOverridesSuspend = MutableStateFlow(false)
         nearbyBeacons = MutableStateFlow(emptyMap())
+        tier = PRO
     }
 
     @Test
@@ -585,6 +591,48 @@ internal class ScanPolicyUseCaseTest {
             nearbyBeacons.value = emptyMap()
             assertEquals(ScanDecision.Active(setOf(STAY_ACTIVE)), awaitItem())
             delay(10.minutes + 1.seconds)
+            assertEquals(ScanDecision.Idle, awaitItem())
+        }
+    }
+
+    @Test
+    fun `Lite ignores the charging and Android Auto conditions`() = runTest {
+        tier = LITE
+        activateOnBluetooth.value = true
+        activateBluetoothDevices.value = setOf("CAR")
+        charging.value = State(cable = true, wireless = true)
+        androidAuto.value = true
+        test().decision.test {
+            assertEquals(ScanDecision.Idle, awaitItem())
+        }
+    }
+
+    @Test
+    fun `Lite activates on a connected Bluetooth device`() = runTest {
+        tier = LITE
+        activateOnBluetooth.value = true
+        activateBluetoothDevices.value = setOf("CAR")
+        bluetoothConnected.value = setOf("CAR")
+        test().decision.test {
+            assertEquals(ScanDecision.Active(setOf(BLUETOOTH), bluetoothDevices = listOf("CAR")), awaitItem())
+        }
+    }
+
+    @Test
+    fun `Lite without a Bluetooth device or beacon always scans, whatever the other conditions`() = runTest {
+        tier = LITE
+        test().decision.test {
+            assertEquals(ScanDecision.Active(setOf(ALWAYS)), awaitItem())
+        }
+    }
+
+    @Test
+    fun `Lite ignores the activate conditions being turned off`() = runTest {
+        tier = LITE
+        activateConditions.value = false
+        activateOnBeacon.value = true
+        beacons.value = listOf(BIKE)
+        test().decision.test {
             assertEquals(ScanDecision.Idle, awaitItem())
         }
     }
