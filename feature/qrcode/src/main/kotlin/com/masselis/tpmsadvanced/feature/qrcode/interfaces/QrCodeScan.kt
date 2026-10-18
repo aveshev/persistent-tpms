@@ -6,6 +6,9 @@ import android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
 import androidx.activity.compose.LocalActivity
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.CameraSelector.DEFAULT_BACK_CAMERA
+import androidx.camera.core.resolutionselector.ResolutionSelector
+import androidx.camera.core.resolutionselector.ResolutionStrategy
+import androidx.camera.core.resolutionselector.ResolutionStrategy.FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER
 import androidx.camera.view.LifecycleCameraController
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Canvas
@@ -91,7 +94,17 @@ private fun Preview(
     val controller = LocalContext.current
         .let { context ->
             remember {
-                LifecycleCameraController(context).apply { this.cameraSelector = cameraSelector }
+                LifecycleCameraController(context).apply {
+                    this.cameraSelector = cameraSelector
+                    // The default 640x480 leaves a module of a small code, like the one etched on
+                    // a Wicarlink cap, a pixel or two wide: decoded only once in a while
+                    imageAnalysisResolutionSelector = ResolutionSelector
+                        .Builder()
+                        .setResolutionStrategy(
+                            ResolutionStrategy(android.util.Size(1920, 1080), FALLBACK_RULE_CLOSEST_HIGHER_THEN_LOWER)
+                        )
+                        .build()
+                }
             }
         }
         .also { controller ->
