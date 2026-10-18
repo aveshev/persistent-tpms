@@ -47,10 +47,14 @@ WHERE vehicleId = ? AND location = ?
 ORDER BY timestamp DESC
 LIMIT 1;
 
+-- The sensor's latest reading, if it was read at this tyre: once reassigned, its readings of the
+-- tyre it was on before stay there, and one left from an earlier time at this tyre is stale. Its
+-- readings follow it on a move, see parkSensor.
 latestBySensorByLocation:
 SELECT * FROM Reading
-WHERE vehicleId = ? AND location = ? AND sensorId = ?
-ORDER BY timestamp DESC
+WHERE vehicleId = :vehicleId AND location = :location AND sensorId = :sensorId AND timestamp = (
+    SELECT MAX(latest.timestamp) FROM Reading AS latest WHERE latest.sensorId = :sensorId
+)
 LIMIT 1;
 
 allByLocation:
