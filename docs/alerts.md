@@ -177,6 +177,9 @@ What this costs:
 - Moving sensors between tyres moves their readings along, and a tyre whose sensor changes starts
   its history over from them: a moved reading never alerts at its new tyre, even if it's newer than
   the readings that tyre had.
+- A tyre whose sensor changes (moved, bound or unbound) ends its alerts at once: its notifications
+  go, its loops stop and the vehicle picker stops blinking for it. A tyre left without a sensor
+  would otherwise never get the reading ending them.
 - Force-stopping the app clears its notifications. An ongoing alert then stays silent until the
   next reading. The process being killed also forgets the loops, the same way.
 
