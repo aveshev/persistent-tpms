@@ -36,6 +36,7 @@ import com.masselis.tpmsadvanced.feature.background.R
 import com.masselis.tpmsadvanced.feature.background.usecase.AlertSnoozeUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.AlertSpeaker
 import com.masselis.tpmsadvanced.feature.background.usecase.StoredTyreAlertsUseCase
+import com.masselis.tpmsadvanced.feature.background.usecase.StoredTyreAlertsUseCase.Event.SensorChanged
 import com.masselis.tpmsadvanced.feature.background.usecase.StoredTyreAlertsUseCase.Update
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.appendLoc
 import com.masselis.tpmsadvanced.feature.main.usecase.VehicleListUseCase
@@ -110,11 +111,23 @@ internal class AlertNotifier(
         )
 
         storedTyreAlertsUseCase
-            .updates
-            .onEach { update ->
-                shown().let { shown ->
-                    AlertClass.entries.forEach {
-                        if (update.isReevaluation) update.reevaluate(it, shown) else update.notify(it, shown)
+            .events
+            .onEach { event ->
+                when (event) {
+                    // Whatever the previous sensor alerted for, which the vehicle picker would
+                    // otherwise blink for until a reading the tyre may never get
+                    is SensorChanged -> AlertClass.entries.forEach { alertClass ->
+                        tag(event.vehicle, event.location, alertClass).also { tag ->
+                            notificationManager.cancel(tag, NOTIFICATION_ID)
+                            holds.remove(tag)?.job?.cancel()
+                            speaker.stop(tag, isDismissed = true)
+                        }
+                    }
+
+                    is Update -> shown().let { shown ->
+                        AlertClass.entries.forEach {
+                            if (event.isReevaluation) event.reevaluate(it, shown) else event.notify(it, shown)
+                        }
                     }
                 }
             }

@@ -22,6 +22,8 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.withIndex
 import kotlin.time.Duration.Companion.seconds
 
 /**
@@ -31,7 +33,8 @@ import kotlin.time.Duration.Companion.seconds
  * docs/alerts.md, "Only new readings alert"). A change of a tyre's thresholds re-evaluates its
  * latest reading, emitted as a [Update.isReevaluation]. A tyre whose sensor changes (moved, bound
  * or unbound) starts its history over: the readings moved in with a sensor were stored before, even
- * if they're newer than the tyre's.
+ * if they're newer than the tyre's, and whatever its previous sensor alerted for ends, see
+ * [Event.SensorChanged].
  */
 @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 internal class StoredTyreAlertsUseCase(
@@ -40,20 +43,31 @@ internal class StoredTyreAlertsUseCase(
     private val sensorDatabase: SensorDatabase,
 ) {
 
+    sealed interface Event {
+        val vehicle: Vehicle
+        val location: Location
+
+        /**
+         * The tyre's sensor changed (moved, bound or unbound): its alerts are over, a tyre left
+         * without a sensor would otherwise never get the reading ending them
+         */
+        data class SensorChanged(override val vehicle: Vehicle, override val location: Location) : Event
+    }
+
     /**
      * A tyre's alerts once [TyreAlerts.latest], a new reading, went through, or went through again
      * under other thresholds if [isReevaluation]
      */
     data class Update(
-        val vehicle: Vehicle,
-        val location: Location,
+        override val vehicle: Vehicle,
+        override val location: Location,
         val alerts: TyreAlerts,
         val thresholds: AlertThresholds,
         val loss: PressureLoss?,
         val isReevaluation: Boolean = false,
-    )
+    ) : Event
 
-    val updates: Flow<Update> = vehicleListUseCase
+    val events: Flow<Event> = vehicleListUseCase
         .vehicleListFlow
         // Editing a vehicle (ranges, name...) re-emits the list, which would start the tyres' history
         // over: only a change in the set of vehicles rebuilds them
@@ -67,14 +81,19 @@ internal class StoredTyreAlertsUseCase(
                             .asFlow()
                             .map { it?.id }
                             .distinctUntilChanged()
-                            .flatMapLatest { sensorId -> updates(vehicle, location, sensorId) }
+                            .withIndex()
+                            // The first one is the sensor the tyre already had
+                            .flatMapLatest { (index, sensorId) ->
+                                updates(vehicle, location, sensorId)
+                                    .onStart<Event> { if (index > 0) emit(Event.SensorChanged(vehicle, location)) }
+                            }
                     }
                 }
                 .merge()
         }
 
     @Suppress("LongMethod", "CyclomaticComplexMethod")
-    private fun updates(vehicle: Vehicle, location: Location, sensorId: Int?): Flow<Update> = flow {
+    private fun updates(vehicle: Vehicle, location: Location, sensorId: Int?): Flow<Event> = flow {
         val component = VehicleComponent(vehicle)
         // The leak is followed with the calibration and the rule it started with, both changing
         // starts it over from the stored readings, as TyrePressureLossStateFlow does
