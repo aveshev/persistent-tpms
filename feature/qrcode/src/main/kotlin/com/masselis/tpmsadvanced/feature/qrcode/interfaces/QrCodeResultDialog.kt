@@ -25,7 +25,7 @@ import java.util.UUID
  * next, so a code scanned again is worked out again. [onDismiss] once answered, [scanBluetooth] for
  * a code the app can't use.
  */
-@Suppress("MaxLineLength")
+@Suppress("MaxLineLength", "LongMethod")
 @Composable
 public fun QrCodeResultDialog(
     vehicleUuid: UUID,
@@ -62,13 +62,25 @@ public fun QrCodeResultDialog(
                             ?: append("Assign the ${state.sensors.size} Sysgration sensors from this QR to ")
                         appendBold(state.vehicle.name)
                         append("?")
+                        state.reassigns?.also { (vehicle, location) ->
+                            append("\n\n⚠️ ")
+                            append(if (state.sensors.size == 1) "This sensor is" else "One of these sensors is")
+                            append(" already assigned to the ")
+                            if (location == Location.Single) append("wheel")
+                            else appendBold(buildString { appendLoc(location) })
+                            append(" of ")
+                            appendBold(vehicle.name)
+                            append(", it will be reassigned")
+                        }
                         if (state.overwrites) append("\n\n⚠️ Warning: this will overwrite already assigned sensors")
                     }
                 )
             },
             // Answering yes is confirmation enough, the assigned sensors show on the vehicle
             confirmButton = {
-                TextButton(onClick = { viewModel.bind(); onDismiss() }) { Text(text = "Yes") }
+                TextButton(onClick = { viewModel.bind(); onDismiss() }) {
+                    Text(text = if (state.reassigns != null) "Reassign" else "Yes")
+                }
             },
             dismissButton = { TextButton(onClick = onDismiss) { Text(text = "Cancel") } },
         )

@@ -28,7 +28,7 @@ import java.util.UUID
  */
 @AssistedInject
 internal class QrCodeResultViewModel(
-    vehicleDatabase: VehicleDatabase,
+    private val vehicleDatabase: VehicleDatabase,
     private val sensorDatabase: SensorDatabase,
     private val boundSensorMapUseCase: BoundSensorMapUseCase,
     @Assisted vehicleUuid: UUID,
@@ -44,8 +44,19 @@ internal class QrCodeResultViewModel(
     sealed interface State {
         data object Loading : State
 
-        /** Assign [sensors] to [vehicle]? [overwrites] when one of its wheels has another sensor */
-        data class Ask(val vehicle: Vehicle, val sensors: List<Sensor>, val overwrites: Boolean) : State
+        /**
+         * Assign [sensors] to [vehicle]? [overwrites] when one of its wheels has another sensor,
+         * [reassigns] when one of [sensors] is assigned already, to another wheel or vehicle
+         */
+        data class Ask(
+            val vehicle: Vehicle,
+            val sensors: List<Sensor>,
+            val overwrites: Boolean,
+            val reassigns: Assigned? = null,
+        ) : State
+
+        /** Where a sensor is assigned */
+        data class Assigned(val vehicle: Vehicle, val location: Location)
 
         /** [vehicle] has fewer wheels than the code's [count] sensors */
         data class TooManySensors(val vehicle: Vehicle, val count: Int) : State
@@ -86,13 +97,24 @@ internal class QrCodeResultViewModel(
     }
 
     private suspend fun ask(vehicle: Vehicle, sensors: List<Sensor>) = withContext(IO) {
-        sensorDatabase.selectListByVehicleId(vehicle.uuid).execute()
-    }.let { assigned ->
+        val assigned = sensorDatabase.selectListByVehicleId(vehicle.uuid).execute()
         State.Ask(
             vehicle,
             sensors,
             overwrites = sensors.any { sensor ->
                 assigned.any { it.location == sensor.location && it.id != sensor.id }
+            },
+            reassigns = sensors.firstNotNullOfOrNull { sensor ->
+                sensorDatabase
+                    .selectById(sensor.id)
+                    .execute()
+                    ?.let { current ->
+                        State.Assigned(
+                            checkNotNull(vehicleDatabase.selectBySensorId(sensor.id).execute()),
+                            current.location,
+                        )
+                    }
+                    ?.takeIf { it.vehicle.uuid != vehicle.uuid || it.location != sensor.location }
             },
         )
     }

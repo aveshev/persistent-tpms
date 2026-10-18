@@ -1,6 +1,7 @@
 package com.masselis.tpmsadvanced.feature.qrcode.usecase
 
 import androidx.camera.view.CameraController
+import co.touchlab.kermit.Logger
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.FRONT_LEFT
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.FRONT_RIGHT
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.REAR_LEFT
@@ -15,6 +16,7 @@ import kotlinx.coroutines.Dispatchers.Default
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -28,6 +30,7 @@ internal class QrCodeSensorUseCase(
         controller: CameraController
     ): Flow<QrCodeResult?> = cameraAnalyser
         .findQrCode(controller)
+        .onEach { logger.d { "QR code read: $it" } }
         .map { code ->
             fourSensorRegex.find(code)?.groupValues?.subList(1, 5)?.asSysgration()
                 ?: twoSensorRegex.find(code)?.groupValues?.subList(1, 3)?.asSysgration()
@@ -85,6 +88,8 @@ internal class QrCodeSensorUseCase(
         .let(QrCodeResult::Sensors)
 
     companion object {
+        private val logger = Logger.withTag("QrCodeSensorUseCase")
+
         // Test available here: https://regex101.com/r/aLJ0o6/1
         private val fourSensorRegex =
             "([0-9a-fA-F]{6})&([0-9a-fA-F]{6})&([0-9a-fA-F]{6})&([0-9a-fA-F]{6})".toRegex()
