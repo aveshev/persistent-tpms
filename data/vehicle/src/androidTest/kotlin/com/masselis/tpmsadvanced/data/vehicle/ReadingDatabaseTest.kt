@@ -9,6 +9,7 @@ import com.masselis.tpmsadvanced.data.vehicle.interfaces.ReadingDatabase
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.bar
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.PECHAM
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.FRONT_LEFT
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.FRONT_RIGHT
 import com.masselis.tpmsadvanced.data.vehicle.model.Temperature.CREATOR.celsius
 import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import com.masselis.tpmsadvanced.data.vehicle.model.flags
@@ -25,6 +26,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 
+@Suppress("MaxLineLength")
 @RunWith(AndroidJUnit4::class)
 internal class ReadingDatabaseTest {
 
@@ -70,6 +72,19 @@ internal class ReadingDatabaseTest {
         assertEquals(42, latest.sensorId)
         assertEquals(-60, latest.rssi)
         assertEquals(27f, latest.temperature.celsius)
+    }
+
+    // Reassigned from the front left wheel to the front right one, then back
+    @Test
+    fun aSensorReadElsewhereSinceHasNoLatestReadingHere() = runTest {
+        val frontRight = Location.Wheel(FRONT_RIGHT)
+        readingDatabase.insert(tyre(pecham), currentVehicleUuid)
+        readingDatabase.insert(tyre(pecham).copy(timestamp = 2.0, location = frontRight), currentVehicleUuid)
+        assertNull(readingDatabase.latestBySensorByLocation(42, Location.Wheel(FRONT_LEFT), currentVehicleUuid).execute())
+        assertEquals(
+            2.0,
+            readingDatabase.latestBySensorByLocation(42, frontRight, currentVehicleUuid).execute()?.timestamp,
+        )
     }
 
     @Test
