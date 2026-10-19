@@ -18,6 +18,7 @@ dependencies {
     implementation(project(":data:unit"))
 
     testImplementation(project(":core:test"))
+    testImplementation(libs.sqldelight.sqlite.driver)
 
     androidTestImplementation(libs.requery)
 }
