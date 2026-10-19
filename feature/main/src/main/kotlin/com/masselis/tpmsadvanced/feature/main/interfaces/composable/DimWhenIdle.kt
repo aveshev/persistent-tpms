@@ -1,13 +1,17 @@
 package com.masselis.tpmsadvanced.feature.main.interfaces.composable
 
+import android.os.Build.VERSION.SDK_INT
+import android.os.Build.VERSION_CODES.P
 import android.view.WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
-import androidx.activity.compose.LocalActivity
+import android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+import android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -17,7 +21,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass.Initial
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
 import androidx.lifecycle.Lifecycle.State.RESUMED
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.currentStateAsState
@@ -38,7 +46,8 @@ import kotlinx.coroutines.delay
  * say, see [DimDisplayDelay]: no touch, no new warning or alert of the shown vehicle's tyres. While
  * [isAlerting], a red or critical alert of any vehicle going on, it stays bright.
  *
- * Dimmed, a touch only brightens the screen: [content] gets nothing until every finger is lifted.
+ * Dimmed, a touch only brightens the screen: [content], and the dialogs over it, get nothing until
+ * every finger is lifted.
  */
 @Composable
 public fun DimWhenIdle(
@@ -92,12 +101,6 @@ internal fun DimWhenIdle(
     }
     // The touch which brightened the screen, until its fingers are lifted
     var isWaking by remember { mutableStateOf(false) }
-    LocalActivity.current?.window?.also { window ->
-        if (isDimmed) DisposableEffect(window) {
-            window.attributes = window.attributes.apply { screenBrightness = DIMMED_BRIGHTNESS }
-            onDispose { window.attributes = window.attributes.apply { screenBrightness = BRIGHTNESS_OVERRIDE_NONE } }
-        }
-    }
     Box(
         modifier.pointerInput(Unit) {
             // Before anything inside can consume it, without consuming it either
@@ -108,26 +111,49 @@ internal fun DimWhenIdle(
         }
     ) {
         content()
-        // Over the content, so it isn't hit at all
-        if (isDimmed || isWaking) Box(
-            Modifier
-                .matchParentSize()
-                .testTag(DimWhenIdleTags.overlay)
-                .pointerInput(Unit) {
-                    awaitEachGesture {
-                        awaitFirstDown(requireUnconsumed = false).consume()
-                        isWaking = true
-                        try {
-                            do {
-                                val event = awaitPointerEvent()
-                                event.changes.forEach { it.consume() }
-                            } while (event.changes.any { it.pressed })
-                        } finally {
-                            isWaking = false
+        // A window of its own, shown after the dialogs over the main screen so it's over them too:
+        // they're windows of their own, which the content's touches never reach. It holds the low
+        // brightness, the screen's brightness comes back with it gone.
+        if (isDimmed || isWaking) Dialog(
+            // Not focusable, it doesn't get the back key, the window under it does
+            onDismissRequest = {},
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+        ) {
+            LocalView.current.also { view ->
+                SideEffect {
+                    (view.parent as? DialogWindowProvider)?.window?.apply {
+                        setDimAmount(0f)
+                        // Leaves the focus, and the keyboard, to the window under it
+                        addFlags(FLAG_NOT_FOCUSABLE)
+                        attributes = attributes.apply {
+                            screenBrightness = if (isDimmed) DIMMED_BRIGHTNESS else BRIGHTNESS_OVERRIDE_NONE
+                            // Over the cutout too, in landscape, whose touches would go through
+                            if (SDK_INT >= P) layoutInDisplayCutoutMode = LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
                         }
                     }
                 }
-        )
+            }
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .testTag(DimWhenIdleTags.overlay)
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false).consume()
+                            wakes++
+                            isWaking = true
+                            try {
+                                do {
+                                    val event = awaitPointerEvent()
+                                    event.changes.forEach { it.consume() }
+                                } while (event.changes.any { it.pressed })
+                            } finally {
+                                isWaking = false
+                            }
+                        }
+                    }
+            )
+        }
     }
 }
 
