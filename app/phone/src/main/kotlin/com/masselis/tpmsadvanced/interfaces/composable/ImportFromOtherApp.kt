@@ -38,14 +38,14 @@ import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State.Unre
 import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State.UpdateNeeded
 import com.masselis.tpmsadvanced.ioc.Bindings.Companion.ImportViewModel
 
-/** Offers to import the other version of the app's data (Lite or Pro), once, when the app opens */
+/** Offers to import the other version of the app's data (Lite or Pro) when the app opens */
 @Composable
 internal fun ImportOffer(
     viewModel: ImportViewModel = viewModel(key = "ImportOffer") { ImportViewModel() },
 ) {
     LaunchedEffect(Unit) { viewModel.offerOnce() }
     val state by viewModel.state.collectAsState()
-    ImportDialog(state, viewModel::confirm, viewModel::dismiss)
+    ImportDialog(state, viewModel::confirm, viewModel::dismiss, viewModel::neverAsk)
 }
 
 /** "Import from <other app>", only while the other version of the app is installed */
@@ -72,6 +72,7 @@ private fun ImportDialog(
     state: State,
     onConfirm: () -> Unit,
     onDismiss: () -> Unit,
+    onNeverAsk: () -> Unit = {},
 ) {
     when (state) {
         Idle -> Unit
@@ -81,7 +82,14 @@ private fun ImportDialog(
             onDismissRequest = onDismiss,
             confirmButton = { TextButton(onClick = onConfirm) { Text(text = "Import") } },
             dismissButton = {
-                TextButton(onClick = onDismiss) { Text(text = if (state.fromSettings) "Cancel" else "Not now") }
+                if (state.fromSettings) {
+                    TextButton(onClick = onDismiss) { Text(text = "Cancel") }
+                } else {
+                    Row {
+                        TextButton(onClick = onNeverAsk) { Text(text = "Don't ask again") }
+                        TextButton(onClick = onDismiss) { Text(text = "Not now") }
+                    }
+                }
             },
         )
 

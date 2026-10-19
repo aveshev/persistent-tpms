@@ -21,7 +21,8 @@ import java.io.InputStream
 
 /**
  * Imports the data of the other version of the app (Lite or Pro). Imported data replaces this app's,
- * it's never merged. Offered once, when the app opens, and from the settings any time after:
+ * it's never merged. Offered when the app opens, until imported or "Don't ask again", and from the
+ * settings any time:
  * - this app has no data: offered whenever the other app has some;
  * - this app has data, restored by Auto Backup for instance: only offered when the other app's
  *   latest reading is newer.
@@ -47,15 +48,13 @@ internal class ImportViewModel(
     /** Null while the other app isn't installed */
     fun otherAppLabel(): String? = otherApp.label()
 
-    /** When the app opens: offers the import if the rules allow, once */
+    /** When the app opens: offers the import if the rules allow */
     fun offerOnce() {
         if (offeredMarker.exists()) return
         val label = otherApp.label() ?: return
         viewModelScope.launch {
             // Asked again on the next opening when the other app can't tell, an older build maybe
             val status = otherApp.status() ?: return@launch
-            offeredMarker.parentFile?.mkdirs()
-            offeredMarker.createNewFile()
             val ours = databaseExport.latestReading()
             val oursHasData = databaseExport.hasData()
             mutableState.value = when {
@@ -64,7 +63,16 @@ internal class ImportViewModel(
                 status.databaseVersion > DatabaseExport.version -> UpdateNeeded(label)
                 else -> Offer(label, status.latestReading, ours, oursHasData, fromSettings = false)
             }
+            // Asked again until imported or "Don't ask again": "Not now", or the app closed while
+            // it's shown, isn't a no. Nothing to offer is settled right away, the other app isn't
+            // asked again.
+            if (mutableState.value == Idle) markOffered()
         }
+    }
+
+    private fun markOffered() {
+        offeredMarker.parentFile?.mkdirs()
+        offeredMarker.createNewFile()
     }
 
     /** From the settings: always offered, if there is anything to import */
@@ -84,6 +92,7 @@ internal class ImportViewModel(
 
     fun confirm() {
         val offer = mutableState.value as? Offer ?: return
+        markOffered()
         mutableState.value = Importing(offer.otherApp)
         viewModelScope.launch {
             runCatching { otherApp.openSnapshot()?.use { stage(it) } }
@@ -102,7 +111,15 @@ internal class ImportViewModel(
         }
     }
 
+    /** "Not now" asks again on the next opening. A message about an update to make is only shown once. */
     fun dismiss() {
+        if (mutableState.value is UpdateNeeded) markOffered()
+        mutableState.value = Idle
+    }
+
+    /** No more offer when the app opens, the settings still import */
+    fun neverAsk() {
+        markOffered()
         mutableState.value = Idle
     }
 

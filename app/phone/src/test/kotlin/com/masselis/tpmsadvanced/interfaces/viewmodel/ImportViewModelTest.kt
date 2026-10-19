@@ -115,12 +115,46 @@ internal class ImportViewModelTest {
     }
 
     @Test
-    fun `the offer is only made once`() {
-        test().offerOnce()
+    fun `the offer isn't made again after "don't ask again"`() {
+        test().also { it.offerOnce() }.neverAsk()
         assertTrue(offeredMarker.exists())
         val viewModel = test()
         viewModel.offerOnce()
         assertEquals(Idle, viewModel.state.value)
+    }
+
+    @Test
+    fun `the offer is made again after "not now"`() {
+        test().also { it.offerOnce() }.dismiss()
+        assertFalse(offeredMarker.exists())
+        val viewModel = test()
+        viewModel.offerOnce()
+        assertIs<Offer>(viewModel.state.value)
+    }
+
+    @Test
+    fun `the update message is only shown once`() {
+        otherAppStatus = status(latestReading = NEWER, databaseVersion = DatabaseExport.version + 1)
+        test().also { it.offerOnce() }.dismiss()
+        assertTrue(offeredMarker.exists())
+    }
+
+    @Test
+    fun `an offer left unanswered is made again on the next opening`() {
+        test().offerOnce()
+        assertFalse(offeredMarker.exists())
+        val viewModel = test()
+        viewModel.offerOnce()
+        assertIs<Offer>(viewModel.state.value)
+    }
+
+    @Test
+    fun `nothing to offer isn't checked again`() {
+        ourData = true
+        ourLatestReading = NEWER
+        otherAppStatus = status(latestReading = OLDER)
+        test().offerOnce()
+        assertTrue(offeredMarker.exists())
     }
 
     @Test
