@@ -73,12 +73,15 @@ Each column applies when the more severe one doesn't.
   sidewall. The pressure settings suggest setting it so. Red above it, crimson above it + 20%: past
   what the tyre is rated for, not something a tyre warming up reaches. An overfill mistake (a pump
   set to the wrong unit) or a fault.
-- **The default maximum becomes 50 psi (345 kPa)** for new vehicles, at the high end of what
-  tyres are rated for, against 300 kPa today. Existing vehicles keep theirs. The sidewall maximum
-  is a cold pressure: a tyre inflated right up to it can go above it when hot, but the recommended
-  pressures are well below it, so a tyre warming up from its recommended pressure stays under it.
-  SQLite can't change a column's default without rebuilding the table, so the new default is set
-  where vehicles are created rather than in the schema.
+- **New vehicles start from their kind's pressures** (`Vehicle.Kind.defaultPressures`, and
+  `defaultRearPressures` for the kinds whose rear runs its own): a typical recommended cold pressure
+  as the minimum and a typical sidewall maximum as the maximum, each on the strict side, so an
+  unconfigured vehicle alerts a little too readily rather than too late. A tadpole three wheeler
+  uses Piaggio MP3's. Existing vehicles keep theirs. The sidewall maximum is a cold pressure: a
+  tyre inflated right up to it can go above it when hot, but the recommended pressures are well
+  below it, so a tyre warming up from its recommended pressure stays under it. SQLite can't change
+  a column's default without rebuilding the table, so the defaults are set where vehicles are
+  created rather than in the schema.
 - **Pressure loss is a class of its own**: a leak is a different kind of problem from a pressure
   out of range. A leaking tyre reaching its minimum gets a separate red pressure notification.
   The tracker is experimental and off by default, this class only exists while it's on.

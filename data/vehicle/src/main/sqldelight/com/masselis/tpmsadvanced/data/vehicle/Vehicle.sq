@@ -12,7 +12,7 @@ CREATE TABLE Vehicle(
     name TEXT NOT NULL,
     isFavourite INTEGER AS Boolean NOT NULL,
     lowPressure REAL AS Pressure NOT NULL DEFAULT 100,
-    -- VehicleDatabase.DEFAULT_HIGH_PRESSURE, 50 psi
+    -- Unused: VehicleDatabase.insert sets each Kind's defaultPressures
     highPressure REAL AS Pressure NOT NULL DEFAULT 344.75,
     lowTemp REAL AS Temperature NOT NULL DEFAULT 20,
     normalTemp REAL AS Temperature NOT NULL DEFAULT 45,
