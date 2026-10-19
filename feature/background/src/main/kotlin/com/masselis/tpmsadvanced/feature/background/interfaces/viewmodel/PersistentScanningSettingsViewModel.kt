@@ -111,12 +111,14 @@ internal class PersistentScanningSettingsViewModel(
             .also { if (it && suspendBluetooth.isSelected.not()) suspendConditions.value = false }
     }
 
-    /** Called once the monitoring permissions are granted, the toggle only turns on after that */
+    /**
+     * Called once the monitoring permissions are granted, the toggle only turns on after that.
+     * PersistentScanningHost starts the service, once it checked that the other version of the app
+     * (Lite or Pro) doesn't scan persistently too.
+     */
     fun enablePersistentScanning() {
-        // Set first: the service reads it to ask for a sticky restart
         appPreferences.persistentScanning.value = true
         appPreferences.persistentScanningSetUp.value = true
-        controller.start()
     }
 
     fun disablePersistentScanning() {

@@ -104,6 +104,8 @@ internal fun AppSettings(
         openPressureLoss = openPressureLoss,
         modifier = Modifier.testTag(developerOptions),
     )
+    // Its own section, only while the other version of the app (Lite or Pro) is installed
+    ImportSettings()
     SettingsSectionHeader("About")
     LocalUriHandler.current.also { uriHandler ->
         SettingsGroup {

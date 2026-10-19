@@ -85,6 +85,10 @@ android {
 
             else -> error("Unknown app.brand \"$brand\", expected persistenttpms or tpmsadvanced")
         }
+        // Lite and Pro of a brand reach each other through AppLinkProvider: both declare its
+        // signature permission, and each needs to see the other one from Android 11
+        manifestPlaceholders["appLinkPermission"] = "$applicationId.permission.APP_LINK"
+        manifestPlaceholders["otherApplicationId"] = if (lite) "$applicationId" else "$applicationId.lite"
     }
     keys(keysFile.asFile)?.also { keys ->
         signingConfigs.create("release") {

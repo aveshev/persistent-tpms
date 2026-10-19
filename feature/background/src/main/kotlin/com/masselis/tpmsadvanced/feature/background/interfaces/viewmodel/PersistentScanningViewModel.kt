@@ -1,11 +1,16 @@
 package com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import co.touchlab.kermit.Logger
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
 import com.masselis.tpmsadvanced.data.app.interfaces.AppTier
 import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.LITE
+import com.masselis.tpmsadvanced.data.app.interfaces.OtherApp
 import com.masselis.tpmsadvanced.feature.background.interfaces.MonitoringController
+import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningViewModel.OtherAppCheck.Clear
+import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningViewModel.OtherAppCheck.Conflict
+import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningViewModel.OtherAppCheck.Unchecked
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanPolicyUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.UnexpectedStopUseCase
@@ -16,13 +21,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.launch
 
+@Suppress("LongParameterList")
 internal class PersistentScanningViewModel(
     private val appPreferences: AppPreferences,
     private val scanPolicyUseCase: ScanPolicyUseCase,
     private val wifiConnectionUseCase: WifiConnectionUseCase,
     unexpectedStopUseCase: UnexpectedStopUseCase,
     private val controller: MonitoringController,
+    private val otherApp: OtherApp,
     private val tier: AppTier = AppTier.current,
 ) : ViewModel() {
 
@@ -87,6 +95,51 @@ internal class PersistentScanningViewModel(
 
     fun disableWifiException() {
         appPreferences.wifiExceptionEnabled.value = false
+    }
+
+    private val mutableOtherAppCheck = MutableStateFlow<OtherAppCheck>(Unchecked)
+
+    /**
+     * Only one of Lite and Pro may scan persistently: checked before the service starts here,
+     * whenever persistent scanning is turned on or the app is opened while it's on
+     */
+    val otherAppCheck: StateFlow<OtherAppCheck> = mutableOtherAppCheck.asStateFlow()
+
+    fun checkOtherApp() {
+        mutableOtherAppCheck.value = Unchecked
+        viewModelScope.launch {
+            mutableOtherAppCheck.value = otherApp
+                .status()
+                ?.takeIf { it.persistentScanning }
+                ?.let { Conflict(otherApp.label() ?: "the other version of this app") }
+                ?: Clear
+        }
+    }
+
+    /** Turns persistent scanning off in the other app, so that it runs here */
+    fun switchFromOtherApp() {
+        viewModelScope.launch {
+            if (otherApp.turnOffPersistentScanning().not()) {
+                logger.w { "Cannot turn persistent scanning off in ${otherApp.packageName}" }
+            }
+            mutableOtherAppCheck.value = Clear
+        }
+    }
+
+    /** Leaves persistent scanning to the other app */
+    fun keepOtherApp() {
+        setPersistentScanning(false)
+        mutableOtherAppCheck.value = Unchecked
+    }
+
+    sealed interface OtherAppCheck {
+        /** Not checked yet, since persistent scanning was turned on or the app was opened */
+        data object Unchecked : OtherAppCheck
+
+        /** The other app isn't installed, can't be reached, or doesn't scan persistently */
+        data object Clear : OtherAppCheck
+
+        data class Conflict(val otherApp: String) : OtherAppCheck
     }
 
     /** Persistent scanning is on, so the service is expected to run whenever the app is opened */

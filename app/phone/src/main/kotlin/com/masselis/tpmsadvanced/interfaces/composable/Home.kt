@@ -110,6 +110,7 @@ internal fun Home(
 ) {
     val vehicleComponent by viewModel.vehicleComponentStateFlow.collectAsState()
     PersistentScanningHost {
+        ImportOffer()
         // Another vehicle starts over with its own screens: its routes carry its id, a new start
         // destination would be a new screen fading in over the previous one, which shows the new
         // vehicle as well, each fitting its text, see CurrentVehicle

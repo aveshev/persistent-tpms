@@ -13,6 +13,17 @@
         android:name="android.permission.ACCESS_FINE_LOCATION"
         tools:node="replace" />
 
+    <!-- Guards AppLinkProvider: only the other version of the app (Lite or Pro), signed with the
+         same key, holds it. Both declare it, so it's granted whichever is installed first. -->
+    <permission
+        android:name="${appLinkPermission}"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="${appLinkPermission}" />
+
+    <queries>
+        <package android:name="${otherApplicationId}" />
+    </queries>
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -43,6 +54,12 @@
 
             </intent-filter>
         </activity>
+        <!-- See OtherApp, call() checks the permission on its own -->
+        <provider
+            android:name="com.masselis.tpmsadvanced.feature.background.interfaces.AppLinkProvider"
+            android:authorities="${applicationId}.app-link"
+            android:exported="true"
+            android:permission="${appLinkPermission}" />
         <service
             android:name="com.masselis.tpmsadvanced.feature.androidauto.endpoint.CarAppService"
             android:icon="@mipmap/ic_launcher"
