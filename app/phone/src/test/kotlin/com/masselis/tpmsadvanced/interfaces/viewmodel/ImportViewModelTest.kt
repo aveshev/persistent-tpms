@@ -5,6 +5,7 @@ import com.masselis.tpmsadvanced.data.app.interfaces.OtherApp
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.DatabaseExport
 import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State.Failed
 import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State.Idle
+import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State.Imported
 import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State.NothingToImport
 import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State.Offer
 import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State.Unreachable
@@ -39,6 +40,7 @@ internal class ImportViewModelTest {
     private var stagedVersion = 0L
     private var committed = false
     private var discarded = false
+    private var imported: String? = null
     private lateinit var offeredMarker: File
 
     private fun test() = ImportViewModel(
@@ -56,6 +58,7 @@ internal class ImportViewModelTest {
         stage = { stagedVersion },
         commitAndRestart = { committed = true },
         discardStaged = { discarded = true },
+        consumeImported = { imported.also { imported = null } },
     )
 
     @Before
@@ -68,6 +71,7 @@ internal class ImportViewModelTest {
         stagedVersion = DatabaseExport.version
         committed = false
         discarded = false
+        imported = null
         offeredMarker = File(temporaryFolder.root, "import-offered")
     }
 
@@ -237,6 +241,18 @@ internal class ImportViewModelTest {
         viewModel.confirm()
         assertEquals(Failed("Persistent TPMS Lite"), viewModel.state.value)
         assertFalse(committed)
+    }
+
+    @Test
+    fun `the restart after an import tells where the data came from, once`() {
+        imported = "Persistent TPMS Lite"
+        offeredMarker.createNewFile()
+        val viewModel = test()
+        viewModel.offerOnce()
+        assertEquals(Imported("Persistent TPMS Lite"), viewModel.state.value)
+        viewModel.dismiss()
+        viewModel.offerOnce()
+        assertEquals(Idle, viewModel.state.value)
     }
 
     private companion object {

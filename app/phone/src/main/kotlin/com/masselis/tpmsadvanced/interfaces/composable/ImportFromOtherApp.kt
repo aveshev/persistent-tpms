@@ -31,6 +31,7 @@ import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel
 import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State
 import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State.Failed
 import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State.Idle
+import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State.Imported
 import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State.Importing
 import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State.NothingToImport
 import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State.Offer
@@ -105,6 +106,12 @@ private fun ImportDialog(
             onDismissRequest = {},
             confirmButton = {},
             properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
+        )
+
+        is Imported -> ImportMessage(
+            title = "Imported from ${state.otherApp}",
+            text = "Its vehicles, sensors, readings and settings are now in this app.",
+            onDismiss = onDismiss,
         )
 
         is UpdateNeeded -> ImportMessage(

@@ -74,10 +74,19 @@ public object AppSnapshot {
         .let { File(it, DATABASE) }
         .also { check(it.exists()) { "The snapshot has no database" } }
 
-    /** The staged data replaces this app's on its next start */
-    public fun commitStaged(context: Context) {
-        File(context.staging(), READY).createNewFile()
+    /** The staged data replaces this app's on its next start, see [consumeImported] for [from] */
+    public fun commitStaged(context: Context, from: String) {
+        File(context.staging(), READY).writeText(from)
     }
+
+    /**
+     * The name of the app whose data was swapped in by [applyStaged], once, to tell the user: the
+     * app restarts looking like that app, which can't be told apart from nothing happening
+     */
+    public fun consumeImported(context: Context): String? = context
+        .imported()
+        .takeIf { it.exists() }
+        ?.let { file -> file.readText().also { file.delete() } }
 
     public fun discardStaged(context: Context) {
         context.staging().deleteRecursively()
@@ -113,12 +122,15 @@ public object AppSnapshot {
                             }
                         }
                     }
+                File(staging, READY).copyTo(context.imported(), overwrite = true)
             }
         // Also drops an import left half-staged by a process which died
         context.staging().deleteRecursively()
     }
 
     private fun Context.staging() = File(noBackupFilesDir, "import")
+
+    private fun Context.imported() = File(noBackupFilesDir, "imported")
 
     private fun SharedPreferences.asJson(): JSONObject = all.entries.fold(JSONObject()) { json, (key, value) ->
         when (value) {

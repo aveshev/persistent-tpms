@@ -7,6 +7,7 @@ import com.masselis.tpmsadvanced.data.app.interfaces.OtherApp
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.DatabaseExport
 import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State.Failed
 import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State.Idle
+import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State.Imported
 import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State.Importing
 import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State.NothingToImport
 import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State.Offer
@@ -35,9 +36,14 @@ internal class ImportViewModel(
     private val offeredMarker: File,
     /** Stages the snapshot, @return the version of its database */
     private val stage: suspend (InputStream) -> Long,
-    /** Stops monitoring, has the staged data replace this app's, and restarts the app */
-    private val commitAndRestart: suspend () -> Unit,
+    /**
+     * Stops monitoring, has the staged data replace this app's, and restarts the app. Takes the
+     * name of the app imported from, see [consumeImported].
+     */
+    private val commitAndRestart: suspend (String) -> Unit,
     private val discardStaged: () -> Unit,
+    /** The name of the app whose data was imported, once, when the app restarted with it */
+    private val consumeImported: () -> String?,
 ) : ViewModel() {
 
     private val logger = Logger.withTag("ImportViewModel")
@@ -50,6 +56,7 @@ internal class ImportViewModel(
 
     /** When the app opens: offers the import if the rules allow */
     fun offerOnce() {
+        consumeImported()?.also { mutableState.value = Imported(it) }
         if (offeredMarker.exists()) return
         val label = otherApp.label() ?: return
         viewModelScope.launch {
@@ -105,7 +112,7 @@ internal class ImportViewModel(
                         version > DatabaseExport.version ->
                             mutableState.value = UpdateNeeded(offer.otherApp).also { discardStaged() }
 
-                        else -> commitAndRestart()
+                        else -> commitAndRestart(offer.otherApp)
                     }
                 }
         }
@@ -142,6 +149,9 @@ internal class ImportViewModel(
         ) : State
 
         data class Importing(val otherApp: String) : State
+
+        /** Shown once the app restarted with the other app's data */
+        data class Imported(val otherApp: String) : State
 
         /** The other app's database is of a newer version than this build's */
         data class UpdateNeeded(val otherApp: String) : State

@@ -39,13 +39,14 @@ public interface Bindings {
         // Not backed up: an app restored by Auto Backup offers the import again, see ImportViewModel
         offeredMarker = File(context.noBackupFilesDir, "import-offered"),
         stage = { withContext(IO) { AppSnapshot.stage(context, it).let(DatabaseExport::versionOf) } },
-        commitAndRestart = {
+        commitAndRestart = { from ->
             stopMonitoring()
-            AppSnapshot.commitStaged(context)
+            AppSnapshot.commitStaged(context, from)
             // AppGraph swaps the staged data in when the app starts again
             context.restartApp()
         },
         discardStaged = { AppSnapshot.discardStaged(context) },
+        consumeImported = { AppSnapshot.consumeImported(context) },
     )
 
     public val appPhoneInternal: Internal
