@@ -116,6 +116,20 @@ internal class DatabaseBackupTest {
     }
 
     @Test
+    fun `a full copy, for a device transfer, keeps every reading`() {
+        driver(database).use { source -> with(DatabaseBackup) { source.copyFullInto(copy) } }
+        listOf(
+            "SELECT hex(vehicleId), location, timestamp FROM Reading ORDER BY 1, 2, 3",
+            "SELECT hex(uuid), name, isFavourite, kind FROM Vehicle ORDER BY name",
+            "SELECT type, name, sql FROM sqlite_master ORDER BY name",
+            "PRAGMA user_version",
+        ).forEach { sql ->
+            assertEquals(driver(database).use { it.rows(sql) }, driver(copy).use { it.rows(sql) })
+        }
+        assertEquals(listOf("6"), driver(copy).use { it.rows("SELECT count(*) FROM Reading") })
+    }
+
+    @Test
     fun `a restored copy becomes car_db`() {
         test()
         val bytes = copy.readBytes()

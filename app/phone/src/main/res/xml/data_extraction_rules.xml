@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?><!--
    Auto Backup and device transfer from API 31, see backup_rules.xml up to API 30. car.db is
-   replaced by the slim copy SlimBackupAgent builds next to it (car-backup.db, see DatabaseBackup):
-   Auto Backup stops backing up an app whose data passes 25 MB, which the readings would reach.
+   replaced by the copy SlimBackupAgent builds next to it (car-backup.db, see DatabaseBackup): Auto
+   Backup stops backing up an app whose data passes 25 MB, which the readings would reach, so the
+   cloud backup gets only each tyre's latest reading. A device-to-device transfer gets all of them.
 -->
 <data-extraction-rules>
     <cloud-backup>

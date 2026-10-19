@@ -9,9 +9,10 @@ import java.io.File
 
 /**
  * car.db for Android's Auto Backup, which stops backing an app up once its data passes 25 MB: a
- * copy with every table, but only each tyre's latest reading. It's built when Android takes a
- * backup, and backed up instead of car.db (see the backup rules). On a fresh install, the restored
- * copy becomes car.db before it opens, and the migrations then run on it as on any older database.
+ * copy with every table, but only each tyre's latest reading. A device-to-device transfer, which has
+ * no such limit, gets a full copy instead. It's built when Android takes a backup, and backed up
+ * instead of car.db (see the backup rules). On a fresh install, the restored copy becomes car.db
+ * before it opens, and the migrations then run on it as on any older database.
  *
  * Takes a [Context] rather than the dependency graph: the backup agent runs in a process started
  * without the app's initializers.
@@ -21,13 +22,23 @@ public object DatabaseBackup {
     internal const val DATABASE: String = "car.db"
     private const val COPY = "car-backup.db"
 
-    /** Builds the copy next to car.db for the backup to take, nothing without car.db */
-    public fun build(context: Context): Unit = SQLiteOpenHelperUseCase(context).let { sqlite ->
+    /**
+     * Builds the copy next to car.db for the backup to take, nothing without car.db. [slim] keeps
+     * only each tyre's latest reading, otherwise every reading is kept.
+     */
+    public fun build(context: Context, slim: Boolean): Unit = SQLiteOpenHelperUseCase(context).let { sqlite ->
         context
             .getDatabasePath(DATABASE)
             .takeIf { it.exists() }
             ?.let { AndroidSqliteDriver(sqlite.open(it)) }
-            ?.use { it.copySlimInto(context.getDatabasePath(COPY)) { file -> AndroidSqliteDriver(sqlite.open(file)) } }
+            ?.use { driver ->
+                context
+                    .getDatabasePath(COPY)
+                    .also { copy ->
+                        if (slim) driver.copySlimInto(copy) { AndroidSqliteDriver(sqlite.open(it)) }
+                        else driver.copyFullInto(copy)
+                    }
+            }
     }
 
     /** Once backed up, the copy is only taking room */
@@ -53,6 +64,17 @@ public object DatabaseBackup {
                     }
                     ?: copy.delete()
             }
+    }
+
+    /**
+     * A consistent copy of everything: unlike copying the file, VACUUM INTO also takes what still
+     * sits in the write-ahead log (see [DatabaseExport])
+     */
+    internal fun SqlDriver.copyFullInto(copy: File) {
+        // VACUUM INTO refuses to overwrite a file
+        copy.deleteWithJournals()
+        copy.parentFile?.mkdirs()
+        execute(null, "VACUUM INTO ?", 1) { bindString(0, copy.path) }
     }
 
     /**
