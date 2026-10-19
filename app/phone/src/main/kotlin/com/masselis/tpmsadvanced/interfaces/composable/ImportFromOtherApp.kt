@@ -110,7 +110,7 @@ private fun ImportDialog(
 
         is Imported -> ImportMessage(
             title = "Imported from ${state.otherApp}",
-            text = "Its vehicles, sensors, readings and settings are now in this app.",
+            text = "All vehicles, sensors, readings and settings (where applicable) have been copied here.",
             onDismiss = onDismiss,
         )
 
