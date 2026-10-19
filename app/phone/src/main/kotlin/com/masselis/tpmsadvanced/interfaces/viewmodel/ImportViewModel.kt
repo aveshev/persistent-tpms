@@ -63,8 +63,8 @@ internal class ImportViewModel(
                 status.databaseVersion > DatabaseExport.version -> UpdateNeeded(label)
                 else -> Offer(label, status.latestReading, ours, oursHasData, fromSettings = false)
             }
-            // Asked again until imported or "Don't ask again": "Not now", or the app closed while
-            // it's shown, isn't a no. Nothing to offer is settled right away, the other app isn't
+            // Asked again until imported or "Don't ask again": closing it, or the app, while it's
+            // shown isn't a no. Nothing to offer is settled right away, the other app isn't
             // asked again.
             if (mutableState.value == Idle) markOffered()
         }
@@ -111,7 +111,10 @@ internal class ImportViewModel(
         }
     }
 
-    /** "Not now" asks again on the next opening. A message about an update to make is only shown once. */
+    /**
+     * Closing the offer without answering (back, a tap outside) asks again on the next opening. A
+     * message about an update to make is only shown once.
+     */
     fun dismiss() {
         if (mutableState.value is UpdateNeeded) markOffered()
         mutableState.value = Idle

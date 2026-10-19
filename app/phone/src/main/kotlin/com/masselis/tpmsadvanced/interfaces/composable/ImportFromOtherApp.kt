@@ -85,10 +85,8 @@ private fun ImportDialog(
                 if (state.fromSettings) {
                     TextButton(onClick = onDismiss) { Text(text = "Cancel") }
                 } else {
-                    Row {
-                        TextButton(onClick = onNeverAsk) { Text(text = "Don't ask again") }
-                        TextButton(onClick = onDismiss) { Text(text = "Not now") }
-                    }
+                    // Back or a tap outside dismisses it until the next opening, see onDismissRequest
+                    TextButton(onClick = onNeverAsk) { Text(text = "Don't ask again") }
                 }
             },
         )

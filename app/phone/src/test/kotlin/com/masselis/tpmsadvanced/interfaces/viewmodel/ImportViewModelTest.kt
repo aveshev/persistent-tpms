@@ -124,7 +124,7 @@ internal class ImportViewModelTest {
     }
 
     @Test
-    fun `the offer is made again after "not now"`() {
+    fun `the offer closed without an answer is made again`() {
         test().also { it.offerOnce() }.dismiss()
         assertFalse(offeredMarker.exists())
         val viewModel = test()
