@@ -23,7 +23,7 @@ internal class CurrentVehicleUseCaseTest {
     @Before
     fun setup() {
         database = mockk {
-            coEvery { insert(any(), any(), any(), any(), any()) } returns Unit
+            coEvery { insert(any(), any(), any(), any()) } returns Unit
         }
     }
 
@@ -31,7 +31,7 @@ internal class CurrentVehicleUseCaseTest {
     fun `inserting a car does not request the rear pressure override`() = runTest {
         test().insertAsCurrent("My car", Vehicle.Kind.CAR)
         coVerify {
-            database.insert(any<UUID>(), Vehicle.Kind.CAR, "My car", true, false)
+            database.insert(any<UUID>(), Vehicle.Kind.CAR, "My car", true)
         }
     }
 
@@ -39,7 +39,7 @@ internal class CurrentVehicleUseCaseTest {
     fun `inserting a single axle trailer does not request the rear pressure override`() = runTest {
         test().insertAsCurrent("My trailer", Vehicle.Kind.SINGLE_AXLE_TRAILER)
         coVerify {
-            database.insert(any<UUID>(), Vehicle.Kind.SINGLE_AXLE_TRAILER, "My trailer", true, false)
+            database.insert(any<UUID>(), Vehicle.Kind.SINGLE_AXLE_TRAILER, "My trailer", true)
         }
     }
 
@@ -47,7 +47,7 @@ internal class CurrentVehicleUseCaseTest {
     fun `inserting a motorcycle requests the rear pressure override by default`() = runTest {
         test().insertAsCurrent("My motorcycle", Vehicle.Kind.MOTORCYCLE)
         coVerify {
-            database.insert(any<UUID>(), Vehicle.Kind.MOTORCYCLE, "My motorcycle", true, true)
+            database.insert(any<UUID>(), Vehicle.Kind.MOTORCYCLE, "My motorcycle", true)
         }
     }
 
@@ -55,7 +55,7 @@ internal class CurrentVehicleUseCaseTest {
     fun `inserting a three wheeler requests the rear pressure override by default`() = runTest {
         test().insertAsCurrent("My trike", Vehicle.Kind.TADPOLE_THREE_WHEELER)
         coVerify {
-            database.insert(any<UUID>(), Vehicle.Kind.TADPOLE_THREE_WHEELER, "My trike", true, true)
+            database.insert(any<UUID>(), Vehicle.Kind.TADPOLE_THREE_WHEELER, "My trike", true)
         }
     }
 }
