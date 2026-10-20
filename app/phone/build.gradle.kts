@@ -83,7 +83,8 @@ android {
             }
 
             "tpmsadvanced" -> {
-                resValue("string", "app_name", "TPMS Advanced")
+                // Lite keeps the brand's name, Pro is told apart by its own
+                resValue("string", "app_name", if (lite) "TPMS Advanced" else "TPMS Advanced Pro")
                 // The stock look, black on green, and no "always on" dot
                 resValue("color", "ic_launcher_background", "#FF4CAF50")
                 resValue("color", "ic_launcher_dot", "#00000000")
