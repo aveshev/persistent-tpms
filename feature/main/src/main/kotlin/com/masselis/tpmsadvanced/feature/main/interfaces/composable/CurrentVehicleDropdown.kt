@@ -101,7 +101,6 @@ import kotlinx.collections.immutable.toImmutableList
 import kotlinx.collections.immutable.toImmutableMap
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -280,7 +279,6 @@ private fun AddVehicle(
     onVehicleAdd: (name: String, kind: Vehicle.Kind) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val focusRequester = remember { FocusRequester() }
     val dialogFocusRequester = remember { FocusRequester() }
     val isWide = isWideWindow()
     var vehicleName by remember { mutableStateOf("") }
@@ -308,7 +306,6 @@ private fun AddVehicle(
             modifier = Modifier
                 .fillMaxWidth()
                 .testTag(textField)
-                .focusRequester(focusRequester)
                 .onFocusChanged { isNameFocused = it.isFocused }
         )
     }
@@ -460,12 +457,6 @@ private fun AddVehicle(
                 }
         }
     }
-    // In landscape, the kind comes first: the name's keyboard would hide them
-    if (isWide.not())
-        LaunchedEffect(key1 = Unit) {
-            delay(200)
-            focusRequester.requestFocus()
-        }
 }
 
 private val previewOtherVehicle = previewVehicle.copy(

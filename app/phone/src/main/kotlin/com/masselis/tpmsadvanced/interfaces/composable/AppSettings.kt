@@ -48,6 +48,7 @@ import com.masselis.tpmsadvanced.feature.main.interfaces.composable.MagnifierDur
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.DimDisplayDelay
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.PressureLossSettings
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.TextSize
+import com.masselis.tpmsadvanced.feature.main.interfaces.composable.SensorReadingsUpdateDetails
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.TimeSinceUpdateDetails
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.ReadingsSettings
 import com.masselis.tpmsadvanced.feature.unit.interfaces.UnitsSettingsItems
@@ -208,9 +209,17 @@ internal fun PressureLossSettingsPage(
 
 @Composable
 internal fun TimeSinceUpdateSettings(
+    openSensorReadingsUpdateDetails: () -> Unit,
     modifier: Modifier = Modifier
 ) = SettingsPage(modifier) {
-    TimeSinceUpdateDetails()
+    TimeSinceUpdateDetails(openSensorReadingsUpdateDetails)
+}
+
+@Composable
+internal fun SensorReadingsUpdateDetailsSettings(
+    modifier: Modifier = Modifier
+) = SettingsPage(modifier) {
+    SensorReadingsUpdateDetails()
 }
 
 @Composable

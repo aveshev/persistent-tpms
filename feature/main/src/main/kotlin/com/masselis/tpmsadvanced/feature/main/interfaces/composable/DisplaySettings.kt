@@ -112,20 +112,20 @@ private fun DisplaySettings(
         modifier = Modifier.testTag(TyreDisplaySettingsTags.theme),
     )
     SwitchNavigationSettingsItem(
-        headline = "Tap to magnify",
-        supporting = listOf(AnnotatedString("for $magnifierSeconds seconds")),
-        checked = magnifier,
-        onCheckedChange = onMagnifier,
-        onClick = openMagnifier,
-        modifier = Modifier.testTag(TyreDisplaySettingsTags.magnifier),
-    )
-    SwitchNavigationSettingsItem(
         headline = "Dim when idle",
         supporting = listOf(AnnotatedString("after ${dimDisplaySeconds.asDimDelay()}")),
         checked = dimDisplay,
         onCheckedChange = onDimDisplay,
         onClick = openDimDisplay,
         modifier = Modifier.testTag(TyreDisplaySettingsTags.dimDisplay),
+    )
+    SwitchNavigationSettingsItem(
+        headline = "Tap to magnify",
+        supporting = listOf(AnnotatedString("for $magnifierSeconds seconds")),
+        checked = magnifier,
+        onCheckedChange = onMagnifier,
+        onClick = openMagnifier,
+        modifier = Modifier.testTag(TyreDisplaySettingsTags.magnifier),
     )
     TextSettingsItem(
         headline = "Sensor readings text size",

@@ -67,7 +67,7 @@ private fun VehicleTemperatureSettings(
     // The margins of the alert levels, see AlertThresholds, in degrees of the displayed unit
     val degrees = if (unit == CELSIUS) 1f else FAHRENHEIT_PER_CELSIUS
     TyreLegend(
-        text = "As it warms up, the tyre turns from blue to green between the cold and normal temperatures, then from green towards red. From ${"%.0f".format(AMBER_MARGIN * degrees)} ${unit.symbol()} below the hot temperature, its reading turns orange. From the hot temperature on, it blinks red to alert you, and faster from ${"%.0f".format(CRIMSON_MARGIN * degrees)} ${unit.symbol()} above it.",
+        text = "A tyre indicator's colour will change from blue to green between cold and normal temperatures, and from green to orange to red between normal and hot. Going above hot will raise an alert and blink the affected tyre indicator in red. Going ${"%.0f".format(CRIMSON_MARGIN * degrees)} ${unit.symbol()} above hot will raise a critical alert.",
         entries = listOf(
             State.Normal.BlueToGreen(Fraction(0f)) to "Cold\n${low.withSymbol(unit)}",
             State.Normal.BlueToGreen(Fraction(1f)) to "Normal\n${normal.withSymbol(unit)}",
@@ -126,8 +126,7 @@ private val TemperatureLimits = 5f.celsius..150f.celsius
 
 private fun Temperature.withSymbol(unit: TemperatureUnit) = "${numberString(unit)} ${unit.symbol()}"
 
-// AlertThresholds' margins, in degrees Celsius
-private const val AMBER_MARGIN = 10f
+// AlertThresholds' critical margin, in degrees Celsius
 private const val CRIMSON_MARGIN = 20f
 private const val FAHRENHEIT_PER_CELSIUS = 1.8f
 
