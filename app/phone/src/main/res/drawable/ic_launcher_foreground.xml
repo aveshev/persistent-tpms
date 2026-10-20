@@ -28,4 +28,14 @@
     <path
         android:fillColor="@color/ic_launcher_dot"
         android:pathData="M291,292 A15,15 0 1,0 321,292 A15,15 0 1,0 291,292 Z" />
+    <!-- Pro's ribbon, a strip across the bottom left corner that stays inside any launcher's mask:
+         "PRO" in black on yellow, over the tyre. Lite has none, its colours
+         being transparent there (app/phone/build.gradle.kts, per app.tier) -->
+    <path
+        android:fillColor="@color/ic_launcher_pro_badge"
+        android:pathData="M0,106.1 L325.9,432 L242.5,432 L0,189.5 Z" />
+    <path
+        android:fillColor="@color/ic_launcher_pro_text"
+        android:fillType="evenOdd"
+        android:pathData="M118.4,237.2 L131.1,249.9 A11.2,11.2 45 0,1 115.2,265.9 L108.9,259.5 L99.3,269 L93,262.7 Z M118.4,249.9 L124.8,256.3 A2.2,2.2 45 0,1 121.6,259.5 L115.2,253.1 Z M145.5,264.3 L158.2,277 A11.2,11.2 45 0,1 142.3,292.9 L135.9,286.5 L126.4,296.1 L120,289.7 Z M145.5,277 L151.8,283.4 A2.2,2.2 45 0,1 148.6,286.5 L142.3,280.2 Z M135.9,286.5 L143.1,293.7 L141.5,311.2 L134.3,304 Z M159.8,304 A15.8,18 45 1,0 182.1,326.3 A15.8,18 45 1,0 159.8,304 Z M166.1,310.4 A6.8,9 45 1,1 175.7,319.9 A6.8,9 45 1,1 166.1,310.4 Z" />
 </vector>
