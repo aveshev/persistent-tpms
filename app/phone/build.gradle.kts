@@ -59,26 +59,48 @@ android {
         // TPMS Advanced instead: another app ID with its own data, so a change can be tried on a
         // phone beside the Persistent TPMS that runs there, without touching it. Only the ID, the
         // name and the launcher icon's colours change.
+        // `-Papp.tier=lite` builds Lite: a separate app beside Pro, with its own data. data/app reads
+        // the same property for the code (AppTier). Pro's name ends in "Pro" and its launcher icon has
+        // a "PRO" ribbon (TPMS Advanced, local only, keeps one name for both).
+        val lite = providers.gradleProperty("app.tier").orNull == "lite"
+        // Each brand gives its glyph colour
         when (val brand = providers.gradleProperty("app.brand").getOrElse("persistenttpms")) {
             "persistenttpms" -> {
-                applicationId = "com.aveshev.persistenttpms"
-                resValue("string", "app_name", "Persistent TPMS")
+                // Each tier has its own suffix, so that neither is taken for the other
+                applicationId = if (lite) "com.aveshev.persistenttpms.lite" else "com.aveshev.persistenttpms.pro"
+                resValue("string", "app_name", if (lite) "Persistent TPMS" else "Persistent TPMS Pro")
                 // Near black rather than black, so the icon's edge stays visible on dark wallpapers
                 resValue("color", "ic_launcher_background", "#FF101410")
-                resValue("color", "ic_launcher_glyph", "#FF4CAF50")
                 resValue("color", "ic_launcher_dot", "#FF8BE08F")
+                // Pro's ribbon: yellow "PRO" on black, within its yellow edges
+                resValue("color", "ic_launcher_pro_band", if (lite) "#00000000" else "#FF000000")
+                resValue("color", "ic_launcher_pro_text", if (lite) "#00000000" else "#FFFFD600")
+                "#FF4CAF50"
             }
 
             "tpmsadvanced" -> {
-                applicationId = "com.masselis.tpmsadvanced"
+                applicationId = if (lite) "com.masselis.tpmsadvanced.lite" else "com.masselis.tpmsadvanced"
                 resValue("string", "app_name", "TPMS Advanced")
                 // The stock look, black on green, and no "always on" dot
                 resValue("color", "ic_launcher_background", "#FF4CAF50")
-                resValue("color", "ic_launcher_glyph", "#FF000000")
                 resValue("color", "ic_launcher_dot", "#00000000")
+                // Pro's ribbon: black "PRO" on yellow
+                resValue("color", "ic_launcher_pro_band", if (lite) "#00000000" else "#FFFFD600")
+                resValue("color", "ic_launcher_pro_text", if (lite) "#00000000" else "#FF000000")
+                "#FF000000"
             }
 
             else -> error("Unknown app.brand \"$brand\", expected persistenttpms or tpmsadvanced")
+        }.also { glyph ->
+            resValue("color", "ic_launcher_glyph", glyph)
+            // The edges of the launcher icon's "PRO" ribbon, drawn on Pro only
+            resValue("color", "ic_launcher_pro_badge", if (lite) "#00000000" else "#FFFFD600")
+            // What the ribbon leaves of the themed icon's tyre, which would show in its empty band otherwise
+            resValue(
+                "string",
+                "ic_launcher_unribboned",
+                if (lite) "M0,0 H432 V432 H0 Z" else "M0,0 H432 V432 H0 Z M-90.9,98.6 L333.4,522.9 L378.6,477.6 L-45.6,53.4 Z"
+            )
         }
     }
     keys(keysFile.asFile)?.also { keys ->

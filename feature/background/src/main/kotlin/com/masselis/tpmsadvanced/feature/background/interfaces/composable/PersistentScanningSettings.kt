@@ -125,16 +125,7 @@ private fun PersistentScanningSettings(
     openSuspendConditions: () -> Unit,
     modifier: Modifier = Modifier,
 ) = SettingsGroup(modifier) {
-    SwitchNavigationSettingsItem(
-        headline = "Persistent scanning",
-        supporting = listOf(status.statusText("Status: ")),
-        checked = persistentScanning,
-        onCheckedChange = onPersistentScanning,
-        onClick = openPersistentScanning,
-        // The page explains the feature, which matters most before turning it on
-        openableWhenOff = true,
-        modifier = Modifier.testTag(PersistentScanningSettingsTags.persistentScanning),
-    )
+    PersistentScanningItem(persistentScanning, onPersistentScanning, status, openPersistentScanning)
     // Greyed out rather than hidden while persistent scanning is off, like Android's settings do
     SwitchNavigationSettingsItem(
         headline = "Activate scan conditions",
@@ -155,6 +146,24 @@ private fun PersistentScanningSettings(
         modifier = Modifier.testTag(PersistentScanningSettingsTags.suspendConditions),
     )
 }
+
+/** The persistent scanning switch with its status, which opens the page explaining it */
+@Composable
+internal fun PersistentScanningItem(
+    persistentScanning: Boolean,
+    onPersistentScanning: (Boolean) -> Unit,
+    status: BellState?,
+    openPersistentScanning: () -> Unit,
+) = SwitchNavigationSettingsItem(
+    headline = "Persistent scanning",
+    supporting = listOf(status.statusText("Status: ")),
+    checked = persistentScanning,
+    onCheckedChange = onPersistentScanning,
+    onClick = openPersistentScanning,
+    // The page explains the feature, which matters most before turning it on
+    openableWhenOff = true,
+    modifier = Modifier.testTag(PersistentScanningSettingsTags.persistentScanning),
+)
 
 /**
  * From the most detailed to the shortest, the item shows the first one that fits a single line.
@@ -245,4 +254,6 @@ internal object PersistentScanningSettingsTags {
     const val suspendOnBluetooth = "PersistentScanningSettingsTags_suspendOnBluetooth"
     const val stayActive = "PersistentScanningSettingsTags_stayActive"
     const val stayActiveDuration = "PersistentScanningSettingsTags_stayActiveDuration"
+    const val keepAlwaysOn = "PersistentScanningSettingsTags_keepAlwaysOn"
+    const val disablePersistent = "PersistentScanningSettingsTags_disablePersistent"
 }

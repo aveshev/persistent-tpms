@@ -2,6 +2,9 @@ package com.masselis.tpmsadvanced.feature.background.usecase
 
 import app.cash.turbine.test
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.LITE
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.PRO
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanSuspensionUseCase.Reason.BLUETOOTH
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanSuspensionUseCase.Reason.IDLE
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanSuspensionUseCase.Reason.WIFI
@@ -34,12 +37,14 @@ internal class ScanSuspensionUseCaseTest {
     private lateinit var suspendScanningOnBluetooth: MutableStateFlow<Boolean>
     private lateinit var suspendBluetoothDevices: MutableStateFlow<Set<String>>
     private lateinit var bluetoothConnected: MutableStateFlow<Set<String>>
+    private lateinit var tier: AppTier
 
     private fun test() = ScanSuspensionUseCase(
         appPreferences,
         phoneIdleUseCase,
         wifiConnectionUseCase,
         bluetoothDevicesUseCase,
+        tier,
     )
 
     @Before
@@ -54,6 +59,7 @@ internal class ScanSuspensionUseCaseTest {
         suspendScanningOnBluetooth = MutableStateFlow(false)
         suspendBluetoothDevices = MutableStateFlow(emptySet())
         bluetoothConnected = MutableStateFlow(emptySet())
+        tier = PRO
 
         appPreferences = mockk {
             every { suspendConditions } returns this@ScanSuspensionUseCaseTest.suspendConditions
@@ -191,6 +197,33 @@ internal class ScanSuspensionUseCaseTest {
         bluetoothConnected.value = setOf("SPEAKER")
         test().suspensionReasons.test {
             assertEquals(emptySet(), awaitItem())
+        }
+    }
+
+    @Test
+    fun `Lite only suspends while the phone is idle`() = runTest {
+        tier = LITE
+        suspendScanningOnWifi.value = true
+        wifiState.value = Connected("Home")
+        suspendScanningOnBluetooth.value = true
+        suspendBluetoothDevices.value = setOf("SPEAKER")
+        bluetoothConnected.value = setOf("SPEAKER")
+        suspendScanningInDoze.value = true
+        test().suspensionReasons.test {
+            assertEquals(emptySet(), awaitItem())
+            phoneIdle.value = true
+            assertEquals(setOf(IDLE), awaitItem())
+        }
+    }
+
+    @Test
+    fun `Lite ignores the suspend conditions being turned off`() = runTest {
+        tier = LITE
+        suspendConditions.value = false
+        suspendScanningInDoze.value = true
+        phoneIdle.value = true
+        test().suspensionReasons.test {
+            assertEquals(setOf(IDLE), awaitItem())
         }
     }
 }

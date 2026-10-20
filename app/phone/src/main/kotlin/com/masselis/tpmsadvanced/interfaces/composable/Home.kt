@@ -332,6 +332,15 @@ internal fun VehicleHome(
                             openSuspendScanConditions = {
                                 navController.navigate("${Path.SuspendScanConditions}")
                             },
+                            openBluetoothDevices = {
+                                navController.navigate("${Path.ActivateBluetoothDevices}")
+                            },
+                            openBeacons = {
+                                navController.navigate("${Path.Beacons}")
+                            },
+                            openStayActiveDuration = {
+                                navController.navigate("${Path.StayActiveDuration}")
+                            },
                             modifier = modifier,
                         )
                     }

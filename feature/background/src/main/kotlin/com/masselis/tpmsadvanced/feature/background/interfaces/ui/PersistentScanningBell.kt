@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
+import com.masselis.tpmsadvanced.core.ui.Blue
 import com.masselis.tpmsadvanced.core.ui.Orange
 import com.masselis.tpmsadvanced.feature.background.R
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningViewModel
@@ -72,6 +73,7 @@ private fun PersistentScanningBell(
             contentDescription = when (state) {
                 BellState.NeedsPermission -> "Persistent scanning needs permissions, tap to grant them"
                 BellState.Active -> "Background scanning is active"
+                BellState.Always -> "Background scanning is always active"
                 BellState.Suspended -> "Background scanning is suspended"
                 BellState.Idle -> "Background scanning is idle"
             },
@@ -86,6 +88,7 @@ internal val BellState.color: Color
     get() = when (this) {
         BellState.NeedsPermission -> MaterialTheme.colorScheme.error
         BellState.Active -> MaterialTheme.colorScheme.primary
+        BellState.Always -> Blue
         BellState.Suspended -> Orange
         // The theme's content colour, a plain white would vanish on the light theme
         BellState.Idle -> LocalContentColor.current

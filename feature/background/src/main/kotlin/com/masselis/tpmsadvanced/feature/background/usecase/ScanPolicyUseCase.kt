@@ -2,6 +2,8 @@ package com.masselis.tpmsadvanced.feature.background.usecase
 
 import co.touchlab.kermit.Logger
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.LITE
 import com.masselis.tpmsadvanced.feature.background.usecase.BeaconPresenceUseCase.Companion.asBeaconScanMode
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.ALWAYS
@@ -48,6 +50,7 @@ internal class ScanPolicyUseCase(
     private val beaconPresenceUseCase: BeaconPresenceUseCase,
     scope: CoroutineScope,
     private val timeSource: TimeSource = TimeSource.Monotonic,
+    private val tier: AppTier = AppTier.current,
 ) {
     private val logger = Logger.withTag("ScanPolicy")
 
@@ -179,8 +182,13 @@ internal class ScanPolicyUseCase(
         }
             .filter { it.isNotEmpty() }
 
+    /**
+     * Lite only has the Bluetooth and the beacon conditions, without a switch for the conditions
+     * as a whole: the others are ignored whatever they're set to, and none of the two selected is
+     * the same as the conditions being off.
+     */
     private fun enabledCauses(): Flow<Set<ActivateCause>> = combine(
-        appPreferences.activateConditions,
+        appPreferences.activateConditions.map { it || tier == LITE },
         combine(
             appPreferences.activateOnCableCharging,
             appPreferences.activateOnWirelessCharging,
@@ -189,9 +197,11 @@ internal class ScanPolicyUseCase(
             appPreferences.activateBluetoothDevices,
         ) { cable, wireless, androidAuto, bluetooth, bluetoothDevices ->
             buildSet {
-                if (cable) add(CABLE)
-                if (wireless) add(WIRELESS)
-                if (androidAuto) add(ANDROID_AUTO)
+                if (tier != LITE) {
+                    if (cable) add(CABLE)
+                    if (wireless) add(WIRELESS)
+                    if (androidAuto) add(ANDROID_AUTO)
+                }
                 // Selected devices unpaired since then count too: the paired ones are unknown
                 // while Bluetooth is off, which must not turn this into "always" active. Leaving
                 // the device picker with none of them paired turns the condition off instead.

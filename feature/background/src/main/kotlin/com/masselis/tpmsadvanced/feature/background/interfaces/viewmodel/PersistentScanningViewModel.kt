@@ -3,6 +3,8 @@ package com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel
 import androidx.lifecycle.ViewModel
 import co.touchlab.kermit.Logger
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.LITE
 import com.masselis.tpmsadvanced.feature.background.interfaces.MonitoringController
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanPolicyUseCase
@@ -21,6 +23,7 @@ internal class PersistentScanningViewModel(
     private val wifiConnectionUseCase: WifiConnectionUseCase,
     unexpectedStopUseCase: UnexpectedStopUseCase,
     private val controller: MonitoringController,
+    private val tier: AppTier = AppTier.current,
 ) : ViewModel() {
 
     private val logger = Logger.withTag("PersistentScanningViewModel")
@@ -37,6 +40,16 @@ internal class PersistentScanningViewModel(
     fun setPersistentScanning(enabled: Boolean) {
         appPreferences.persistentScanning.value = enabled
         if (enabled.not()) controller.stop()
+    }
+
+    /**
+     * Lite without any Bluetooth device or beacon to activate it: turned on, it would scan all the
+     * time. Read when the switch is tapped, so the current values are enough.
+     */
+    fun scansAlwaysOnceOn(): Boolean = with(appPreferences) {
+        tier == LITE &&
+            (activateOnBluetooth.value && activateBluetoothDevices.value.isNotEmpty()).not() &&
+            (activateOnBeacon.value && beacons.value.isNotEmpty()).not()
     }
 
     // Read before anything restarts the service. Consumed even when persistent scanning is off,
