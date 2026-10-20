@@ -60,35 +60,54 @@ android {
         // phone beside the Persistent TPMS that runs there, without touching it. Only the ID, the
         // name and the launcher icon's colours change.
         // `-Papp.tier=lite` builds Lite: a separate app beside Pro, with its own data. data/app reads
-        // the same property for the code (AppTier).
+        // the same property for the code (AppTier). Both have the same name, the launcher icon's
+        // "PRO" ribbon tells them apart.
         val lite = providers.gradleProperty("app.tier").orNull == "lite"
-        val tierName = if (lite) " Lite" else ""
-        if (lite) applicationIdSuffix = ".lite"
-        when (val brand = providers.gradleProperty("app.brand").getOrElse("persistenttpms")) {
+        val brand = providers.gradleProperty("app.brand").getOrElse("persistenttpms")
+        // Lite's and Pro's IDs: each one reaches the other through AppLinkProvider
+        val (liteId, proId) = when (brand) {
+            // Each tier has its own suffix, so that neither is taken for the other
+            "persistenttpms" -> "com.aveshev.persistenttpms.lite" to "com.aveshev.persistenttpms.pro"
+            "tpmsadvanced" -> "com.masselis.tpmsadvanced.lite" to "com.masselis.tpmsadvanced"
+            else -> error("Unknown app.brand \"$brand\", expected persistenttpms or tpmsadvanced")
+        }
+        applicationId = if (lite) liteId else proId
+        // Each brand gives its glyph colour
+        when (brand) {
             "persistenttpms" -> {
-                applicationId = "com.aveshev.persistenttpms"
-                resValue("string", "app_name", "Persistent TPMS$tierName")
+                resValue("string", "app_name", "Persistent TPMS")
                 // Near black rather than black, so the icon's edge stays visible on dark wallpapers
                 resValue("color", "ic_launcher_background", "#FF101410")
-                resValue("color", "ic_launcher_glyph", "#FF4CAF50")
                 resValue("color", "ic_launcher_dot", "#FF8BE08F")
+                "#FF4CAF50"
             }
 
             "tpmsadvanced" -> {
-                applicationId = "com.masselis.tpmsadvanced"
-                resValue("string", "app_name", "TPMS Advanced$tierName")
+                resValue("string", "app_name", "TPMS Advanced")
                 // The stock look, black on green, and no "always on" dot
                 resValue("color", "ic_launcher_background", "#FF4CAF50")
-                resValue("color", "ic_launcher_glyph", "#FF000000")
                 resValue("color", "ic_launcher_dot", "#00000000")
+                "#FF000000"
             }
 
             else -> error("Unknown app.brand \"$brand\", expected persistenttpms or tpmsadvanced")
+        }.also { glyph ->
+            resValue("color", "ic_launcher_glyph", glyph)
+            // The launcher icon's "PRO" badge, drawn on Pro only
+            resValue("color", "ic_launcher_pro_badge", if (lite) "#00000000" else "#FFFFD600")
+            resValue("color", "ic_launcher_pro_text", if (lite) "#00000000" else "#FF000000")
+            // What the ribbon leaves of the themed icon's tyre, which would show through "PRO" otherwise
+            resValue(
+                "string",
+                "ic_launcher_unribboned",
+                if (lite) "M0,0 H432 V432 H0 Z" else "M0,0 H432 V432 H325.9 L0,106.1 Z M0,189.5 L242.5,432 H0 Z"
+            )
         }
         // Lite and Pro of a brand reach each other through AppLinkProvider: both declare its
-        // signature permission, and each needs to see the other one from Android 11
-        manifestPlaceholders["appLinkPermission"] = "$applicationId.permission.APP_LINK"
-        manifestPlaceholders["otherApplicationId"] = if (lite) "$applicationId" else "$applicationId.lite"
+        // signature permission, under the same name, and each needs to see the other one from
+        // Android 11. The code reads both from the manifest, see OtherApp.
+        manifestPlaceholders["appLinkPermission"] = "${liteId.removeSuffix(".lite")}.permission.APP_LINK"
+        manifestPlaceholders["otherApplicationId"] = if (lite) proId else liteId
     }
     keys(keysFile.asFile)?.also { keys ->
         signingConfigs.create("release") {

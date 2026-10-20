@@ -12,6 +12,7 @@ import com.masselis.tpmsadvanced.data.vehicle.Database
 import com.masselis.tpmsadvanced.data.vehicle.Sensor
 import com.masselis.tpmsadvanced.data.vehicle.Reading
 import com.masselis.tpmsadvanced.data.vehicle.Vehicle
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.DatabaseBackup
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.DatabaseExport
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorDatabase
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.ReadingDatabase
@@ -152,27 +153,29 @@ public interface Bindings {
     private fun driver(
         useCase: SQLiteOpenHelperUseCase,
         locationAdapter: ColumnAdapter<Location, Long>
-    ): SqlDriver = AndroidSqliteDriver(
-        schema = Database.Schema,
-        context = appContext,
-        name = DatabaseExport.FILE_NAME,
-        factory = useCase.factory,
-        callback = object : AndroidSqliteDriver.Callback(
-            Database.Schema,
-            Database.afterVersion3(locationAdapter),
-            Database.afterVersion10(),
-        ) {
-            val delegate = AndroidSqliteDriver.Callback(Database.Schema)
+    ): SqlDriver = DatabaseBackup.restore(appContext).let {
+        AndroidSqliteDriver(
+            schema = Database.Schema,
+            context = appContext,
+            name = DatabaseBackup.DATABASE,
+            factory = useCase.factory,
+            callback = object : AndroidSqliteDriver.Callback(
+                Database.Schema,
+                Database.afterVersion3(locationAdapter),
+                Database.afterVersion10(),
+            ) {
+                val delegate = AndroidSqliteDriver.Callback(Database.Schema)
 
-            override fun onConfigure(db: SupportSQLiteDatabase) {
-                delegate.onConfigure(db)
-                db.setForeignKeyConstraintsEnabled(true)
-                // Increase SQLite performance, see https://developer.android.com/topic/performance/sqlite-performance-best-practices
-                db.enableWriteAheadLogging()
-                db.execSQL("PRAGMA synchronous = NORMAL")
-            }
-        },
-    )
+                override fun onConfigure(db: SupportSQLiteDatabase) {
+                    delegate.onConfigure(db)
+                    db.setForeignKeyConstraintsEnabled(true)
+                    // Increase SQLite performance, see https://developer.android.com/topic/performance/sqlite-performance-best-practices
+                    db.enableWriteAheadLogging()
+                    db.execSQL("PRAGMA synchronous = NORMAL")
+                }
+            },
+        )
+    }
 
     @Provides
     @SingleIn(AppScope::class)

@@ -26,6 +26,8 @@
 
     <application
         android:allowBackup="true"
+        android:backupAgent=".interfaces.SlimBackupAgent"
+        android:fullBackupOnly="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
@@ -54,6 +56,13 @@
 
             </intent-filter>
         </activity>
+        <!-- Read by OtherApp: the other version's app ID, and the permission guarding both providers -->
+        <meta-data
+            android:name="com.masselis.tpmsadvanced.OTHER_APPLICATION_ID"
+            android:value="${otherApplicationId}" />
+        <meta-data
+            android:name="com.masselis.tpmsadvanced.APP_LINK_PERMISSION"
+            android:value="${appLinkPermission}" />
         <!-- See OtherApp, call() checks the permission on its own -->
         <provider
             android:name="com.masselis.tpmsadvanced.feature.background.interfaces.AppLinkProvider"

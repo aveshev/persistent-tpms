@@ -1,34 +1,30 @@
 package com.masselis.tpmsadvanced.data.app.interfaces
 
 import android.content.Context
+import android.content.pm.PackageManager.GET_META_DATA
 import android.content.pm.PackageManager.NameNotFoundException
 import android.net.Uri
 import android.os.Bundle
 import androidx.core.os.bundleOf
 import co.touchlab.kermit.Logger
-import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.LITE
-import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.PRO
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.withContext
 import java.io.InputStream
 
 /**
- * The other version of this app, Pro beside Lite or Lite beside Pro, of the same brand. Each one
- * exposes a provider (`AppLinkProvider`, declared by app/phone) which only apps signed with the same
- * key can use, through [permission]: both declare it, so it's granted whichever is installed first.
+ * The other version of this app, Pro beside Lite or Lite beside Pro, of the same brand: its ID comes
+ * from the manifest, which app/phone's build fills. Each one exposes a provider (`AppLinkProvider`,
+ * declared by app/phone) which only apps signed with the same key can use, through [permission]:
+ * both declare it, so it's granted whichever is installed first.
  * Through it, this app reads whether persistent scanning is on there, turns it off there, and
  * downloads its data, see [AppSnapshot].
  */
 public class OtherApp internal constructor(
     private val context: Context,
-    tier: AppTier = AppTier.current,
 ) {
     private val logger = Logger.withTag("OtherApp")
 
-    public val packageName: String = when (tier) {
-        LITE -> context.packageName.removeSuffix(LITE_SUFFIX)
-        PRO -> context.packageName + LITE_SUFFIX
-    }
+    public val packageName: String = context.metaData(OTHER_APPLICATION_ID)
 
     /** Its name, null while it isn't installed */
     public fun label(): String? = context.packageManager.let { pm ->
@@ -98,17 +94,21 @@ public class OtherApp internal constructor(
         private const val KEY_LATEST_READING = "latestReading"
         private const val KEY_HAS_DATA = "hasData"
 
-        private const val LITE_SUFFIX = ".lite"
+        // Both set by app/phone's build, which names each brand's Lite and Pro
+        private const val OTHER_APPLICATION_ID = "com.masselis.tpmsadvanced.OTHER_APPLICATION_ID"
+        private const val APP_LINK_PERMISSION = "com.masselis.tpmsadvanced.APP_LINK_PERMISSION"
 
         /** The provider's address in the app [packageName] */
         public fun uri(packageName: String): Uri = Uri.parse("content://$packageName.app-link")
 
-        /**
-         * The signature permission guarding the provider, the same in both apps of a brand. Declared
-         * in app/phone's manifest under that name.
-         */
-        public fun permission(context: Context): String =
-            "${context.packageName.removeSuffix(LITE_SUFFIX)}.permission.APP_LINK"
+        /** The signature permission guarding the provider, the same in both apps of a brand */
+        public fun permission(context: Context): String = context.metaData(APP_LINK_PERMISSION)
+
+        private fun Context.metaData(name: String): String = packageManager
+            .getApplicationInfo(packageName, GET_META_DATA)
+            .metaData
+            ?.getString(name)
+            .let { checkNotNull(it) { "The manifest has no $name" } }
 
         public fun Status.asBundle(): Bundle = bundleOf(
             KEY_PERSISTENT_SCANNING to persistentScanning,

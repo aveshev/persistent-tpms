@@ -60,12 +60,12 @@ private val logger = Logger.withTag("MockAdvertisements")
  * Either replay a raw advertisement, in hex as `ScanRecord.getBytes()` returns it (the scan logs
  * print it for real sensors):
  * ```
- * adb shell am broadcast -a com.masselis.tpmsadvanced.MOCK_ADVERTISEMENT -p com.aveshev.persistenttpms \
+ * adb shell am broadcast -a com.masselis.tpmsadvanced.MOCK_ADVERTISEMENT -p com.aveshev.persistenttpms.pro \
  *     --es bytes 0201060303B0FB12FFAC00D043520008DA001D10FF1100AF2206
  * ```
  * or have [MockSensor] encode a reading for a brand:
  * ```
- * adb shell am broadcast -a com.masselis.tpmsadvanced.MOCK_ADVERTISEMENT -p com.aveshev.persistenttpms \
+ * adb shell am broadcast -a com.masselis.tpmsadvanced.MOCK_ADVERTISEMENT -p com.aveshev.persistenttpms.pro \
  *     --es brand pecham --ef kpa 230 --ef celsius 21 --ei battery 30
  * ```
  * - `brand`: pecham, bekubee_ky, wicarlink, bekubee_tpms or sysgration. `kpa` is required,

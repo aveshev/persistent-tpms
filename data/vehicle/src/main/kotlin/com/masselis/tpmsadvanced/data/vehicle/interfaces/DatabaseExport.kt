@@ -42,7 +42,7 @@ public class DatabaseExport internal constructor(
 
     public companion object {
         /** The database's file name, in the app's databases folder */
-        public const val FILE_NAME: String = "car.db"
+        public const val FILE_NAME: String = DatabaseBackup.DATABASE
 
         /** This build's schema version: a database of a higher one can't be opened */
         public val version: Long get() = Database.Schema.version
