@@ -1,6 +1,7 @@
 package com.masselis.tpmsadvanced.data.vehicle.model
 
 import android.os.Parcelable
+import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.bar
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.Axle.FRONT
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.Axle.REAR
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.FRONT_LEFT
@@ -37,10 +38,16 @@ public data class Vehicle(
      *
      * For each [Kind], the property [locations] represent the current layout with a [Set] of
      * [Location].
+     *
+     * A new vehicle starts with [defaultPressures], from its minimum to its maximum, for every tyre,
+     * or for the front only when [defaultRearPressures] gives the rear its own. The minimum is a
+     * typical recommended cold pressure and the maximum a typical sidewall maximum, each on the
+     * strict side: an alert the user didn't need is better than one that never came.
      */
     public enum class Kind(
         public val locations: Set<Location>,
-        public val defaultsToSeparateFrontRearPressure: Boolean = false,
+        public val defaultPressures: ClosedRange<Pressure>,
+        public val defaultRearPressures: ClosedRange<Pressure>? = null,
     ) {
         /**
          * ```
@@ -55,7 +62,8 @@ public data class Vehicle(
                 Wheel(FRONT_RIGHT),
                 Wheel(REAR_LEFT),
                 Wheel(REAR_RIGHT)
-            )
+            ),
+            2.3f.bar..3.2f.bar,
         ),
 
         /**
@@ -63,7 +71,8 @@ public data class Vehicle(
          * N-N
          * ```
          */
-        SINGLE_AXLE_TRAILER(setOf(Side(LEFT), Side(RIGHT))),
+        // Trailer tyres run near their sidewall maximum, from car tyres on a caravan to load range D
+        SINGLE_AXLE_TRAILER(setOf(Side(LEFT), Side(RIGHT)), 2.8f.bar..4.5f.bar),
 
         /**
          * ```
@@ -72,7 +81,11 @@ public data class Vehicle(
          *  N
          * ```
          */
-        MOTORCYCLE(setOf(Axle(FRONT), Axle(REAR)), defaultsToSeparateFrontRearPressure = true),
+        MOTORCYCLE(
+            setOf(Axle(FRONT), Axle(REAR)),
+            2.5f.bar..3f.bar,
+            2.9f.bar..3.4f.bar,
+        ),
 
         /**
          * ```
@@ -82,7 +95,10 @@ public data class Vehicle(
          */
         TADPOLE_THREE_WHEELER(
             setOf(Wheel(FRONT_LEFT), Wheel(FRONT_RIGHT), Axle(REAR)),
-            defaultsToSeparateFrontRearPressure = true,
+            // Piaggio MP3's, from 1.6 / 2.0 bar for a 125 ridden alone to 2.0 / 2.4 for a 500, the
+            // minimums at the 125's with a passenger
+            1.8f.bar..2.5f.bar,
+            2.4f.bar..3f.bar,
         ),
 
         /**
@@ -93,7 +109,10 @@ public data class Vehicle(
          */
         DELTA_THREE_WHEELER(
             setOf(Axle(FRONT), Wheel(REAR_LEFT), Wheel(REAR_RIGHT)),
-            defaultsToSeparateFrontRearPressure = true,
+            // A motorcycle tyre ahead of two car tyres, like Harley-Davidson's Tri Glide's 36 psi
+            // and 26 psi
+            2.5f.bar..3f.bar,
+            1.9f.bar..2.8f.bar,
         ),
 
         /**
@@ -111,7 +130,8 @@ public data class Vehicle(
                 Wheel(REAR_LEFT),
                 Wheel(REAR_RIGHT),
                 Location.Spare,
-            )
+            ),
+            2.3f.bar..3.2f.bar,
         ),
 
         /**
@@ -119,7 +139,10 @@ public data class Vehicle(
          *  N
          * ```
          */
-        MONOWHEEL(setOf(Location.Single));
+        MONOWHEEL(setOf(Location.Single), 2.8f.bar..3.5f.bar);
+
+        public val defaultsToSeparateFrontRearPressure: Boolean
+            get() = defaultRearPressures != null
 
         /**
          * `true` when this [Kind]'s [locations] distinguish a front axle from a rear one, i.e.

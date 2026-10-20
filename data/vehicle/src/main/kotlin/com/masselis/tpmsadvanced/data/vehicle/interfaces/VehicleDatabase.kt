@@ -8,7 +8,6 @@ import com.masselis.tpmsadvanced.core.database.QueryOneOrNull
 import com.masselis.tpmsadvanced.core.database.QueryOneOrNull.Companion.asOneOrNull
 import com.masselis.tpmsadvanced.data.vehicle.Database
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure
-import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.psi
 import com.masselis.tpmsadvanced.data.vehicle.model.Temperature
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import com.masselis.tpmsadvanced.data.vehicle.model.Voltage
@@ -30,19 +29,20 @@ public class VehicleDatabase internal constructor(database: Database) {
         kind: Vehicle.Kind,
         name: String,
         isCurrent: Boolean,
-        defaultsToSeparateFrontRearPressure: Boolean = false,
     ): Unit = withContext(IO) {
         // Runs as a single transaction so a reactive observer (e.g. a settings screen navigated
         // to right after creation) never sees the row with the rear override half-applied.
         queries.transaction {
             queries.insert(id, kind, name, isCurrent)
-            // The schema's default predates it, see DEFAULT_HIGH_PRESSURE
-            queries.updateHighPressure(DEFAULT_HIGH_PRESSURE, id)
-            if (defaultsToSeparateFrontRearPressure) {
-                val lowPressure = queries.selectLowPressureByVehicleId(id).executeAsOne()
-                val highPressure = queries.selectHighPressureByVehicleId(id).executeAsOne()
-                queries.updateRearLowPressure(lowPressure, id)
-                queries.updateRearHighPressure(highPressure, id)
+            // The schema's defaults predate them: SQLite can't change them without rebuilding the
+            // table
+            kind.defaultPressures.also {
+                queries.updateLowPressure(it.start, id)
+                queries.updateHighPressure(it.endInclusive, id)
+            }
+            kind.defaultRearPressures?.also {
+                queries.updateRearLowPressure(it.start, id)
+                queries.updateRearHighPressure(it.endInclusive, id)
                 queries.updateSeparateRearPressure(true, id)
             }
         }
@@ -183,13 +183,6 @@ public class VehicleDatabase internal constructor(database: Database) {
         .asOneOrNull()
 
     public companion object {
-        /**
-         * The maximum pressure of a new vehicle, at the high end of the maximum inflation pressures
-         * marked on tyre sidewalls, which the maximum is meant to be set to. The schema's default,
-         * 300 kPa, predates it: SQLite can't change it without rebuilding the table.
-         */
-        public val DEFAULT_HIGH_PRESSURE: Pressure = 50f.psi
-
         private val mapper: (
             UUID,
             String,
