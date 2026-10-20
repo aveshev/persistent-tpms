@@ -13,16 +13,24 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.masselis.tpmsadvanced.core.ui.SettingsGroup
 import com.masselis.tpmsadvanced.core.ui.SettingsIntro
 import com.masselis.tpmsadvanced.core.ui.SwitchSettingsItem
+import com.masselis.tpmsadvanced.core.ui.TextSettingsItem
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.TyreDisplaySettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.TyreDisplaySettingsViewModel
 
 /** The page opened from the "Time since last update" item of [ReadingsSettings] */
 @Composable
-public fun TimeSinceUpdateDetails(modifier: Modifier = Modifier): Unit =
-    TimeSinceUpdateDetails(modifier, viewModel { TyreDisplaySettingsViewModel() })
+public fun TimeSinceUpdateDetails(
+    openSensorReadingsUpdateDetails: () -> Unit,
+    modifier: Modifier = Modifier,
+): Unit = TimeSinceUpdateDetails(
+    openSensorReadingsUpdateDetails,
+    modifier,
+    viewModel { TyreDisplaySettingsViewModel() },
+)
 
 @Composable
 internal fun TimeSinceUpdateDetails(
+    openSensorReadingsUpdateDetails: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: TyreDisplaySettingsViewModel = viewModel { TyreDisplaySettingsViewModel() },
 ) {
@@ -30,6 +38,7 @@ internal fun TimeSinceUpdateDetails(
     TimeSinceUpdateDetails(
         showTimeSinceUpdate = showTimeSinceUpdate,
         onShowTimeSinceUpdate = { viewModel.showTimeSinceUpdate.value = it },
+        openSensorReadingsUpdateDetails = openSensorReadingsUpdateDetails,
         modifier = modifier,
     )
 }
@@ -38,12 +47,20 @@ internal fun TimeSinceUpdateDetails(
 private fun TimeSinceUpdateDetails(
     showTimeSinceUpdate: Boolean,
     onShowTimeSinceUpdate: (Boolean) -> Unit,
+    openSensorReadingsUpdateDetails: () -> Unit,
     modifier: Modifier = Modifier,
 ) = Column(modifier) {
     @Suppress("MaxLineLength")
     SettingsIntro(
-        "Many tyre sensors only send an update when the pressure changes. This can mean no update reaching your phone for hours or even days, especially from the non-driven tyres (driven tyres heat up at the start of a ride and therefore update more often).\n\nA tyre that is quickly losing air changes pressure, so its sensor updates often and you get alerted: in that sense, no update is good news. Unfortunately, a very slow leak or a faulty sensor can look exactly like that \"all good\" case.\n\nIf a sensor hasn't updated for a long while, you can briefly remove it while the app is scanning, and put it back once it shows zero pressure. If the sensor still works and its battery isn't dead, this refreshes the displayed values, at the cost of a little air."
+        "Most TPMS sensors send updates at regular time intervals while riding. However, in some cases the updates can get lost, because of signal obstruction, low sensor battery or other issues. Knowing when exactly the last update arrived from each sensor can help you diagnose these issues."
     )
+    SettingsGroup(Modifier.padding(top = 16.dp)) {
+        TextSettingsItem(
+            headline = "Sensor readings update details",
+            supporting = "How often each sensor updates, and how to check a silent one",
+            onClick = openSensorReadingsUpdateDetails,
+        )
+    }
     SettingsGroup(Modifier.padding(top = 24.dp)) {
         SwitchSettingsItem(
             headline = "Time since last update",
@@ -57,5 +74,9 @@ private fun TimeSinceUpdateDetails(
 @Preview
 @Composable
 internal fun TimeSinceUpdateDetailsPreview() {
-    TimeSinceUpdateDetails(showTimeSinceUpdate = true, onShowTimeSinceUpdate = {})
+    TimeSinceUpdateDetails(
+        showTimeSinceUpdate = true,
+        onShowTimeSinceUpdate = {},
+        openSensorReadingsUpdateDetails = {},
+    )
 }

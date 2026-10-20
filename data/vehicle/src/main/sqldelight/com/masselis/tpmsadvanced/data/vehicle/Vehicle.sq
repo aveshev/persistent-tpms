@@ -85,10 +85,11 @@ END;
 
 -- This statement is put in the end because SQLDelight executes the triggers before the statements
 
-INSERT INTO Vehicle(uuid, kind, name, isFavourite) VALUES (randomblob(16), "CAR", "My car", 1);
+-- Cold and hot set here rather than as the columns' defaults, which would take a migration to change
+INSERT INTO Vehicle(uuid, kind, name, isFavourite, lowTemp, highTemp) VALUES (randomblob(16), "CAR", "My car", 1, 7, 65);
 
 insert:
-INSERT INTO Vehicle(uuid, kind, name, isFavourite) VALUES (?,?,?,?);
+INSERT INTO Vehicle(uuid, kind, name, isFavourite, lowTemp, highTemp) VALUES (?, ?, ?, ?, 7, 65);
 
 updateName:
 UPDATE Vehicle SET name = ? WHERE uuid = ?;
