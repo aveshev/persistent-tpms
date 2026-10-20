@@ -60,15 +60,15 @@ android {
         // phone beside the Persistent TPMS that runs there, without touching it. Only the ID, the
         // name and the launcher icon's colours change.
         // `-Papp.tier=lite` builds Lite: a separate app beside Pro, with its own data. data/app reads
-        // the same property for the code (AppTier). Both have the same name, the launcher icon's
-        // "PRO" ribbon tells them apart.
+        // the same property for the code (AppTier). Pro's name ends in "Pro" and its launcher icon has
+        // a "PRO" ribbon (TPMS Advanced, local only, keeps one name for both).
         val lite = providers.gradleProperty("app.tier").orNull == "lite"
         // Each brand gives its glyph colour
         when (val brand = providers.gradleProperty("app.brand").getOrElse("persistenttpms")) {
             "persistenttpms" -> {
                 // Each tier has its own suffix, so that neither is taken for the other
                 applicationId = if (lite) "com.aveshev.persistenttpms.lite" else "com.aveshev.persistenttpms.pro"
-                resValue("string", "app_name", "Persistent TPMS")
+                resValue("string", "app_name", if (lite) "Persistent TPMS" else "Persistent TPMS Pro")
                 // Near black rather than black, so the icon's edge stays visible on dark wallpapers
                 resValue("color", "ic_launcher_background", "#FF101410")
                 resValue("color", "ic_launcher_dot", "#FF8BE08F")
