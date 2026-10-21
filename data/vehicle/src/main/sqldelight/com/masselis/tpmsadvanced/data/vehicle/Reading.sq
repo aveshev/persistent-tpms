@@ -79,3 +79,7 @@ WHERE vehicleId = :vehicleId AND location = :location AND timestamp <= (
     ORDER BY timestamp DESC
     LIMIT 1 OFFSET :kept
 );
+
+-- The latest reading of any tyre, to tell which of two apps' data is the newest
+latestTimestamp:
+SELECT MAX(timestamp) AS timestamp FROM Reading;

@@ -16,6 +16,8 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningViewModel
+import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningViewModel.OtherAppCheck.Clear
+import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningViewModel.OtherAppCheck.Conflict
 import com.masselis.tpmsadvanced.feature.background.ioc.Bindings
 
 /**
@@ -50,6 +52,8 @@ internal val LocalWifiExceptionJourney = compositionLocalOf<PermissionJourney> {
  * Every time the app is opened while persistent scanning is on, it also checks that the service
  * still has what it needs (walking the user through what is missing, once) and that it is running.
  * When the service died behind the user's back since the last opening, the user is told first.
+ * Before any of that, the other version of the app (Lite or Pro) must not scan persistently too:
+ * the user chooses which one does.
  */
 @Composable
 public fun PersistentScanningHost(content: @Composable () -> Unit): Unit =
@@ -58,6 +62,7 @@ public fun PersistentScanningHost(content: @Composable () -> Unit): Unit =
         content,
     )
 
+@Suppress("LongMethod", "ComplexCondition")
 @Composable
 internal fun PersistentScanningHost(
     viewModel: PersistentScanningViewModel,
@@ -65,6 +70,20 @@ internal fun PersistentScanningHost(
 ) {
     val persistentScanning by viewModel.persistentScanning.collectAsState()
     val unexpectedStop by viewModel.unexpectedStop.collectAsState()
+    val otherAppCheck by viewModel.otherAppCheck.collectAsState()
+    // Declared before the permission journey's effect, so that it runs first once the app is
+    // started: the journey reads the check's reset state rather than the one of the last opening
+    LifecycleStartEffect(persistentScanning) {
+        if (persistentScanning) viewModel.checkOtherApp()
+        onStopOrDispose { }
+    }
+    (otherAppCheck as? Conflict)?.also { conflict ->
+        OtherAppPersistentScanningAlert(
+            otherApp = conflict.otherApp,
+            onSwitch = viewModel::switchFromOtherApp,
+            onCancel = viewModel::keepOtherApp,
+        )
+    }
     val permissions = rememberMonitoringPermissions(
         confirmBeforeStart = false,
         onGranted = viewModel::ensureRunning,
@@ -72,11 +91,17 @@ internal fun PersistentScanningHost(
     val currentPermissions by rememberUpdatedState(permissions)
     // Read here to key the effect: the service is restarted once the user read why it stopped
     val unexpectedStopShown = unexpectedStop != null
-    LifecycleStartEffect(persistentScanning, unexpectedStopShown) {
+    LifecycleStartEffect(persistentScanning, unexpectedStopShown, otherAppCheck) {
         // When everything is granted this only makes sure the service runs, without any popup.
         // Coming back from Settings also starts the lifecycle again: the journey started before
         // leaving is resumed by the permissions themselves, it must not be started a second time.
-        if (persistentScanning && unexpectedStopShown.not() && currentPermissions.isInProgress().not()) {
+        // The check is read live: the composition's value can still be the last opening's.
+        if (
+            persistentScanning &&
+            viewModel.otherAppCheck.value == Clear &&
+            unexpectedStopShown.not() &&
+            currentPermissions.isInProgress().not()
+        ) {
             currentPermissions.request()
         }
         onStopOrDispose { }

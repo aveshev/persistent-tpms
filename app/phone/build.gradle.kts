@@ -63,11 +63,18 @@ android {
         // the same property for the code (AppTier). Pro's name ends in "Pro" and its launcher icon has
         // a "PRO" ribbon (TPMS Advanced, local only, keeps one name for both).
         val lite = providers.gradleProperty("app.tier").orNull == "lite"
+        val brand = providers.gradleProperty("app.brand").getOrElse("persistenttpms")
+        // Lite's and Pro's IDs: each one reaches the other through AppLinkProvider
+        val (liteId, proId) = when (brand) {
+            // Each tier has its own suffix, so that neither is taken for the other
+            "persistenttpms" -> "com.aveshev.persistenttpms.lite" to "com.aveshev.persistenttpms.pro"
+            "tpmsadvanced" -> "com.masselis.tpmsadvanced.lite" to "com.masselis.tpmsadvanced"
+            else -> error("Unknown app.brand \"$brand\", expected persistenttpms or tpmsadvanced")
+        }
+        applicationId = if (lite) liteId else proId
         // Each brand gives its glyph colour
-        when (val brand = providers.gradleProperty("app.brand").getOrElse("persistenttpms")) {
+        when (brand) {
             "persistenttpms" -> {
-                // Each tier has its own suffix, so that neither is taken for the other
-                applicationId = if (lite) "com.aveshev.persistenttpms.lite" else "com.aveshev.persistenttpms.pro"
                 resValue("string", "app_name", if (lite) "Persistent TPMS" else "Persistent TPMS Pro")
                 // Near black rather than black, so the icon's edge stays visible on dark wallpapers
                 resValue("color", "ic_launcher_background", "#FF101410")
@@ -79,8 +86,8 @@ android {
             }
 
             "tpmsadvanced" -> {
-                applicationId = if (lite) "com.masselis.tpmsadvanced.lite" else "com.masselis.tpmsadvanced"
-                resValue("string", "app_name", "TPMS Advanced")
+                // Lite keeps the brand's name, Pro is told apart by its own
+                resValue("string", "app_name", if (lite) "TPMS Advanced" else "TPMS Advanced Pro")
                 // The stock look, black on green, and no "always on" dot
                 resValue("color", "ic_launcher_background", "#FF4CAF50")
                 resValue("color", "ic_launcher_dot", "#00000000")
@@ -102,6 +109,11 @@ android {
                 if (lite) "M0,0 H432 V432 H0 Z" else "M0,0 H432 V432 H0 Z M-90.9,98.6 L333.4,522.9 L378.6,477.6 L-45.6,53.4 Z"
             )
         }
+        // Lite and Pro of a brand reach each other through AppLinkProvider: both declare its
+        // signature permission, under the same name, and each needs to see the other one from
+        // Android 11. The code reads both from the manifest, see OtherApp.
+        manifestPlaceholders["appLinkPermission"] = "${liteId.removeSuffix(".lite")}.permission.APP_LINK"
+        manifestPlaceholders["otherApplicationId"] = if (lite) proId else liteId
     }
     keys(keysFile.asFile)?.also { keys ->
         signingConfigs.create("release") {

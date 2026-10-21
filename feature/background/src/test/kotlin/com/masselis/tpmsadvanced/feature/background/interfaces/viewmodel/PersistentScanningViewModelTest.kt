@@ -1,14 +1,21 @@
 package com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel
 
 import app.cash.turbine.test
+import com.masselis.tpmsadvanced.core.test.MainDispatcherRule
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
+import com.masselis.tpmsadvanced.data.app.interfaces.OtherApp
 import com.masselis.tpmsadvanced.feature.background.interfaces.MonitoringController
+import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningViewModel.OtherAppCheck.Clear
+import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningViewModel.OtherAppCheck.Conflict
+import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningViewModel.OtherAppCheck.Unchecked
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanPolicyUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.UnexpectedStopUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.UnexpectedStopUseCase.Cause.LowMemory
 import com.masselis.tpmsadvanced.feature.background.usecase.UnexpectedStopUseCase.UnexpectedStop
 import com.masselis.tpmsadvanced.feature.background.usecase.WifiConnectionUseCase
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -16,6 +23,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -24,6 +32,9 @@ import kotlin.test.assertTrue
 
 internal class PersistentScanningViewModelTest {
 
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private lateinit var persistentScanning: MutableStateFlow<Boolean>
     private lateinit var persistentScanningSetUp: MutableStateFlow<Boolean>
     private lateinit var suspendConditions: MutableStateFlow<Boolean>
@@ -31,6 +42,8 @@ internal class PersistentScanningViewModelTest {
     private lateinit var wifiExceptionEnabled: MutableStateFlow<Boolean>
     private var unexpectedStop: UnexpectedStop? = null
     private lateinit var controller: MonitoringController
+    private var otherAppStatus: OtherApp.Status? = null
+    private lateinit var otherApp: OtherApp
 
     private fun test() = PersistentScanningViewModel(
         mockk<AppPreferences> {
@@ -44,6 +57,7 @@ internal class PersistentScanningViewModelTest {
         mockk<WifiConnectionUseCase>(),
         mockk<UnexpectedStopUseCase> { every { consume() } returns unexpectedStop },
         controller,
+        otherApp,
     )
 
     @Before
@@ -55,6 +69,63 @@ internal class PersistentScanningViewModelTest {
         wifiExceptionEnabled = MutableStateFlow(true)
         unexpectedStop = null
         controller = mockk { every { stop() } returns true }
+        otherAppStatus = null
+        otherApp = mockk {
+            every { packageName } returns "com.aveshev.persistenttpms.lite"
+            every { label() } returns "Persistent TPMS Lite"
+            coEvery { status() } answers { otherAppStatus }
+            coEvery { turnOffPersistentScanning() } returns true
+        }
+    }
+
+    private fun status(persistentScanning: Boolean) = OtherApp.Status(
+        persistentScanning = persistentScanning,
+        databaseVersion = 12,
+        latestReading = null,
+        hasData = true,
+    )
+
+    @Test
+    fun `the other app scanning persistently too is a conflict, named after it`() {
+        otherAppStatus = status(persistentScanning = true)
+        val viewModel = test()
+        assertEquals(Unchecked, viewModel.otherAppCheck.value)
+        viewModel.checkOtherApp()
+        assertEquals(Conflict("Persistent TPMS Lite"), viewModel.otherAppCheck.value)
+    }
+
+    @Test
+    fun `the other app not scanning persistently, or not reachable, clears the check`() {
+        otherAppStatus = status(persistentScanning = false)
+        val viewModel = test()
+        viewModel.checkOtherApp()
+        assertEquals(Clear, viewModel.otherAppCheck.value)
+        otherAppStatus = null
+        viewModel.checkOtherApp()
+        assertEquals(Clear, viewModel.otherAppCheck.value)
+    }
+
+    @Test
+    fun `switching to this app turns persistent scanning off in the other app`() {
+        otherAppStatus = status(persistentScanning = true)
+        val viewModel = test()
+        viewModel.checkOtherApp()
+        viewModel.switchFromOtherApp()
+        coVerify { otherApp.turnOffPersistentScanning() }
+        assertEquals(Clear, viewModel.otherAppCheck.value)
+        assertTrue(persistentScanning.value)
+    }
+
+    @Test
+    fun `cancelling the switch turns persistent scanning off here`() {
+        otherAppStatus = status(persistentScanning = true)
+        val viewModel = test()
+        viewModel.checkOtherApp()
+        viewModel.keepOtherApp()
+        assertFalse(persistentScanning.value)
+        verify { controller.stop() }
+        coVerify(exactly = 0) { otherApp.turnOffPersistentScanning() }
+        assertEquals(Unchecked, viewModel.otherAppCheck.value)
     }
 
     @Test

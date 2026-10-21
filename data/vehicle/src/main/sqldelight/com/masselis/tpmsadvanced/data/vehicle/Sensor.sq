@@ -87,3 +87,6 @@ UPDATE Sensor SET pressureCalibration = ?, pressureOffset = ?, pressureMultiplie
 -- Sets every sensor of a vehicle to the same calibration, see SensorDatabase.updateCalibrations
 updateCalibrationsByVehicleId:
 UPDATE Sensor SET pressureCalibration = ?, pressureOffset = ?, pressureMultiplier = ? WHERE vehicleId = ?;
+
+countAll:
+SELECT COUNT(*) FROM Sensor;

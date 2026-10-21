@@ -2,6 +2,7 @@ package com.masselis.tpmsadvanced.data.app.ioc
 
 import android.content.Context
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
+import com.masselis.tpmsadvanced.data.app.interfaces.OtherApp
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesTo
 import dev.zacsweers.metro.Provides
@@ -13,4 +14,7 @@ public interface Bindings {
     @Provides
     @SingleIn(AppScope::class)
     private fun appPreferences(context: Context): AppPreferences = AppPreferences(context)
+
+    @Provides
+    private fun otherApp(context: Context): OtherApp = OtherApp(context)
 }

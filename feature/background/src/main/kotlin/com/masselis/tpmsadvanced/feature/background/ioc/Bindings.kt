@@ -4,7 +4,9 @@ import com.masselis.tpmsadvanced.core.common.appGraph
 import com.masselis.tpmsadvanced.core.ui.isAppVisibleFlow
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
 import com.masselis.tpmsadvanced.data.unit.interfaces.UnitPreferences
+import com.masselis.tpmsadvanced.data.app.interfaces.OtherApp
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.DatabaseExport
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.ReadingDatabase
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorDatabase
 import com.masselis.tpmsadvanced.feature.background.interfaces.AlertNotifier
@@ -292,12 +294,14 @@ public interface Bindings {
         wifiConnectionUseCase: WifiConnectionUseCase,
         unexpectedStopUseCase: UnexpectedStopUseCase,
         controller: MonitoringController,
+        otherApp: OtherApp,
     ): PersistentScanningViewModel = PersistentScanningViewModel(
         appPreferences,
         scanPolicyUseCase,
         wifiConnectionUseCase,
         unexpectedStopUseCase,
         controller,
+        otherApp,
     )
 
     @Provides
@@ -360,6 +364,7 @@ public interface Bindings {
     public class Internal internal constructor(
         internal val appPreferences: AppPreferences,
         internal val controller: MonitoringController,
+        internal val databaseExport: DatabaseExport,
         internal val unexpectedStopUseCase: UnexpectedStopUseCase,
         internal val scanStatusAnnouncer: () -> ScanStatusAnnouncer,
         internal val alertNotifier: () -> AlertNotifier,

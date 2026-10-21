@@ -109,7 +109,8 @@ public interface Bindings {
         }
 
     @Provides
-    private fun databaseExport(driver: SqlDriver): DatabaseExport = DatabaseExport(driver)
+    private fun databaseExport(driver: SqlDriver, database: Database): DatabaseExport =
+        DatabaseExport(driver, database)
 
     @Suppress("MagicNumber")
     @Provides
