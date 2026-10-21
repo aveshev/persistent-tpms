@@ -145,7 +145,7 @@ private fun TextSize(
     }
     @Suppress("MaxLineLength")
     SettingsSectionNote(
-        "Applies to the tyres' readouts, on top of your phone's font size. They're still made smaller when they don't fit the screen.",
+        "Applies only to sensor readouts, on top of the system font size. If the chosen font size does not fit on the screen, it will be reduced to fit.",
         Modifier.padding(top = 8.dp),
     )
 }

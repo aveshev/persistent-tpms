@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -78,21 +79,13 @@ private fun VehicleBatterySettings(
     // Blinks along with the alerting values of the main screen
     val isVisible = isFirstBlinkPhase(BLINK)
     if (batteryKinds.showsVoltage) {
-        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) {
-            BatteryLevelSamples(
-                normal = (lowVoltage + BATTERY_AMBER_MARGIN + BATTERY_AMBER_MARGIN).string(),
-                gettingLow = (lowVoltage + BATTERY_AMBER_MARGIN).string(),
-                low = lowVoltage.string(),
-                isVisible = isVisible,
-            )
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = "Most sensors report the voltage of their battery. A fresh coin cell reads around 3 V and stays close to it for most of its life, then drops quickly near the end.\n\n" +
-                    "Once a sensor's voltage is within 0.1 V of the low voltage alarm, it is shown in orange below that tyre's readings, so you can plan a battery change. At or below the alarm, it blinks red, and you get a notification once it stays there for 10 minutes: the voltage dips in the cold and while the sensor sends.\n\n" +
-                    "The alarm is meant for 20°C. A battery's voltage drops in the cold without it being any emptier, so below 20°C the alarm comes down by 0.05 V every 10°C. It never comes down more than 0.1 V: that close to the end, the cold can make the sensor stop sending.",
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        }
+        BatteryLevelSamples(
+            normal = (lowVoltage + BATTERY_AMBER_MARGIN + BATTERY_AMBER_MARGIN).string(),
+            gettingLow = (lowVoltage + BATTERY_AMBER_MARGIN).string(),
+            low = lowVoltage.string(),
+            isVisible = isVisible,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
+        )
         SettingsSectionHeader("Voltage alarm")
         var editing by rememberSaveable { mutableStateOf(false) }
         SettingsGroup {
@@ -103,6 +96,11 @@ private fun VehicleBatterySettings(
                 modifier = Modifier.testTag(VehicleBatterySettingsTags.lowVoltage),
             )
         }
+        Text(
+            text = "If the sensor reports battery voltage, you can set when to report it as low. Within 0.1 V of the setting, it's shown in orange. After 10 minutes of consistently low readings it will raise an alert. The app will use a slightly reduced value when temperatures are low, to account for the voltage drop.",
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
+        )
         if (editing) NumberDialog(
             title = "Low voltage alarm",
             value = lowVoltage.volts,
@@ -116,20 +114,15 @@ private fun VehicleBatterySettings(
         )
     }
     if (batteryKinds.showsPercent) {
-        Column(Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp)) {
-            BatteryLevelSamples(
-                normal = "${lowPercent + BATTERY_AMBER_MARGIN_PERCENT * 2}%",
-                gettingLow = "${lowPercent + BATTERY_AMBER_MARGIN_PERCENT}%",
-                low = "$lowPercent%",
-                isVisible = isVisible,
-            )
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = "Sysgration sensors report their battery as a percentage instead of a voltage.\n\n" +
-                    "Once it is within $BATTERY_AMBER_MARGIN_PERCENT points of the low battery alarm, it is shown in orange below that tyre's readings. At or below the alarm, it blinks red, and you get a notification once it stays there for 10 minutes.",
-                style = MaterialTheme.typography.bodyLarge,
-            )
-        }
+        // Both kinds of sensors on the vehicle, the voltage part above
+        if (batteryKinds.showsVoltage) HorizontalDivider(Modifier.padding(top = 24.dp))
+        BatteryLevelSamples(
+            normal = "${lowPercent + BATTERY_AMBER_MARGIN_PERCENT * 2}%",
+            gettingLow = "${lowPercent + BATTERY_AMBER_MARGIN_PERCENT}%",
+            low = "$lowPercent%",
+            isVisible = isVisible,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
+        )
         SettingsSectionHeader("Percentage alarm")
         var editing by rememberSaveable { mutableStateOf(false) }
         SettingsGroup {
@@ -140,6 +133,12 @@ private fun VehicleBatterySettings(
                 modifier = Modifier.testTag(VehicleBatterySettingsTags.lowPercent),
             )
         }
+        Text(
+            text = "Sysgration sensors report their battery state as a percentage rather than a voltage.\n\n" +
+                "At or below the setting, it will blink red. After 10 minutes of consistently low readings it will raise an alarm.",
+            style = MaterialTheme.typography.bodyLarge,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
+        )
         if (editing) NumberDialog(
             title = "Low battery alarm",
             value = lowPercent.toFloat(),

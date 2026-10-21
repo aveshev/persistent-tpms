@@ -367,8 +367,14 @@ internal fun VehicleHome(
                     }
                     composable("${Path.TimeSinceUpdate}") {
                         TimeSinceUpdateSettings(
+                            openSensorReadingsUpdateDetails = {
+                                navController.navigate("${Path.SensorReadingsUpdateDetails}")
+                            },
                             modifier = modifier
                         )
+                    }
+                    composable("${Path.SensorReadingsUpdateDetails}") {
+                        SensorReadingsUpdateDetailsSettings(modifier = modifier)
                     }
                     composable("${Path.MagnifierDuration}") {
                         MagnifierDurationSettings(
@@ -574,6 +580,7 @@ private fun TopAppBar(
                 is Path.PressureLoss -> Text(text = "Pressure loss")
                 is Path.AppSettings -> Text(text = "App settings")
                 is Path.TimeSinceUpdate -> Text(text = "Time since last update")
+                is Path.SensorReadingsUpdateDetails -> Text(text = "Sensor readings update details")
                 is Path.MagnifierDuration -> Text(text = "Tap to magnify")
                 is Path.DimDisplayDelay -> Text(text = "Dim when idle")
                 is Path.TextSize -> Text(text = "Sensor readings text size")
@@ -605,6 +612,7 @@ private fun TopAppBar(
                 is Path.PressureLoss,
                 is Path.AppSettings,
                 is Path.TimeSinceUpdate,
+                is Path.SensorReadingsUpdateDetails,
                 is Path.MagnifierDuration,
                 is Path.DimDisplayDelay,
                 is Path.TextSize,
@@ -644,6 +652,7 @@ private fun TopAppBar(
                 is Path.PressureLoss,
                 is Path.AppSettings,
                 is Path.TimeSinceUpdate,
+                is Path.SensorReadingsUpdateDetails,
                 is Path.MagnifierDuration,
                 is Path.DimDisplayDelay,
                 is Path.TextSize,

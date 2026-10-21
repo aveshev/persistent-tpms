@@ -43,6 +43,10 @@ internal sealed interface Path {
         override fun toString(): String = "app_settings/time_since_last_update"
     }
 
+    data object SensorReadingsUpdateDetails : Path {
+        override fun toString(): String = "app_settings/time_since_last_update/sensor_readings_update_details"
+    }
+
     data object MagnifierDuration : Path {
         override fun toString(): String = "app_settings/magnifier"
     }
@@ -144,6 +148,7 @@ internal sealed interface Path {
             get() = listOf(
                 AppSettings,
                 TimeSinceUpdate,
+                SensorReadingsUpdateDetails,
                 MagnifierDuration,
                 DimDisplayDelay,
                 TextSize,
