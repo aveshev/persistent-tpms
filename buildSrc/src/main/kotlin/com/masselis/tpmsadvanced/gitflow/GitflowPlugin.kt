@@ -17,6 +17,7 @@ import com.masselis.tpmsadvanced.gitflow.task.TagCommit
 import com.masselis.tpmsadvanced.gitflow.valuesource.CommitCountBetweenBranch
 import com.masselis.tpmsadvanced.gitflow.valuesource.CurrentBranch
 import com.masselis.tpmsadvanced.gitflow.valuesource.VersionCode
+import com.masselis.tpmsadvanced.gitflow.version.VersionName
 import org.gradle.api.GradleException
 import org.gradle.api.Plugin
 import org.gradle.api.Project
@@ -30,11 +31,13 @@ import org.gradle.kotlin.dsl.register
 public class GitflowPlugin : Plugin<Project> {
     override fun apply(project: Project): Unit = with(project) {
         val versionCode = objects.property<Int>()
+        val versionName = objects.property<String>()
         val currentReleaseTag = objects.property<SemanticVersion>()
         val lastReleaseCommitSha = objects.property<String>()
         val ext = extensions.create<GitflowExtension>(
             "gitflow",
             versionCode,
+            versionName,
             currentReleaseTag,
             lastReleaseCommitSha,
         )
@@ -70,6 +73,22 @@ public class GitflowPlugin : Plugin<Project> {
             releaseBranch = ext.releaseBranch
             mainBranch = ext.mainBranch
             this.releaseBuildCount = releaseBuildCount
+        })
+        // Only providers are captured, never `ext` or the project: the configuration cache would
+        // serialize the whole extension, and its lastReleaseCommitSha throws off a releasable branch
+        val appVersion = ext.version
+        val releaseBranchName = ext.releaseBranch
+        val mainBranchName = ext.mainBranch
+        val headSha = providers.exec { commandLine("git", "rev-parse", "HEAD") }.standardOutput.asText
+        versionName.set(currentBranchName.map { branch ->
+            VersionName.compute(
+                version = appVersion.get(),
+                currentBranch = branch,
+                releaseBranch = releaseBranchName.get(),
+                mainBranch = mainBranchName.get(),
+                releaseBuildCount = releaseBuildCount,
+                headSha = headSha,
+            )
         })
         currentReleaseTag.set(versionCode.flatMap { vc ->
             if (currentBranchName.get() == ext.releaseBranch.get())

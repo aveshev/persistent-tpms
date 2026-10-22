@@ -14,7 +14,7 @@ public class AndroidAppPlugin : Plugin<Project> {
             onVariants { variant ->
                 variant.outputs.forEach { output ->
                     with(rootProject.the<GitflowExtension>()) {
-                        output.versionName = version.map { it.toString() }
+                        output.versionName = versionName
                         output.versionCode = versionCode
                     }
                 }
