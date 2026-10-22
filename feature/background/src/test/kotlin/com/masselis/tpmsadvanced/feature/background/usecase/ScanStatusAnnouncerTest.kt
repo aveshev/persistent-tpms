@@ -25,7 +25,7 @@ internal class ScanStatusAnnouncerTest {
     // The speaking side stays off: no text-to-speech in unit tests
     private fun TestScope.test() = ScanStatusAnnouncer(
         mockk<AppPreferences> {
-            every { debugOptions } returns MutableStateFlow(false)
+            every { debugOptionsInUse } returns MutableStateFlow(false)
             every { announceScanStatus } returns MutableStateFlow(false)
         },
         mockk<ScanPolicyUseCase> {

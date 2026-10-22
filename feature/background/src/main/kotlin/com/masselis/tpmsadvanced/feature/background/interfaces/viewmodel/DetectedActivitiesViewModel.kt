@@ -24,7 +24,7 @@ internal class DetectedActivitiesViewModel(
 
     /** null while nothing is to be shown, empty until the first sample arrives */
     @OptIn(ExperimentalCoroutinesApi::class)
-    val topActivities: Flow<List<Activity>?> = appPreferences.debugOptions
+    val topActivities: Flow<List<Activity>?> = appPreferences.debugOptionsInUse
         // Only shown while the switch of the debug options is on
         .combine(showDetectedActivities, Boolean::and)
         .distinctUntilChanged()

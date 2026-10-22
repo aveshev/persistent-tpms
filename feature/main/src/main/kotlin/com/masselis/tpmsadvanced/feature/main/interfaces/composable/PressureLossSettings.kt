@@ -24,7 +24,7 @@ import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.PressureLos
 import com.masselis.tpmsadvanced.feature.main.usecase.VehiclePressureLossUseCase
 
 /**
- * The page of the experimental pressure loss warning, opened from [DeveloperOptionsSettings]. It
+ * The page of the experimental pressure loss warning, opened from [MiscSettings]. It
  * applies to every vehicle, each against its own low pressure alert.
  */
 @Composable

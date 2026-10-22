@@ -92,7 +92,7 @@ internal class ScanStatusAnnouncer(
 
     init {
         // Only while the switch of the debug options is on, as the other ones
-        combine(appPreferences.debugOptions, appPreferences.announceScanStatus, Boolean::and)
+        combine(appPreferences.debugOptionsInUse, appPreferences.announceScanStatus, Boolean::and)
             .distinctUntilChanged()
             .flatMapLatest { enabled ->
                 if (enabled) textToSpeech().flatMapLatest { tts ->

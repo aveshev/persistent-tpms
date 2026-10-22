@@ -40,7 +40,7 @@ internal class PhoneIdleUseCaseTest {
 
     context(scope: TestScope)
     private fun test(tier: AppTier = PRO) = PhoneIdleUseCase(
-        mockk<AppPreferences> { every { phoneIdleMechanism } returns mechanism },
+        mockk<AppPreferences> { every { phoneIdleMechanismInUse } returns mechanism },
         mockk<DeviceIdleModeUseCase> { every { isDeviceIdle } returns deviceIdle },
         mockk<ScreenStateUseCase> { every { isInUse } returns inUse },
         mockk<ChargingStateUseCase> { every { state } returns charging },

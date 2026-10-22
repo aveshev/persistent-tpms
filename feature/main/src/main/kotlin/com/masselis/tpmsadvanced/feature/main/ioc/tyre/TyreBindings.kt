@@ -109,7 +109,7 @@ public interface TyreBindings {
     ): ListenTyreSmartDutyUseCase = ListenTyreSmartDutyUseCase(
         scanner,
         // A debug option: turning Debug off turns it off too
-        combine(appPreferences.debugOptions, appPreferences.balancedAfterFirstReading, Boolean::and),
+        combine(appPreferences.debugOptionsInUse, appPreferences.balancedAfterFirstReading, Boolean::and),
     )
 
     // Single, it keeps the sensor it detects for TyreActionsViewModel

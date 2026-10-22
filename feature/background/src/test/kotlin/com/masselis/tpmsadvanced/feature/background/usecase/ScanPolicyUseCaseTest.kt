@@ -70,7 +70,7 @@ internal class ScanPolicyUseCaseTest {
             every { activateOnBeacon } returns this@ScanPolicyUseCaseTest.activateOnBeacon
             every { beacons } returns this@ScanPolicyUseCaseTest.beacons
             every { beaconOverridesSuspend } returns this@ScanPolicyUseCaseTest.beaconOverridesSuspend
-            every { beaconScanMode } returns MutableStateFlow(null)
+            every { beaconScanModeInUse } returns MutableStateFlow(null)
         },
         mockk<ScanSuspensionUseCase> {
             every { this@mockk.suspensionReasons } returns this@ScanPolicyUseCaseTest.suspensionReasons

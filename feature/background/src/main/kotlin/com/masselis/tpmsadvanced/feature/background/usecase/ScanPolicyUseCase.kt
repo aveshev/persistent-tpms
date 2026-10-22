@@ -103,7 +103,7 @@ internal class ScanPolicyUseCase(
             .map { beacons -> beacons.map { it.copy(label = null) } }
             .distinctUntilChanged(),
         appPreferences
-            .beaconScanMode
+            .beaconScanModeInUse
             .map { it.asBeaconScanMode() }
             .distinctUntilChanged(),
         ::Pair,

@@ -135,7 +135,7 @@ public interface Bindings {
         scanner,
         // The paired devices are only unknown while Bluetooth is off
         bluetoothDevicesUseCase.paired.map { it != null },
-        appPreferences.beaconMinRssi,
+        appPreferences.beaconMinRssiInUse,
     )
 
     @Provides
@@ -146,7 +146,7 @@ public interface Bindings {
     ): BeaconDiscoveryUseCase = BeaconDiscoveryUseCase(
         scanner,
         bluetoothDevicesUseCase.paired.map { it != null },
-        appPreferences.beaconMinRssi,
+        appPreferences.beaconMinRssiInUse,
     )
 
     @Provides

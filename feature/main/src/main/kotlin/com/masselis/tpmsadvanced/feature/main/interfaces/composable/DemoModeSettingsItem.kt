@@ -11,7 +11,7 @@ import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.DemoModeSwitc
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.DemoModeSwitchViewModel.State
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.DemoModeSwitchViewModel
 
-/** Switches between made-up sensors and the real ones, see [DeveloperOptionsSettings] */
+/** Switches between made-up sensors and the real ones, see [MiscSettings] */
 @Composable
 internal fun DemoModeSettingsItem(
     modifier: Modifier = Modifier,
