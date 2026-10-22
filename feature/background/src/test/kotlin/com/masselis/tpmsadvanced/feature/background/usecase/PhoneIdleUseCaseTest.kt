@@ -2,6 +2,9 @@ package com.masselis.tpmsadvanced.feature.background.usecase
 
 import app.cash.turbine.test
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.LITE
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.PRO
 import com.masselis.tpmsadvanced.feature.background.usecase.ActivityRecognitionUseCase.Activity
 import com.masselis.tpmsadvanced.feature.background.usecase.ActivityRecognitionUseCase.Activity.Type.ON_FOOT
 import com.masselis.tpmsadvanced.feature.background.usecase.ActivityRecognitionUseCase.Activity.Type.STILL
@@ -36,7 +39,7 @@ internal class PhoneIdleUseCaseTest {
     private var activityPermitted = true
 
     context(scope: TestScope)
-    private fun test() = PhoneIdleUseCase(
+    private fun test(tier: AppTier = PRO) = PhoneIdleUseCase(
         mockk<AppPreferences> { every { phoneIdleMechanism } returns mechanism },
         mockk<DeviceIdleModeUseCase> { every { isDeviceIdle } returns deviceIdle },
         mockk<ScreenStateUseCase> { every { isInUse } returns inUse },
@@ -48,6 +51,7 @@ internal class PhoneIdleUseCaseTest {
         },
         scope.backgroundScope,
         { scope.testScheduler.currentTime.milliseconds },
+        tier,
     )
 
     @Before
@@ -181,6 +185,22 @@ internal class PhoneIdleUseCaseTest {
             advanceTimeBy(10.minutes)
             expectNoEvents()
         }
+    }
+
+    @Test
+    fun `Lite falls back on the default mechanism for standing still, imported from Pro`() = runTest {
+        mechanism.value = STANDING_STILL.name
+        test(LITE).isIdle.test {
+            assertEquals(false, awaitItem())
+            assertEquals(true, awaitItem())
+            assertEquals(5.minutes, currentTime.milliseconds)
+        }
+    }
+
+    @Test
+    fun `Lite does not offer standing still`() {
+        assertEquals(listOf(DEEP_DOZE, NO_SIGNIFICANT_MOTION), PhoneIdleUseCase.mechanisms(LITE))
+        assertEquals(listOf(DEEP_DOZE, NO_SIGNIFICANT_MOTION, STANDING_STILL), PhoneIdleUseCase.mechanisms(PRO))
     }
 
     @Test

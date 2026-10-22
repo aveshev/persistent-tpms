@@ -35,12 +35,14 @@ public object AppSnapshot {
 
     /**
      * [AppPreferences] keys Lite has no use for, not imported there: the devices Pro suspends on
-     * would stay out of reach in Lite's device picker, and the beacon override has no option there
+     * would stay out of reach in Lite's device picker, the beacon override has no option there, and
+     * Lite can't detect activities: it doesn't declare the permission
      */
     private val proOnlyPreferences = setOf(
         "SUSPEND_SCANNING_ON_BLUETOOTH",
         "SUSPEND_BLUETOOTH_DEVICES",
         "BEACON_OVERRIDES_SUSPEND",
+        "SHOW_DETECTED_ACTIVITIES",
     )
 
     private const val DATABASE = "database"

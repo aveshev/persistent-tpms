@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,7 +50,7 @@ internal class PermissionJourney(
  * with [disabledInfo] tells the user that it was, unless [isSettingsOnScreen]: the user then sees
  * the toggle turn off.
  */
-@Suppress("LongParameterList", "CyclomaticComplexMethod")
+@Suppress("LongParameterList", "CyclomaticComplexMethod", "LongMethod")
 @Composable
 internal fun rememberPermissionJourney(
     permissions: List<String>,
@@ -124,6 +125,20 @@ internal fun rememberPermissionJourney(
         DisabledInfoAlert(text = disabledInfo, onDismissRequest = { showDisabledInfo = false })
     }
 
+    // Prompts once the other journeys are done, and holds them back until its info dialog is read
+    val turn = rememberPromptTurn(
+        onTurn = {
+            when {
+                // Granted while waiting, by another journey asking for the same permission
+                isGranted() -> granted()
+                systemPopupFirst -> permissionLauncher.launch(permissions.toTypedArray())
+                else -> showRationale = true
+            }
+        }
+    )
+    val holdsTurn = inProgress || showDisabledInfo
+    LaunchedEffect(holdsTurn) { if (holdsTurn.not()) turn.done() }
+
     return PermissionJourney(
         onRequest = { onGranted ->
             pendingOnGranted = onGranted
@@ -131,8 +146,7 @@ internal fun rememberPermissionJourney(
                 granted()
             } else {
                 inProgress = true
-                if (systemPopupFirst) permissionLauncher.launch(permissions.toTypedArray())
-                else showRationale = true
+                turn.await()
             }
         },
         // Until the user has read the info dialog too: the next journey must not open its own

@@ -52,6 +52,11 @@ rootProject.file("secrets/publisher-service-account.json").takeIf { it.exists() 
     }
 }
 
+// Lite's permissions: see its manifest
+if (providers.gradleProperty("app.tier").orNull == "lite") {
+    androidComponents.onVariants { it.sources.manifests.addStaticManifestFile("src/lite/AndroidManifest.xml") }
+}
+
 android {
     defaultConfig {
         namespace = "com.masselis.tpmsadvanced"
