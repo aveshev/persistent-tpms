@@ -59,6 +59,7 @@ internal fun decide(
     }
 }
 
+@Suppress("CyclomaticComplexMethod", "MaxLineLength")
 internal fun ScanDecision.explanation(tier: AppTier = AppTier.current): String = when (this) {
     is ScanDecision.Active -> when {
         // Nothing to explain besides the user's own choice, the "due to" wording would sound odd
@@ -88,7 +89,12 @@ internal fun ScanDecision.explanation(tier: AppTier = AppTier.current): String =
             }
         }"
 
-    ScanDecision.Idle -> "Background scanning is idle: no activate condition is currently fulfilled"
+    // Lite's only conditions, told as such
+    ScanDecision.Idle -> if (tier == LITE) {
+        "Background scanning is idle: none of the selected Bluetooth devices is connected and none of the added beacons is nearby"
+    } else {
+        "Background scanning is idle: no activate condition is currently fulfilled"
+    }
 }
 
 /** What the user reads when tapping the bell. */
