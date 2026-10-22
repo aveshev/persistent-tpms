@@ -52,6 +52,30 @@ rootProject.file("secrets/publisher-service-account.json").takeIf { it.exists() 
     }
 }
 
+// The release notes of a Firebase App Distribution upload (`--release-notes-file`): the version, the
+// commit, and the database version, which tells whether the build can open the data already on a
+// phone (a build below it crashes with "Can't downgrade database")
+tasks.register<WriteFirebaseReleaseNotesTask>("firebaseReleaseNotes") {
+    val gitflow = rootProject.the<GitflowExtension>()
+    val migrations = rootProject.file("data/vehicle/src/main/sqldelight/migrations")
+    notes = providers
+        .exec { commandLine("git", "rev-parse", "--abbrev-ref", "HEAD") }
+        .standardOutput
+        .asText
+        .zip(providers.exec { commandLine("git", "rev-parse", "--short=7", "HEAD") }.standardOutput.asText) { branch, sha ->
+            "${branch.trim()} @ ${sha.trim()}"
+        }
+        .zip(gitflow.versionName.zip(gitflow.versionCode) { name, code -> "$name ($code)" }) { commit, version ->
+            migrations
+                .listFiles { file -> file.extension == "sqm" }
+                .orEmpty()
+                .maxOfOrNull { it.nameWithoutExtension.toInt() }
+                .let { (it ?: 0) + 1 }
+                .let { "$version · $commit · database v$it" }
+        }
+    releaseNotesFile = layout.buildDirectory.file("firebase/release-notes.txt")
+}
+
 // Lite's permissions: see its manifest
 if (providers.gradleProperty("app.tier").orNull == "lite") {
     androidComponents.onVariants { it.sources.manifests.addStaticManifestFile("src/lite/AndroidManifest.xml") }

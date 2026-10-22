@@ -106,6 +106,13 @@ Reusable Gradle config lives in `buildSrc/src/main/kotlin/` as convention plugin
 ### Versioning
 A custom `GitflowPlugin` (git-cli backed, no JGit) manages semantic versioning automatically from the git-flow branch structure and validates the branch model (release must fork from `develop`, hotfix from `main`, no duplicate tags/branches, no foreign commits). Releases are cut via `./gradlew createRelease -Pgitflow.bump=major|minor|patch` on `develop` (`./gradlew createHotfix` from `main`, always patch), followed by `./gradlew pushGitflowBranch` — or via the `Gitflow` GitHub Actions `workflow_dispatch`, which runs the same tasks. A push to `main` also auto-opens a merge-commit back-merge PR into `develop`. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full flow.
 
+The fork has its own version line, unrelated to upstream's: `app` in `gradle/libs.versions.toml`, starting at `0.9.0` until the first public release (`1.0.0`). Each build's name and code come from its branch (`VersionName`, `VersionCode`):
+- `main`: `0.9.0`, code `900999`
+- `release/0.9.0`: `0.9.0-beta.N`, code `900000 + N`, where N counts the branch's commits. This is what testers get.
+- anything else: `0.9.0-dev+<sha>`, code `900000`. Every such build shares the code, so it installs over another dev build, but not over a beta.
+
+The name is shown in the app settings. `./gradlew :app:phone:firebaseReleaseNotes` writes `app/phone/build/firebase/release-notes.txt` (version, branch, commit, database version) for `firebase appdistribution:distribute ... --release-notes-file`. Android refuses an install below the installed `versionCode`, which also keeps a tester's database from being opened by an older build.
+
 ### Branching
 New feature/fix work always branches from `develop`, never `main` — before creating a new branch, run `git checkout develop && git pull` first. `main` only holds released code and is the source for hotfix branches (see Versioning above).
 

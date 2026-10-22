@@ -7,6 +7,8 @@ import org.gradle.api.provider.Provider
 
 public abstract class GitflowExtension internal constructor(
     public val versionCode: Provider<Int>,
+    /** The `versionName` that goes with [versionCode], see `VersionName`. */
+    public val versionName: Provider<String>,
     public val currentReleaseTag: Provider<SemanticVersion>,
     public val lastReleaseCommitSha: Provider<String>,
 ) {
