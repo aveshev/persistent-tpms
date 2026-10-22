@@ -39,6 +39,8 @@ import com.masselis.tpmsadvanced.core.ui.SwitchSettingsItem
 import com.masselis.tpmsadvanced.core.ui.TextSettingsItem
 import com.masselis.tpmsadvanced.core.ui.rememberBluetoothState
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.Beacon
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.LITE
 import com.masselis.tpmsadvanced.feature.background.R
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.SettingsOnScreenEffect
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.BeaconsViewModel
@@ -58,6 +60,7 @@ internal fun Beacons(
     openBeaconScan: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: BeaconsViewModel = viewModel { BeaconsViewModel() },
+    tier: AppTier = AppTier.current,
 ) {
     SettingsOnScreenEffect()
     val beacons by viewModel.beacons.collectAsState()
@@ -82,7 +85,8 @@ internal fun Beacons(
         removed = removed.toSet(),
         nearby = nearby.takeIf { bluetoothState.isEnabled },
         wasNearby = wasNearby,
-        overridesSuspend = overridesSuspend,
+        // Lite only suspends while the phone is idle, which a beacon never overrides
+        overridesSuspend = overridesSuspend.takeIf { tier != LITE },
         onOverridesSuspend = { viewModel.beaconOverridesSuspend.value = it },
         onRename = { renaming = it },
         onRemove = { removed = removed + it },
@@ -118,7 +122,8 @@ private fun Beacons(
     nearby: Map<String, Int>?,
     // Still counted as nearby by the background scan, not heard by this page's
     wasNearby: Set<String>,
-    overridesSuspend: Boolean,
+    // Null without the option, in Lite
+    overridesSuspend: Boolean?,
     onOverridesSuspend: (Boolean) -> Unit,
     onRename: (String) -> Unit,
     onRemove: (String) -> Unit,
@@ -193,6 +198,7 @@ private fun Beacons(
             modifier = Modifier.testTag(BeaconsTags.addBeacon),
         )
     }
+    if (overridesSuspend == null) return@Column
     SettingsSectionHeader("Options")
     SettingsGroup {
         SwitchSettingsItem(

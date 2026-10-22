@@ -16,6 +16,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -105,6 +106,8 @@ internal fun rememberMonitoringPermissions(
     // requiring the user to tap the button again after every fix.
     var flowInProgress by remember { mutableStateOf(false) }
     var remediationWasNeeded by remember { mutableStateOf(false) }
+    // Requested, but other journeys are still prompting: this one hasn't shown anything yet
+    var waitingForTurn by remember { mutableStateOf(false) }
     // The battery exemption can't be observed, it is read again every time the app is resumed
     var resumeCount by remember { mutableIntStateOf(0) }
 
@@ -159,17 +162,27 @@ internal fun rememberMonitoringPermissions(
         }
     }
 
+    // Prompts once the other journeys are done, and holds the others back until this one is
+    val turn = rememberPromptTurn(
+        onTurn = {
+            waitingForTurn = false
+            proceedEnablingFlow()
+        }
+    )
+    LaunchedEffect(flowInProgress) { if (flowInProgress.not()) turn.done() }
+
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == ON_RESUME) resumeCount++
             // Resuming means the user came back from Settings (or from the system permission
             // dialog); re-check where the flow stands, unless one of our own alerts is already
-            // waiting for an explicit answer.
-            val noAlertShowing = showNotificationPermissionAlert.not() &&
+            // waiting for an explicit answer, or the journey hasn't started prompting yet.
+            val readyToCheck = showNotificationPermissionAlert.not() &&
                     showBatteryOptimizationAlert.not() &&
-                    showReadyToMonitorAlert.not()
-            if (event == ON_RESUME && flowInProgress && noAlertShowing) {
+                    showReadyToMonitorAlert.not() &&
+                    waitingForTurn.not()
+            if (event == ON_RESUME && flowInProgress && readyToCheck) {
                 proceedEnablingFlow()
             }
         }
@@ -224,7 +237,16 @@ internal fun rememberMonitoringPermissions(
         onRequest = {
             flowInProgress = true
             remediationWasNeeded = false
-            proceedEnablingFlow()
+            // Nothing to prompt for: no need to wait for the other journeys. Read live, the status
+            // is only refreshed when the app is resumed.
+            if (permissionState.allPermissionsGranted && areNotificationsBlocked().not() &&
+                isBatteryOptimizationMissing().not()
+            ) {
+                proceedEnablingFlow()
+            } else {
+                waitingForTurn = true
+                turn.await()
+            }
         },
         inProgress = { flowInProgress },
     )

@@ -3,6 +3,7 @@ package com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel
 import app.cash.turbine.test
 import com.masselis.tpmsadvanced.core.test.MainDispatcherRule
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier
 import com.masselis.tpmsadvanced.data.app.interfaces.OtherApp
 import com.masselis.tpmsadvanced.feature.background.interfaces.MonitoringController
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningViewModel.OtherAppCheck.Clear
@@ -45,7 +46,7 @@ internal class PersistentScanningViewModelTest {
     private var otherAppStatus: OtherApp.Status? = null
     private lateinit var otherApp: OtherApp
 
-    private fun test() = PersistentScanningViewModel(
+    private fun test(tier: AppTier = AppTier.PRO) = PersistentScanningViewModel(
         mockk<AppPreferences> {
             every { persistentScanning } returns this@PersistentScanningViewModelTest.persistentScanning
             every { persistentScanningSetUp } returns this@PersistentScanningViewModelTest.persistentScanningSetUp
@@ -58,6 +59,7 @@ internal class PersistentScanningViewModelTest {
         mockk<UnexpectedStopUseCase> { every { consume() } returns unexpectedStop },
         controller,
         otherApp,
+        tier,
     )
 
     @Before
@@ -132,6 +134,12 @@ internal class PersistentScanningViewModelTest {
     fun `the wifi exception is in use when every setting leading to it is on`() =
         runTest {
             test().wifiExceptionActive.test { assertEquals(true, awaitItem()) }
+        }
+
+    @Test
+    fun `Lite never uses the wifi exception, even with the settings imported from Pro`() =
+        runTest {
+            test(AppTier.LITE).wifiExceptionActive.test { assertEquals(false, awaitItem()) }
         }
 
     @Test

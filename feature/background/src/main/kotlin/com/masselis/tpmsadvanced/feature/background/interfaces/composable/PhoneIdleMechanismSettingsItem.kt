@@ -66,7 +66,7 @@ internal fun PhoneIdleMechanismSettingsItem(
             modifier = Modifier.testTag(PhoneIdleMechanismSettingsItemTags.mechanism),
         )
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-            Mechanism.entries.forEach { option ->
+            PhoneIdleUseCase.mechanisms().forEach { option ->
                 DropdownMenuItem(
                     text = { Text(option.label) },
                     onClick = {

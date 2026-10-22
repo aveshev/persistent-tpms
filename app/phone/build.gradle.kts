@@ -76,6 +76,11 @@ tasks.register<WriteFirebaseReleaseNotesTask>("firebaseReleaseNotes") {
     releaseNotesFile = layout.buildDirectory.file("firebase/release-notes.txt")
 }
 
+// Lite's permissions: see its manifest
+if (providers.gradleProperty("app.tier").orNull == "lite") {
+    androidComponents.onVariants { it.sources.manifests.addStaticManifestFile("src/lite/AndroidManifest.xml") }
+}
+
 android {
     defaultConfig {
         namespace = "com.masselis.tpmsadvanced"

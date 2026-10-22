@@ -88,7 +88,8 @@ internal class PersistentScanningViewModel(
         appPreferences.suspendScanningOnWifi,
         appPreferences.wifiExceptionEnabled,
     ) { persistent, suspendConditions, suspendOnWifi, exception ->
-        persistent && suspendConditions && suspendOnWifi && exception
+        // Lite has no WiFi suspend condition, whatever was imported from Pro
+        tier != LITE && persistent && suspendConditions && suspendOnWifi && exception
     }
 
     fun requiredWifiPermissions(): List<String> = wifiConnectionUseCase.requiredPermissions()

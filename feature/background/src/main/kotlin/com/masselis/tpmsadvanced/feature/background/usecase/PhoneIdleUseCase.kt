@@ -3,6 +3,8 @@ package com.masselis.tpmsadvanced.feature.background.usecase
 import android.os.SystemClock.elapsedRealtime
 import co.touchlab.kermit.Logger
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.LITE
 import com.masselis.tpmsadvanced.feature.background.usecase.ActivityRecognitionUseCase.Activity.Type.STILL
 import com.masselis.tpmsadvanced.feature.background.usecase.PhoneIdleUseCase.Mechanism.DEEP_DOZE
 import com.masselis.tpmsadvanced.feature.background.usecase.PhoneIdleUseCase.Mechanism.NO_SIGNIFICANT_MOTION
@@ -47,6 +49,7 @@ internal class PhoneIdleUseCase(
     scope: CoroutineScope,
     // Keeps counting while the phone sleeps, unlike the clock of delay()
     private val now: () -> Duration = { elapsedRealtime().milliseconds },
+    private val tier: AppTier = AppTier.current,
 ) {
     private val logger = Logger.withTag("PhoneIdle")
 
@@ -84,12 +87,13 @@ internal class PhoneIdleUseCase(
     private fun selectedIsIdle(): Flow<Boolean> = combine(
         appPreferences
             .phoneIdleMechanism
-            .map { it.asPhoneIdleMechanism() }
+            .map { it.asPhoneIdleMechanism(tier) }
             .distinctUntilChanged()
             .onEach { logger.i { "Selected: $it" } },
         deviceIdleModeUseCase.isDeviceIdle.logged(DEEP_DOZE),
         noSignificantMotion().logged(NO_SIGNIFICANT_MOTION),
-        standingStill().logged(STANDING_STILL),
+        // Lite doesn't declare the physical activity permission
+        if (tier == LITE) flowOf(false) else standingStill().logged(STANDING_STILL),
     ) { selected, doze, noMotion, still ->
         when (selected) {
             DEEP_DOZE -> doze
@@ -157,7 +161,7 @@ internal class PhoneIdleUseCase(
                     appPreferences
                         .phoneIdleMechanism
                         .value
-                        .asPhoneIdleMechanism()
+                        .asPhoneIdleMechanism(tier)
                         .takeIf { it != mechanism }
                         ?.let { " (not selected, $it decides: would ${if (idle) "suspend" else "resume"})" }
                         .orEmpty()
@@ -174,8 +178,15 @@ internal class PhoneIdleUseCase(
         // was right on every ride tried
         val DEFAULT_MECHANISM = NO_SIGNIFICANT_MOTION
 
-        /** The mechanism a stored name stands for, the default one for an unknown or missing name */
-        fun String?.asPhoneIdleMechanism(): Mechanism =
-            Mechanism.entries.firstOrNull { it.name == this } ?: DEFAULT_MECHANISM
+        /** The mechanisms [tier] offers: Lite can't detect activities, [STANDING_STILL] needs them */
+        fun mechanisms(tier: AppTier = AppTier.current): List<Mechanism> =
+            Mechanism.entries.filter { tier != LITE || it != STANDING_STILL }
+
+        /**
+         * The mechanism a stored name stands for, the default one for an unknown or missing name, or
+         * one [tier] doesn't offer (imported from Pro)
+         */
+        fun String?.asPhoneIdleMechanism(tier: AppTier = AppTier.current): Mechanism =
+            mechanisms(tier).firstOrNull { it.name == this } ?: DEFAULT_MECHANISM
     }
 }
