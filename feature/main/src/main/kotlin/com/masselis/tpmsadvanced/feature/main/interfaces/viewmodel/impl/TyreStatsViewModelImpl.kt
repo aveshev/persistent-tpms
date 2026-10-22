@@ -15,12 +15,20 @@ internal class TyreStatsViewModelImpl(
 ) : ViewModel(), TyreStatsViewModel {
     override val isLoading = stateFlow.isLoading
     // The debug options are only shown while their switch is on
-    override val showSensorId = appPreferences.debugOptions
+    override val showSensorId = appPreferences.debugOptionsInUse
         .combine(appPreferences.showSensorId, Boolean::and)
-        .stateIn(viewModelScope, Eagerly, appPreferences.debugOptions.value && appPreferences.showSensorId.value)
-    override val showSensorFlags = appPreferences.debugOptions
+        .stateIn(
+            viewModelScope,
+            Eagerly,
+            appPreferences.debugOptionsInUse.value && appPreferences.showSensorId.value,
+        )
+    override val showSensorFlags = appPreferences.debugOptionsInUse
         .combine(appPreferences.showSensorFlags, Boolean::and)
-        .stateIn(viewModelScope, Eagerly, appPreferences.debugOptions.value && appPreferences.showSensorFlags.value)
+        .stateIn(
+            viewModelScope,
+            Eagerly,
+            appPreferences.debugOptionsInUse.value && appPreferences.showSensorFlags.value,
+        )
     override val showTimeSinceUpdate = appPreferences.showTimeSinceUpdate
     override val showBatteryVoltage = appPreferences.showBatteryVoltage
 }

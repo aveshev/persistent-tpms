@@ -27,7 +27,7 @@ internal class DetectedActivitiesViewModelTest {
 
     private fun test() = DetectedActivitiesViewModel(
         mockk<AppPreferences> {
-            every { debugOptions } returns this@DetectedActivitiesViewModelTest.debugOptions
+            every { debugOptionsInUse } returns this@DetectedActivitiesViewModelTest.debugOptions
             every { showDetectedActivities } returns this@DetectedActivitiesViewModelTest.showDetectedActivities
         },
         mockk<ActivityRecognitionUseCase> {

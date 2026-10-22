@@ -86,7 +86,7 @@ internal class PhoneIdleUseCase(
 
     private fun selectedIsIdle(): Flow<Boolean> = combine(
         appPreferences
-            .phoneIdleMechanism
+            .phoneIdleMechanismInUse
             .map { it.asPhoneIdleMechanism(tier) }
             .distinctUntilChanged()
             .onEach { logger.i { "Selected: $it" } },
@@ -159,7 +159,7 @@ internal class PhoneIdleUseCase(
             logger.i {
                 "$mechanism: ${if (idle) "idle" else "not idle"}" +
                     appPreferences
-                        .phoneIdleMechanism
+                        .phoneIdleMechanismInUse
                         .value
                         .asPhoneIdleMechanism(tier)
                         .takeIf { it != mechanism }

@@ -26,7 +26,7 @@ import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.DebugSettin
 import kotlinx.coroutines.launch
 
 /**
- * The page opened from the "Debug" item of [DeveloperOptionsSettings]: what the sensors and the
+ * The page opened from the "Debug" item of [MiscSettings]: what the sensors and the
  * phone report, shown on the home screen, and how the tyres are scanned. [additionalItems] are
  * appended to the first group, for debug options owned by other features.
  */
@@ -90,7 +90,7 @@ private fun DebugSettings(
 ) = Column(modifier) {
     @Suppress("MaxLineLength")
     SettingsIntro(
-        "What the sensors and the phone report, to help investigate them. Turning Debug off in the app settings hides or turns off all of it, and keeps what is selected here."
+        "What the sensors and the phone report, to help investigate them. Turning Debug off in the app settings hides, turns off or puts back to its default all of it, and keeps what is selected here."
     )
     SettingsGroup(Modifier.padding(top = 24.dp)) {
         SwitchSettingsItem(

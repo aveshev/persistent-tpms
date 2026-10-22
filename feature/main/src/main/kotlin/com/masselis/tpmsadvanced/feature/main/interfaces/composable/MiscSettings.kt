@@ -16,16 +16,16 @@ import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.DebugSettin
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.PressureLossSettingsViewModel
 
 /**
- * The "Developer options" group of the app settings: the demo mode, the switch of the debug
- * options, whose page [openDebug] opens, and the experimental pressure loss warning, whose page
- * [openPressureLoss] opens.
+ * The "Misc" group of the app settings: the demo mode, the switch of the debug options, whose page
+ * [openDebug] opens, and the experimental pressure loss warning, whose page [openPressureLoss]
+ * opens. The debug options are only there for a developer, see [VersionSettingsItem].
  */
 @Composable
-public fun DeveloperOptionsSettings(
+public fun MiscSettings(
     openDebug: () -> Unit,
     openPressureLoss: () -> Unit,
     modifier: Modifier = Modifier,
-): Unit = DeveloperOptionsSettings(
+): Unit = MiscSettings(
     openDebug,
     openPressureLoss,
     modifier,
@@ -34,7 +34,7 @@ public fun DeveloperOptionsSettings(
 )
 
 @Composable
-internal fun DeveloperOptionsSettings(
+internal fun MiscSettings(
     openDebug: () -> Unit,
     openPressureLoss: () -> Unit,
     modifier: Modifier = Modifier,
@@ -42,6 +42,7 @@ internal fun DeveloperOptionsSettings(
     pressureLossViewModel: PressureLossSettingsViewModel = viewModel { PressureLossSettingsViewModel() },
 ) {
     val pressureLoss by pressureLossViewModel.enabled.collectAsState()
+    val developer by viewModel.developer.collectAsState()
     val debugOptions by viewModel.debugOptions.collectAsState()
     val sensorId by viewModel.showSensorId.collectAsState()
     val sensorFlags by viewModel.showSensorFlags.collectAsState()
@@ -58,7 +59,7 @@ internal fun DeveloperOptionsSettings(
     )
     SettingsGroup(modifier) {
         DemoModeSettingsItem()
-        SwitchNavigationSettingsItem(
+        if (developer) SwitchNavigationSettingsItem(
             headline = "Debug",
             // Also while off: what turning it on would show
             supporting = selected
@@ -76,7 +77,7 @@ internal fun DeveloperOptionsSettings(
                 if (enabled && selected.isEmpty()) openDebug()
             },
             onClick = openDebug,
-            modifier = Modifier.testTag(DeveloperOptionsSettingsTags.debug),
+            modifier = Modifier.testTag(MiscSettingsTags.debug),
         )
         SwitchNavigationSettingsItem(
             headline = "Pressure loss",
@@ -86,14 +87,14 @@ internal fun DeveloperOptionsSettings(
             onClick = openPressureLoss,
             // The page explains what counts as a loss, which matters before turning it on
             openableWhenOff = true,
-            modifier = Modifier.testTag(DeveloperOptionsSettingsTags.pressureLoss),
+            modifier = Modifier.testTag(MiscSettingsTags.pressureLoss),
         )
     }
 }
 
 @Preview
 @Composable
-internal fun DeveloperOptionsSettingsPreview() {
+internal fun MiscSettingsPreview() {
     SettingsGroup {
         DemoModeSettingsItem(demoMode = false, onDemoMode = {})
         SwitchNavigationSettingsItem(
@@ -115,7 +116,7 @@ internal fun DeveloperOptionsSettingsPreview() {
 }
 
 @Suppress("ConstPropertyName")
-internal object DeveloperOptionsSettingsTags {
-    const val debug = "DeveloperOptionsSettingsTags_debug"
-    const val pressureLoss = "DeveloperOptionsSettingsTags_pressureLoss"
+internal object MiscSettingsTags {
+    const val debug = "MiscSettingsTags_debug"
+    const val pressureLoss = "MiscSettingsTags_pressureLoss"
 }

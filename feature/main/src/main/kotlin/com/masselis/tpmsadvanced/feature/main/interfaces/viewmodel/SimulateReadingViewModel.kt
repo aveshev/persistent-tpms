@@ -32,7 +32,7 @@ internal class SimulateReadingViewModel(
 
     /** Shown along with the other debug options */
     val isAvailable: StateFlow<Boolean> = appPreferences
-        .debugOptions
+        .debugOptionsInUse
         .map { it && SimulatedReadings.IS_AVAILABLE }
         .stateIn(viewModelScope, WhileSubscribed(), false)
 

@@ -6,8 +6,10 @@ import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES.TIRAMISU
 import androidx.core.content.edit
 import com.masselis.tpmsadvanced.core.common.appContext
+import com.masselis.tpmsadvanced.core.common.combineState
 import com.masselis.tpmsadvanced.core.common.observableStateFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import org.json.JSONArray
 import org.json.JSONObject
 
@@ -26,14 +28,28 @@ public class AppPreferences internal constructor(
     }
 
     /**
+     * Whether the switch of the debug options is shown in the app settings, revealed and hidden
+     * again by tapping the version. While hidden, [debugOptions] keeps its value but doesn't apply.
+     */
+    public val developer: MutableStateFlow<Boolean> = observableStateFlow(
+        sharedPreferences.getBoolean("DEVELOPER", false)
+    ) { _, newValue ->
+        sharedPreferences.edit { putBoolean("DEVELOPER", newValue) }
+    }
+
+    /**
      * The switch of the debug options: while off, none of them is shown, whatever is selected.
-     * On by default when the sensor ID, the only one which predates it, was shown.
+     * On by default when the sensor ID, the only one which predates it, was shown. What applies is
+     * [debugOptionsInUse].
      */
     public val debugOptions: MutableStateFlow<Boolean> = observableStateFlow(
         sharedPreferences.getBoolean("DEBUG_OPTIONS", sharedPreferences.getBoolean("SHOW_SENSOR_ID", false))
     ) { _, newValue ->
         sharedPreferences.edit { putBoolean("DEBUG_OPTIONS", newValue) }
     }
+
+    /** [debugOptions], unless [developer] is off: what the debug options check before applying */
+    public val debugOptionsInUse: StateFlow<Boolean> = developer.combineState(debugOptions, Boolean::and)
 
     /** Shows the status byte of the last packet under each tyre, bit by bit */
     public val showSensorFlags: MutableStateFlow<Boolean> = observableStateFlow(
@@ -299,6 +315,10 @@ public class AppPreferences internal constructor(
         sharedPreferences.edit { putString("BEACON_SCAN_MODE", newValue) }
     }
 
+    /** [beaconScanMode] while [debugOptionsInUse], else null for the reader's default */
+    public val beaconScanModeInUse: StateFlow<String?> =
+        debugOptionsInUse.combineState(beaconScanMode) { inUse, mode -> mode.takeIf { inUse } }
+
     /**
      * The signal (dBm) from which one of the [beacons] counts as nearby, a debug option. Weaker
      * than that, it is likely someone else's or across the street.
@@ -308,6 +328,12 @@ public class AppPreferences internal constructor(
     ) { _, newValue ->
         sharedPreferences.edit { putInt("BEACON_MIN_RSSI", newValue) }
     }
+
+    /** [beaconMinRssi] while [debugOptionsInUse], else [DEFAULT_BEACON_MIN_RSSI] */
+    public val beaconMinRssiInUse: StateFlow<Int> =
+        debugOptionsInUse.combineState(beaconMinRssi) { inUse, rssi ->
+            rssi.takeIf { inUse } ?: DEFAULT_BEACON_MIN_RSSI
+        }
 
     /** Keeps scanning for [stayActiveMinutes] once every activate condition has ended */
     public val stayActive: MutableStateFlow<Boolean> = observableStateFlow(
@@ -356,6 +382,10 @@ public class AppPreferences internal constructor(
     ) { _, newValue ->
         sharedPreferences.edit { putString("PHONE_IDLE_MECHANISM", newValue) }
     }
+
+    /** [phoneIdleMechanism] while [debugOptionsInUse], else null for the reader's default */
+    public val phoneIdleMechanismInUse: StateFlow<String?> =
+        debugOptionsInUse.combineState(phoneIdleMechanism) { inUse, mechanism -> mechanism.takeIf { inUse } }
 
     public val suspendScanningOnWifi: MutableStateFlow<Boolean> = observableStateFlow(
         sharedPreferences.getBoolean("SUSPEND_SCANNING_ON_WIFI", false)

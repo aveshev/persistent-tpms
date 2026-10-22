@@ -42,7 +42,8 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.composable.StayAc
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.SuspendBluetoothDevices
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.SuspendScanConditions
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.DebugSettings
-import com.masselis.tpmsadvanced.feature.main.interfaces.composable.DeveloperOptionsSettings
+import com.masselis.tpmsadvanced.feature.main.interfaces.composable.MiscSettings
+import com.masselis.tpmsadvanced.feature.main.interfaces.composable.VersionSettingsItem
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.DisplaySettings
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.MagnifierDuration
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.DimDisplayDelay
@@ -54,7 +55,7 @@ import com.masselis.tpmsadvanced.feature.main.interfaces.composable.ReadingsSett
 import com.masselis.tpmsadvanced.feature.unit.interfaces.UnitsSettingsItems
 import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.alerts
 import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.persistentMode
-import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.developerOptions
+import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.misc
 import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.persistentScanning
 import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.display
 import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.readings
@@ -99,18 +100,12 @@ internal fun AppSettings(
             modifier = Modifier.testTag(persistentMode),
         )
     }
-    SettingsSectionHeader("Developer options")
-    DeveloperOptionsSettings(
-        openDebug = openDebug,
-        openPressureLoss = openPressureLoss,
-        modifier = Modifier.testTag(developerOptions),
-    )
     // Its own section, only while the other version of the app (Lite or Pro) is installed
     ImportSettings()
     SettingsSectionHeader("About")
     LocalUriHandler.current.also { uriHandler ->
         SettingsGroup {
-            TextSettingsItem(headline = "Version", supporting = BuildConfig.VERSION_NAME)
+            VersionSettingsItem(BuildConfig.VERSION_NAME)
             TextSettingsItem(
                 headline = "Based on TPMS Advanced",
                 supporting = "By Vincent Masselis, under the Apache License 2.0",
@@ -131,6 +126,12 @@ internal fun AppSettings(
             )
         }
     }
+    SettingsSectionHeader("Misc")
+    MiscSettings(
+        openDebug = openDebug,
+        openPressureLoss = openPressureLoss,
+        modifier = Modifier.testTag(misc),
+    )
 }
 
 /** Persistent scanning and its scan conditions, opened from the app settings or the main screen's menu */
@@ -332,5 +333,5 @@ internal object AppSettingsTag {
     const val alerts = "AppSettingsTag_alerts"
     const val persistentScanning = "AppSettingsTag_persistentScanning"
     const val persistentMode = "AppSettingsTag_persistentMode"
-    const val developerOptions = "AppSettingsTag_developerOptions"
+    const val misc = "AppSettingsTag_misc"
 }
