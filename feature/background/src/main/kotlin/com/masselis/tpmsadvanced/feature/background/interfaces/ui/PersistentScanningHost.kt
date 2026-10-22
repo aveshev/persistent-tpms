@@ -136,18 +136,10 @@ internal fun PersistentScanningHost(
         onDenied = viewModel::disableWifiException,
     )
     val currentWifiJourney by rememberUpdatedState(wifiJourney)
-    // Read here to key the effect: the journey waits for the monitoring one to end
-    val monitoringJourneyRunning = permissions.isInProgress()
-    LifecycleStartEffect(wifiExceptionActive, monitoringJourneyRunning) {
-        // One system dialog at a time. Both journeys start together when the app opens, the
-        // monitoring one goes first (its effect is declared first) and its end runs this again.
-        if (
-            wifiExceptionActive &&
-            currentPermissions.isInProgress().not() &&
-            currentWifiJourney.isInProgress().not()
-        ) {
-            currentWifiJourney.request()
-        }
+    LifecycleStartEffect(wifiExceptionActive) {
+        // Both journeys start together when the app opens: the prompt queue has the monitoring one
+        // go first (its effect is declared first), this one prompting once it's done
+        if (wifiExceptionActive && currentWifiJourney.isInProgress().not()) currentWifiJourney.request()
         onStopOrDispose { }
     }
     CompositionLocalProvider(

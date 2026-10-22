@@ -33,6 +33,18 @@ public object AppSnapshot {
         "com.masselis.tpmsadvanced.data.vehicle.interfaces.ScannerDatabase",
     )
 
+    /**
+     * [AppPreferences] keys Lite has no use for, not imported there: the devices Pro suspends on
+     * would stay out of reach in Lite's device picker, the beacon override has no option there, and
+     * Lite can't detect activities: it doesn't declare the permission
+     */
+    private val proOnlyPreferences = setOf(
+        "SUSPEND_SCANNING_ON_BLUETOOTH",
+        "SUSPEND_BLUETOOTH_DEVICES",
+        "BEACON_OVERRIDES_SUSPEND",
+        "SHOW_DETECTED_ACTIVITIES",
+    )
+
     private const val DATABASE = "database"
     private const val PREFERENCES = "preferences.json"
 
@@ -96,7 +108,7 @@ public object AppSnapshot {
      * Swaps the committed data in, if any. Must run before anything opens [database] or the
      * settings, which are only read from disk the first time they're opened.
      */
-    public fun applyStaged(context: Context, database: File) {
+    public fun applyStaged(context: Context, database: File, tier: AppTier = AppTier.current) {
         context
             .staging()
             .takeIf { File(it, READY).exists() }
@@ -117,7 +129,11 @@ public object AppSnapshot {
                             context.getSharedPreferences(name, MODE_PRIVATE).edit(commit = true) {
                                 clear()
                                 json.optJSONObject(name)?.also { values ->
-                                    values.keys().forEach { key -> put(key, values.getJSONObject(key)) }
+                                    values
+                                        .keys()
+                                        .asSequence()
+                                        .filter { key -> tier != AppTier.LITE || key !in proOnlyPreferences }
+                                        .forEach { key -> put(key, values.getJSONObject(key)) }
                                 }
                             }
                         }

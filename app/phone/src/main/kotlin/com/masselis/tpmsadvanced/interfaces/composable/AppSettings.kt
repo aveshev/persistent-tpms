@@ -186,7 +186,8 @@ internal fun DebugSettingsPage(
 ) = SettingsPage(modifier) {
     DebugSettings(
         additionalItems = {
-            DetectedActivitiesSettingsItem()
+            // Lite doesn't declare the physical activity permission
+            if (AppTier.current != LITE) DetectedActivitiesSettingsItem()
             ScanStatusAnnouncementsSettingsItem()
             BeaconScanModeSettingsItem()
             BeaconMinRssiSettingsItem()

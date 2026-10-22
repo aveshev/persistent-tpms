@@ -27,6 +27,8 @@ import com.masselis.tpmsadvanced.core.ui.SettingsSectionHeader
 import com.masselis.tpmsadvanced.core.ui.SettingsSectionNote
 import com.masselis.tpmsadvanced.core.ui.TextSettingsItem
 import com.masselis.tpmsadvanced.core.ui.rememberBluetoothState
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.LITE
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.SettingsOnScreenEffect
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningSettingsViewModel
 import com.masselis.tpmsadvanced.feature.background.ioc.Bindings.Companion.PersistentScanningSettingsViewModel
@@ -45,13 +47,15 @@ public fun SuspendBluetoothDevices(modifier: Modifier = Modifier): Unit =
 
 /**
  * Picks the paired devices of the activate ([activate]) or the suspend Bluetooth condition. A device
- * can't be in both: the ones selected for the other condition are listed last, not selectable.
+ * can't be in both: the ones selected for the other condition are listed last, not selectable. Lite
+ * has no suspend condition, the devices left in it (imported from Pro) are free to pick there.
  */
 @Composable
 internal fun BluetoothDevices(
     activate: Boolean,
     modifier: Modifier = Modifier,
     viewModel: PersistentScanningSettingsViewModel = viewModel { PersistentScanningSettingsViewModel() },
+    tier: AppTier = AppTier.current,
 ) {
     SettingsOnScreenEffect()
     val condition = if (activate) viewModel.activateBluetooth else viewModel.suspendBluetooth
@@ -73,10 +77,14 @@ internal fun BluetoothDevices(
         paired = paired,
         selected = selected,
         selectedAtEntry = selectedAtEntry,
-        otherSelected = otherSelected,
+        otherSelected = otherSelected.takeIf { tier != LITE }.orEmpty(),
         connected = connected,
         expanded = expanded,
-        onToggle = { viewModel.toggleBluetoothDevice(condition, it) },
+        onToggle = { address ->
+            viewModel.toggleBluetoothDevice(condition, address)
+            // Picked in Lite, it leaves the suspend condition it can't see, so that it never ends in both
+            if (tier == LITE) other.devices.value -= address
+        },
         onExpand = { expanded = expanded.not() },
         onTurnOnBluetooth = bluetoothState::askEnable,
         openBluetoothSettings = { context.startActivity(Intent(ACTION_BLUETOOTH_SETTINGS)) },

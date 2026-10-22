@@ -1,5 +1,6 @@
 package com.masselis.tpmsadvanced.feature.background.usecase
 
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.ANDROID_AUTO
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.BEACON
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.BLUETOOTH
@@ -117,6 +118,15 @@ internal class ScanDecisionTest {
         assertEquals(
             "Background scanning is active because you chose it to be always active",
             ScanDecision.Active(setOf(ALWAYS)).explanation()
+        )
+    }
+
+    @Suppress("MaxLineLength")
+    @Test
+    fun `idle is explained by Lite's own conditions in Lite`() {
+        assertEquals(
+            "Background scanning is idle: none of the selected Bluetooth devices is connected and none of the added beacons is nearby",
+            ScanDecision.Idle.explanation(AppTier.LITE)
         )
     }
 
