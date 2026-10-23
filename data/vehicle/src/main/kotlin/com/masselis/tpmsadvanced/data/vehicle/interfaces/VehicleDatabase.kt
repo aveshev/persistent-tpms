@@ -143,14 +143,6 @@ public class VehicleDatabase internal constructor(database: Database) {
         queries.updateLowTemp(lowTemp, uuid)
     }
 
-    public fun selectNormalTemp(vehicleId: UUID): Temperature =
-        queries.selectNormalTempByVehicleId(vehicleId).executeAsOne()
-
-    public suspend fun updateNormalTemp(normalTemp: Temperature, uuid: UUID): Unit =
-        withContext(IO) {
-            queries.updateNormalTemp(normalTemp, uuid)
-        }
-
     public fun selectHighTemp(vehicleId: UUID): Temperature =
         queries.selectHighTempByVehicleId(vehicleId).executeAsOne()
 
@@ -206,9 +198,9 @@ public class VehicleDatabase internal constructor(database: Database) {
             Pressure?,
             Boolean,
         ) -> Vehicle =
-            // The unused pressure calibration, the low battery alarms and the spare's range are
-            // only read by the vehicle scope's own queries
-            { uuid, name, _, lowPressure, highPressure, lowTemp, normalTemp, highTemp, kind, _,
+            // The normal temperature is unused, the pressure calibration, the low battery alarms and
+            // the spare's range are only read by the vehicle scope's own queries
+            { uuid, name, _, lowPressure, highPressure, lowTemp, _, highTemp, kind, _,
               rearLowPressure, rearHighPressure, separateRearPressure, _, _, _, _, _, _, _, _ ->
                 Vehicle(
                     uuid,
@@ -217,7 +209,6 @@ public class VehicleDatabase internal constructor(database: Database) {
                     lowPressure,
                     highPressure,
                     lowTemp,
-                    normalTemp,
                     highTemp,
                     rearLowPressure,
                     rearHighPressure,

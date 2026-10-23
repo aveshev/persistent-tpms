@@ -25,7 +25,6 @@ public data class Vehicle(
     public val lowPressure: Pressure,
     public val highPressure: Pressure,
     public val lowTemp: Temperature,
-    public val normalTemp: Temperature,
     public val highTemp: Temperature,
     // Kept while separateRearPressure is off, so turning it back on restores the previous values
     public val rearLowPressure: Pressure? = null,

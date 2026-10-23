@@ -23,7 +23,6 @@ internal interface VehicleSettingsViewModel {
     val pressureUnit: StateFlow<PressureUnit>
 
     val highTemp: MutableStateFlow<Temperature>
-    val normalTemp: MutableStateFlow<Temperature>
     val lowTemp: MutableStateFlow<Temperature>
 
     val temperatureUnit: StateFlow<TemperatureUnit>

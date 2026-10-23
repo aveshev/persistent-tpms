@@ -8,6 +8,7 @@ import com.masselis.tpmsadvanced.data.vehicle.model.AlertClass.BATTERY
 import com.masselis.tpmsadvanced.data.vehicle.model.AlertLevel
 import com.masselis.tpmsadvanced.data.vehicle.model.AlertLevel.CRIMSON
 import com.masselis.tpmsadvanced.data.vehicle.model.AlertLevel.RED
+import com.masselis.tpmsadvanced.data.vehicle.model.AlertThresholds.Companion.AMBER_TEMPERATURE_BELOW
 import com.masselis.tpmsadvanced.data.vehicle.model.Temperature
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location
 import com.masselis.tpmsadvanced.feature.main.usecase.TyreIconStateFlow.State
@@ -42,9 +43,8 @@ public class TyreIconStateFlow internal constructor(
         combine(
         alertsUseCase.listen(),
         rangeUseCase.highTemp,
-        rangeUseCase.normalTemp,
         rangeUseCase.lowTemp,
-    ) { alerts, highTemp, normalTemp, lowTemp ->
+    ) { alerts, highTemp, lowTemp ->
         requireNotNull(alerts.latest).let { latest ->
             Data(
                 latest.timestamp,
@@ -52,40 +52,46 @@ public class TyreIconStateFlow internal constructor(
                 alerts.levels.minus(BATTERY).values.maxOrNull(),
                 latest.temperature,
                 highTemp,
-                normalTemp,
                 lowTemp,
             )
         }
     }
-        .transformLatest { (timestamp, level, temperature, highTemp, normalTemp, lowTemp) ->
+        .transformLatest { (timestamp, level, temperature, highTemp, lowTemp) ->
             emit(
                 // Amber doesn't change the tyre, its readings tell it
                 if (level != null && level >= RED)
                     State.Alerting(isCritical = level == CRIMSON)
                 else
-                    when (temperature) {
-                        in Temperature(Float.NEGATIVE_INFINITY)..lowTemp ->
-                            State.Normal.BlueToGreen(Fraction(0f))
+                    // Blue while the rubber is too stiff, green while it's fine, red as it gets hot
+                    fineCelsius(lowTemp, highTemp).let { fine ->
+                        when (temperature.celsius) {
+                            in Float.NEGATIVE_INFINITY..lowTemp.celsius ->
+                                State.Normal.BlueToGreen(Fraction(0f))
 
-                        in lowTemp..normalTemp ->
-                            State.Normal.BlueToGreen(
-                                Fraction(
-                                    temperature.celsius
-                                        .minus(lowTemp.celsius)
-                                        .div(normalTemp.celsius - lowTemp.celsius)
+                            in lowTemp.celsius..fine.start ->
+                                State.Normal.BlueToGreen(
+                                    Fraction(
+                                        temperature.celsius
+                                            .minus(lowTemp.celsius)
+                                            .div(fine.start - lowTemp.celsius)
+                                            .coerceIn(0f, 1f)
+                                    )
                                 )
-                            )
 
-                        // Up to red, from the hot temperature on the tyre alerts
-                        else ->
-                            State.Normal.GreenToRed(
-                                Fraction(
-                                    temperature.celsius
-                                        .minus(normalTemp.celsius)
-                                        .div(highTemp.celsius - normalTemp.celsius)
-                                        .coerceIn(0f, 1f)
+                            in fine -> State.Normal.BlueToGreen(Fraction(1f))
+
+                            // Up to red where the reading turns amber, from the hot temperature on
+                            // the tyre alerts
+                            else ->
+                                State.Normal.GreenToRed(
+                                    Fraction(
+                                        temperature.celsius
+                                            .minus(fine.endInclusive)
+                                            .div(highTemp.celsius - fine.endInclusive)
+                                            .coerceIn(0f, 1f)
+                                    )
                                 )
-                            )
+                        }
                     }
             )
             timestamp
@@ -112,7 +118,6 @@ public class TyreIconStateFlow internal constructor(
         val level: AlertLevel?,
         val temperature: Temperature,
         val highTemp: Temperature,
-        val normalTemp: Temperature,
         val lowTemp: Temperature,
     )
 
@@ -143,7 +148,24 @@ public class TyreIconStateFlow internal constructor(
         public data object DetectionIssue : State
     }
 
-    private companion object {
+    internal companion object {
         private val obsoleteTimeout = 5.minutes
+
+        /** The tyre turns from blue to green over this many degrees Celsius above the cold temperature */
+        internal const val WARM_UP_CELSIUS: Float = 10f
+
+        /**
+         * Where the tyre is plain green, in degrees Celsius: [WARM_UP_CELSIUS] above [lowTemp] up to
+         * where the reading turns amber below [highTemp]. Each fade takes at most half the range, so
+         * a narrow one still shows both.
+         */
+        internal fun fineCelsius(lowTemp: Temperature, highTemp: Temperature): ClosedFloatingPointRange<Float> =
+            highTemp.celsius
+                .minus(lowTemp.celsius)
+                .div(2)
+                .let { half ->
+                    lowTemp.celsius + WARM_UP_CELSIUS.coerceAtMost(half)..
+                        highTemp.celsius - AMBER_TEMPERATURE_BELOW.coerceAtMost(half)
+                }
     }
 }

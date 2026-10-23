@@ -110,9 +110,11 @@ public data class AlertThresholds(
         private const val AMBER_HIGH_PRESSURE = 0.97f
         private const val CRIMSON_HIGH_PRESSURE = 1.2f
 
-        /** In degrees Celsius whatever the displayed unit */
-        private const val AMBER_TEMPERATURE_BELOW = 10f
-        private const val CRIMSON_TEMPERATURE_ABOVE = 20f
+        /** Amber from this many degrees Celsius below the hot temperature, whatever the displayed unit */
+        public const val AMBER_TEMPERATURE_BELOW: Float = 10f
+
+        /** Crimson from this many degrees Celsius above the hot temperature */
+        public const val CRIMSON_TEMPERATURE_ABOVE: Float = 20f
 
         /**
          * Tolerates the float rounding of the thresholds, converted from the unit they were typed

@@ -31,8 +31,6 @@ public class VehicleRangesUseCase internal constructor(
         MutableStateFlow(database.selectHighPressure(vehicle.uuid))
     public val lowTemp: MutableStateFlow<Temperature> =
         MutableStateFlow(database.selectLowTemp(vehicle.uuid))
-    public val normalTemp: MutableStateFlow<Temperature> =
-        MutableStateFlow(database.selectNormalTemp(vehicle.uuid))
     public val highTemp: MutableStateFlow<Temperature> =
         MutableStateFlow(database.selectHighTemp(vehicle.uuid))
     /** Only used while [separateRearPressure] is on, but kept when it's turned off */
@@ -138,11 +136,6 @@ public class VehicleRangesUseCase internal constructor(
         lowTemp
             .debounce(100.milliseconds)
             .onEach { database.updateLowTemp(it, vehicle.uuid) }
-            .launchIn(scope)
-
-        normalTemp
-            .debounce(100.milliseconds)
-            .onEach { database.updateNormalTemp(it, vehicle.uuid) }
             .launchIn(scope)
 
         highTemp

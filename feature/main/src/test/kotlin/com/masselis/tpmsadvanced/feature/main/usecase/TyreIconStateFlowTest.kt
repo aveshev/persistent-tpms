@@ -27,6 +27,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
@@ -52,7 +53,6 @@ internal class TyreIconStateFlowTest {
         }
         vehicleRangesUseCase = mockk {
             every { lowTemp } returns MutableStateFlow(20f.celsius)
-            every { normalTemp } returns MutableStateFlow(45f.celsius)
             every { highTemp } returns MutableStateFlow(90f.celsius)
             every { alertThresholds(Wheel(FRONT_LEFT)) } returns
                 flowOf(AlertThresholds(1f.bar, 3f.bar, 90f.celsius, 2.6f.volts))
@@ -98,11 +98,53 @@ internal class TyreIconStateFlowTest {
     }
 
     @Test
-    fun highTemperature(): Unit = runTest {
-        setAtmosphere(2f.bar, 60f.celsius)
+    fun `the tyre turns green over the 10 degrees above cold`(): Unit = runTest {
+        setAtmosphere(2f.bar, 25f.celsius)
         test().test {
             assertIs<State.NotDetected>(awaitItem())
-            assertIs<State.Normal.GreenToRed>(awaitItem())
+            assertEquals(0.5f, assertIs<State.Normal.BlueToGreen>(awaitItem()).fraction.value, DELTA)
+        }
+    }
+
+    @Test
+    fun `the tyre stays green until the reading turns amber`(): Unit = runTest {
+        setAtmosphere(2f.bar, 79f.celsius)
+        test().test {
+            assertIs<State.NotDetected>(awaitItem())
+            assertEquals(1f, assertIs<State.Normal.BlueToGreen>(awaitItem()).fraction.value, DELTA)
+        }
+    }
+
+    @Test
+    fun highTemperature(): Unit = runTest {
+        setAtmosphere(2f.bar, 85f.celsius)
+        test().test {
+            assertIs<State.NotDetected>(awaitItem())
+            assertEquals(0.5f, assertIs<State.Normal.GreenToRed>(awaitItem()).fraction.value, DELTA)
+        }
+    }
+
+    @Test
+    fun `a narrow range splits between both fades`(): Unit = runTest {
+        every { vehicleRangesUseCase.lowTemp } returns MutableStateFlow(20f.celsius)
+        every { vehicleRangesUseCase.highTemp } returns MutableStateFlow(30f.celsius)
+        every { vehicleRangesUseCase.alertThresholds(Wheel(FRONT_LEFT)) } returns
+            flowOf(AlertThresholds(1f.bar, 3f.bar, 30f.celsius, 2.6f.volts))
+        setAtmosphere(2f.bar, 22.5f.celsius)
+        test().test {
+            assertIs<State.NotDetected>(awaitItem())
+            assertEquals(0.5f, assertIs<State.Normal.BlueToGreen>(awaitItem()).fraction.value, DELTA)
+        }
+    }
+
+    @Test
+    fun `cold equal to hot doesn't divide by zero`(): Unit = runTest {
+        every { vehicleRangesUseCase.lowTemp } returns MutableStateFlow(20f.celsius)
+        every { vehicleRangesUseCase.highTemp } returns MutableStateFlow(20f.celsius)
+        setAtmosphere(2f.bar, 20f.celsius)
+        test().test {
+            assertIs<State.NotDetected>(awaitItem())
+            assertEquals(0f, assertIs<State.Normal.BlueToGreen>(awaitItem()).fraction.value, DELTA)
         }
     }
 
@@ -189,5 +231,9 @@ internal class TyreIconStateFlowTest {
             advanceTimeBy(1.hours)
             assertIs<State.NotDetected>(awaitItem())
         }
+    }
+
+    private companion object {
+        const val DELTA = 0.0001f
     }
 }
