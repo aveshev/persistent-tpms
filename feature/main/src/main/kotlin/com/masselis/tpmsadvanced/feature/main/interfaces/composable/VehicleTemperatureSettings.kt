@@ -122,13 +122,16 @@ private fun VehicleTemperatureSettings(
 
 private enum class Threshold { COLD, NORMAL, HOT }
 
-private val TemperatureLimits = 5f.celsius..150f.celsius
+private val TemperatureLimits = COLDEST_CELSIUS.celsius..150f.celsius
 
 private fun Temperature.withSymbol(unit: TemperatureUnit) = "${numberString(unit)} ${unit.symbol()}"
 
 // AlertThresholds' critical margin, in degrees Celsius
 private const val CRIMSON_MARGIN = 20f
 private const val FAHRENHEIT_PER_CELSIUS = 1.8f
+
+// Winter tyres stay supple far below summer ones
+private const val COLDEST_CELSIUS = -40f
 
 @Preview
 @Composable
