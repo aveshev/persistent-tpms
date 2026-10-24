@@ -15,6 +15,8 @@ internal fun Settings(
     openTemperature: () -> Unit,
     openBattery: () -> Unit,
     openManageSensors: () -> Unit,
+    openShareSensors: () -> Unit,
+    scanSharedSensors: () -> Unit,
     modifier: Modifier = Modifier
 ) = SettingsPage(modifier) {
     VehicleSettings(
@@ -22,6 +24,8 @@ internal fun Settings(
         openTemperature = openTemperature,
         openBattery = openBattery,
         openManageSensors = openManageSensors,
+        openShareSensors = openShareSensors,
+        scanSharedSensors = scanSharedSensors,
         // backgroundSettings = { AutomaticBackgroundSettings(it) }
         modifier = Modifier.testTag(vehicle),
     )

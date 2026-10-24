@@ -91,6 +91,7 @@ import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
 import com.masselis.tpmsadvanced.feature.qrcode.interfaces.QrCodeScan
 import com.masselis.tpmsadvanced.feature.qrcode.model.QrCodeResult
 import com.masselis.tpmsadvanced.feature.qrcode.interfaces.QrCodeResultDialog
+import com.masselis.tpmsadvanced.feature.qrcode.interfaces.ShareSensors
 import com.masselis.tpmsadvanced.feature.unlocated.interfaces.ui.BluetoothAssign
 import com.masselis.tpmsadvanced.interfaces.composable.HomeTags.backButton
 import com.masselis.tpmsadvanced.interfaces.composable.HomeTags.carListDropdownMenu
@@ -239,6 +240,9 @@ internal fun VehicleHome(
                             openManageSensors = {
                                 navController.navigate("${Path.ManageSensors(vehicleComponent.vehicle.uuid)}")
                             },
+                            openShareSensors = { navController.navigate("${Path.ShareSensors(vehicleUuid)}") },
+                            // A shared code holds every sensor's wheel, whichever wheel the scan is for
+                            scanSharedSensors = { navController.navigate("${Path.QrCode(vehicleUuid, 0)}") },
                             modifier = modifier
                         )
                     }
@@ -262,6 +266,12 @@ internal fun VehicleHome(
                                 modifier
                             },
                             navigationIcon = { BackButton() },
+                        )
+                    }
+                    composable("${Path.ShareSensors(vehicleUuid)}") {
+                        ShareSensors(
+                            vehicleUuid = vehicleUuid,
+                            modifier = modifier
                         )
                     }
                     composable("${Path.PressureSettings(vehicleComponent.vehicle.uuid)}") {
@@ -573,6 +583,7 @@ private fun TopAppBar(
                 )
 
                 is Path.ManageSensors -> Text(text = "Manage sensors")
+                is Path.ShareSensors -> Text(text = "Share sensors")
                 is Path.PressureSettings -> Text(text = "Pressure")
                 is Path.TemperatureSettings -> Text(text = "Temperature")
                 is Path.Calibration -> Text(text = "Calibrate sensor")
@@ -605,6 +616,7 @@ private fun TopAppBar(
             when (currentPath) {
                 is Path.Settings,
                 is Path.ManageSensors,
+                is Path.ShareSensors,
                 is Path.PressureSettings,
                 is Path.TemperatureSettings,
                 is Path.Calibration,
@@ -645,6 +657,7 @@ private fun TopAppBar(
 
                 is Path.Settings,
                 is Path.ManageSensors,
+                is Path.ShareSensors,
                 is Path.PressureSettings,
                 is Path.TemperatureSettings,
                 is Path.Calibration,

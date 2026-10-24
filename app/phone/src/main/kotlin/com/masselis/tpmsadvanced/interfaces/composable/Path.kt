@@ -21,6 +21,11 @@ internal sealed interface Path {
     }
 
     @JvmInline
+    value class ShareSensors(val vehicleUUID: UUID) : Path {
+        override fun toString(): String = "vehicle/$vehicleUUID/share_sensors"
+    }
+
+    @JvmInline
     value class PressureSettings(val vehicleUUID: UUID) : Path {
         override fun toString(): String = "vehicle/$vehicleUUID/settings_pressure"
     }
@@ -183,6 +188,7 @@ internal sealed interface Path {
                         "home" -> Home(uuid)
                         "settings" -> Settings(uuid)
                         "manage_sensors" -> ManageSensors(uuid)
+                        "share_sensors" -> ShareSensors(uuid)
                         "settings_pressure" -> PressureSettings(uuid)
                         "settings_temperature" -> TemperatureSettings(uuid)
                         "settings_battery" -> BatterySettings(uuid)

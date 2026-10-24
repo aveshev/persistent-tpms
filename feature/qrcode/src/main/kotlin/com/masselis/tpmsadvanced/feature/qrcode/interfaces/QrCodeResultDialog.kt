@@ -9,6 +9,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.BEKUBEE_KY
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.BEKUBEE_TPMS
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.PECHAM
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.SYSGRATION
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.WICARLINK
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.appendLoc
@@ -25,7 +30,7 @@ import java.util.UUID
  * next, so a code scanned again is worked out again. [onDismiss] once answered, [scanBluetooth] for
  * a code the app can't use.
  */
-@Suppress("MaxLineLength", "LongMethod")
+@Suppress("MaxLineLength", "LongMethod", "CyclomaticComplexMethod")
 @Composable
 public fun QrCodeResultDialog(
     vehicleUuid: UUID,
@@ -107,8 +112,94 @@ public fun QrCodeResultDialog(
         )
 
         is State.Unusable -> UnusableAlert(state.result, scanBluetooth, onDismiss)
+
+        is State.AskShared -> AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Shared sensors") },
+            text = {
+                Text(
+                    buildAnnotatedString {
+                        append("Assign the sensors of ")
+                        appendBold(state.from)
+                        append(" to ")
+                        appendBold(state.vehicle.name)
+                        append("?\n")
+                        state.sensors.forEach { shared ->
+                            append("\n· ")
+                            append(buildString { appendLoc(shared.sensor.location, withType = false, capitalized = true) })
+                            append(": ")
+                            appendBold(shared.sensor.id.asSensorId(shared.sensor.brand))
+                            append(" ${shared.sensor.brand.label}")
+                            if (shared.calibration.adjusts) append(", calibrated")
+                        }
+                        state.reassigns.forEach { (id, assigned) ->
+                            append("\n\n⚠️ ")
+                            appendBold(id.asSensorId(state.sensors.first { it.sensor.id == id }.sensor.brand))
+                            append(" is assigned to the ")
+                            if (assigned.location == Location.Single) append("wheel")
+                            else appendBold(buildString { appendLoc(assigned.location) })
+                            append(" of ")
+                            appendBold(assigned.vehicle.name)
+                            append(", it will be reassigned")
+                        }
+                        if (state.overwrites) append("\n\n⚠️ Warning: this will overwrite already assigned sensors")
+                        if (state.skipped.isNotEmpty()) {
+                            append("\n\nNot assigned, ")
+                            appendBold(state.vehicle.name)
+                            append(" has no ")
+                            append(state.skipped.joinToString(" or ") { buildString { appendLoc(it.sensor.location) } })
+                        }
+                    }
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { viewModel.bind(); onDismiss() }) {
+                    Text(text = if (state.reassigns.isNotEmpty()) "Reassign" else "Assign")
+                }
+            },
+            dismissButton = { TextButton(onClick = onDismiss) { Text(text = "Cancel") } },
+        )
+
+        is State.NoSharedSensorFits -> AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text("Shared sensors") },
+            text = {
+                Text(
+                    buildAnnotatedString {
+                        append("None of the sensors of ")
+                        appendBold(state.shared.name)
+                        append(" is on a wheel ")
+                        appendBold(state.vehicle.name)
+                        append(" has.")
+                    }
+                )
+            },
+            confirmButton = { TextButton(onClick = onDismiss) { Text(text = "OK") } },
+        )
+
+        State.SharedByNewerApp -> AlertDialog(
+            onDismissRequest = onDismiss,
+            text = { Text("These sensors were shared by a newer version of the app, please update it to read them") },
+            confirmButton = { TextButton(onClick = onDismiss) { Text(text = "OK") } },
+        )
+
+        State.SharedUnreadable -> AlertDialog(
+            onDismissRequest = onDismiss,
+            text = { Text("Error reading the shared sensors, please scan the code again") },
+            confirmButton = { TextButton(onClick = onDismiss) { Text(text = "OK") } },
+        )
     }
 }
+
+/** The brand the way it's sold */
+private val SensorBrand.label
+    get() = when (this) {
+        PECHAM -> "Pecham"
+        BEKUBEE_KY -> "Bekubee KY"
+        WICARLINK -> "Wicarlink"
+        BEKUBEE_TPMS -> "Bekubee"
+        SYSGRATION -> "Sysgration"
+    }
 
 @Suppress("MaxLineLength")
 @Composable
@@ -135,7 +226,11 @@ private fun UnusableAlert(
                         is QrCodeResult.DuplicateId ->
                             append("\n\n⚠️ Filled QR Code contains the same sensor id multiple time")
 
-                        is QrCodeResult.Sensors, is QrCodeResult.Wicarlink -> {}
+                        is QrCodeResult.Sensors,
+                        is QrCodeResult.Wicarlink,
+                        is QrCodeResult.Shared,
+                        QrCodeResult.SharedByNewerApp,
+                        QrCodeResult.SharedUnreadable -> {}
                     }
                 }
             )
