@@ -16,7 +16,6 @@ internal val previewVehicle = Vehicle(
     0.8f.bar,
     2.5f.bar,
     5f.celsius,
-    40f.celsius,
     90f.celsius,
 )
 

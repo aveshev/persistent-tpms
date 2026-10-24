@@ -15,6 +15,7 @@ CREATE TABLE Vehicle(
     -- Unused: VehicleDatabase.insert sets each Kind's defaultPressures
     highPressure REAL AS Pressure NOT NULL DEFAULT 344.75,
     lowTemp REAL AS Temperature NOT NULL DEFAULT 20,
+    -- Unused: the tyre's colour comes from lowTemp and highTemp alone
     normalTemp REAL AS Temperature NOT NULL DEFAULT 45,
     highTemp REAL AS Temperature NOT NULL DEFAULT 90,
     kind TEXT AS Kind NOT NULL DEFAULT "CAR",
@@ -159,12 +160,6 @@ SELECT lowTemp FROM Vehicle WHERE uuid = ?;
 
 updateLowTemp:
 UPDATE Vehicle SET lowTemp = ? WHERE uuid = ?;
-
-selectNormalTempByVehicleId:
-SELECT normalTemp FROM Vehicle WHERE uuid = ?;
-
-updateNormalTemp:
-UPDATE Vehicle SET normalTemp = ? WHERE uuid = ?;
 
 selectHighTempByVehicleId:
 SELECT highTemp FROM Vehicle WHERE uuid = ?;

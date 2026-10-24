@@ -37,7 +37,6 @@ internal class VehicleSettingsViewModelImpl(
     override val pressureUnit = unitPreferences.pressure.asStateFlow()
 
     override val highTemp = vehicleRangesUseCase.highTemp
-    override val normalTemp = vehicleRangesUseCase.normalTemp
     override val lowTemp = vehicleRangesUseCase.lowTemp
 
     override val temperatureUnit = unitPreferences.temperature.asStateFlow()

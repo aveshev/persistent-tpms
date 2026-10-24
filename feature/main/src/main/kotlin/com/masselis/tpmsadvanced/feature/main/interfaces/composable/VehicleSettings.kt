@@ -65,7 +65,6 @@ public fun VehicleSettings(
     val separateSpare by viewModel.separateSparePressure.collectAsState()
     val temperatureUnit by viewModel.temperatureUnit.collectAsState()
     val lowTemp by viewModel.lowTemp.collectAsState()
-    val normalTemp by viewModel.normalTemp.collectAsState()
     val highTemp by viewModel.highTemp.collectAsState()
     val lowBatteryVoltage by viewModel.lowBatteryVoltage.collectAsState()
     val lowBatteryPercent by viewModel.lowBatteryPercent.collectAsState()
@@ -97,7 +96,6 @@ public fun VehicleSettings(
             TextSettingsItem(
                 headline = "Temperature",
                 supporting = "Cold ${lowTemp.numberString(temperatureUnit)} · " +
-                    "Normal ${normalTemp.numberString(temperatureUnit)} · " +
                     "Hot ${highTemp.numberString(temperatureUnit)} ${temperatureUnit.symbol()}",
                 onClick = openTemperature,
             )

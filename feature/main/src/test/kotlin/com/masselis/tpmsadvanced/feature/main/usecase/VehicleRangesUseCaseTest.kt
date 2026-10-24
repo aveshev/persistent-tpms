@@ -46,7 +46,6 @@ internal class VehicleRangesUseCaseTest {
             every { selectLowPressure(uuid) } returns 1f.bar
             every { selectHighPressure(uuid) } returns 3f.bar
             every { selectLowTemp(uuid) } returns 20f.celsius
-            every { selectNormalTemp(uuid) } returns 45f.celsius
             every { selectHighTemp(uuid) } returns 90f.celsius
             every { selectRearLowPressure(uuid) } returns null
             every { selectRearHighPressure(uuid) } returns null
@@ -59,7 +58,6 @@ internal class VehicleRangesUseCaseTest {
             coEvery { updateLowPressure(any(), any()) } returns Unit
             coEvery { updateHighPressure(any(), any()) } returns Unit
             coEvery { updateLowTemp(any(), any()) } returns Unit
-            coEvery { updateNormalTemp(any(), any()) } returns Unit
             coEvery { updateHighTemp(any(), any()) } returns Unit
             coEvery { updateRearLowPressure(any(), any()) } returns Unit
             coEvery { updateRearHighPressure(any(), any()) } returns Unit
