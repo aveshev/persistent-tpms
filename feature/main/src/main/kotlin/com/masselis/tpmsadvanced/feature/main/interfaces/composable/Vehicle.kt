@@ -473,9 +473,20 @@ private fun Modifier.reportBounds(location: Location, taps: TyreTaps) = taps
     ?.let { report -> onGloballyPositioned { report(location, it.boundsInWindow()) } }
     ?: this
 
-/** A sensor moving along [chain] on a vehicle with [all] these locations, [onTap] picking the next one */
-internal class TyreMove(val chain: MoveChain, private val all: Collection<Location>, val onTap: (Location) -> Unit) {
-    fun canTap(location: Location): Boolean = chain.canTap(location, all)
+/**
+ * A sensor moving, [onTap] picking where it goes among the locations it [canTap]. Along [chain] on
+ * its vehicle, or from another vehicle without one, see [MoveSensorToVehicle].
+ */
+internal class TyreMove(
+    val chain: MoveChain?,
+    private val isTappable: (Location) -> Boolean,
+    val onTap: (Location) -> Unit,
+) {
+    /** Along [chain] on a vehicle with [all] these locations */
+    constructor(chain: MoveChain, all: Collection<Location>, onTap: (Location) -> Unit) :
+        this(chain, { chain.canTap(it, all) }, onTap)
+
+    fun canTap(location: Location): Boolean = isTappable(location)
 }
 
 /**

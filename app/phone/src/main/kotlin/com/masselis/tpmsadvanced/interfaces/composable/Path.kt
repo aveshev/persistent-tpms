@@ -142,6 +142,18 @@ internal sealed interface Path {
         }
     }
 
+    /**
+     * Moves the sensor at [location] in the vehicle kind's locations to a wheel of the vehicle
+     * [toVehicleUUID]
+     */
+    data class MoveToVehicle(val vehicleUUID: UUID, val location: Int, val toVehicleUUID: UUID) : Path {
+        override fun toString(): String = "vehicle/$vehicleUUID/move_to_vehicle/$location/$toVehicleUUID"
+
+        companion object {
+            fun route(vehicleUUID: UUID) = "vehicle/$vehicleUUID/move_to_vehicle/{location}/{toVehicle}"
+        }
+    }
+
     companion object {
         /** Pages that don't depend on a vehicle, their route is fixed */
         private val appPages
@@ -189,6 +201,12 @@ internal sealed interface Path {
                         "qrcode" -> QrCode(uuid, argument)
                         "bluetooth_assign" -> BluetoothAssign(uuid, argument)
                         "calibration" -> Calibration(uuid, argument)
+                        // A pattern has none, the page's own vehicle stands in
+                        "move_to_vehicle" -> MoveToVehicle(
+                            uuid,
+                            argument,
+                            segments.getOrNull(4)?.let { runCatching { UUID.fromString(it) }.getOrNull() } ?: uuid,
+                        )
                         else -> error("Unrecognized route: \"$route\"")
                     }
                 }

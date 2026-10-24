@@ -12,8 +12,10 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted.Companion.Eagerly
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.plus
@@ -52,6 +54,18 @@ internal interface SensorBindingUseCase {
     /** Unbinds the sensor bound to this location, if any */
     suspend fun unbind()
 
+    /** Every vehicle but this one, the sensor bound here can be moved to them */
+    fun otherVehicles(): Flow<List<OtherVehicle>>
+
+    /**
+     * Moves the sensor bound here to [location] of [vehicle], see [SensorDatabase.moveToVehicle]:
+     * the sensor there comes here when [swap], it's unbound otherwise
+     */
+    suspend fun moveToVehicle(vehicle: Vehicle, location: Location, swap: Boolean)
+
+    /** Another vehicle, and its locations with a sensor */
+    data class OtherVehicle(val vehicle: Vehicle, val occupied: Set<Location>)
+
     class Impl(
         private val currentVehicle: Vehicle,
         private val vehicleDatabase: VehicleDatabase,
@@ -79,6 +93,28 @@ internal interface SensorBindingUseCase {
 
         override suspend fun unbind() =
             sensorDatabase.deleteFromVehicle(currentVehicle.uuid, currentLocation)
+
+        @OptIn(ExperimentalCoroutinesApi::class)
+        override fun otherVehicles(): Flow<List<OtherVehicle>> = vehicleDatabase
+            .selectAll()
+            .asFlow()
+            .map { vehicles -> vehicles.filter { it.uuid != currentVehicle.uuid } }
+            .flatMapLatest { vehicles ->
+                vehicles
+                    .map { vehicle ->
+                        sensorDatabase
+                            .selectListByVehicleId(vehicle.uuid)
+                            .asFlow()
+                            .map { sensors -> OtherVehicle(vehicle, sensors.map { it.location }.toSet()) }
+                    }
+                    // Combining nothing never emits
+                    .takeIf { it.isNotEmpty() }
+                    ?.let { flows -> combine(flows) { it.toList() } }
+                    ?: flowOf(emptyList())
+            }
+
+        override suspend fun moveToVehicle(vehicle: Vehicle, location: Location, swap: Boolean) =
+            sensorDatabase.moveToVehicle(currentVehicle.uuid, currentLocation, vehicle.uuid, location, swap)
     }
 
     object NoOp : SensorBindingUseCase {
@@ -87,5 +123,7 @@ internal interface SensorBindingUseCase {
         override fun isBound(sensorId: Int): Boolean = false
         override suspend fun bind(sensor: Sensor) {}
         override suspend fun unbind() {}
+        override fun otherVehicles(): Flow<List<OtherVehicle>> = flowOf(emptyList())
+        override suspend fun moveToVehicle(vehicle: Vehicle, location: Location, swap: Boolean) {}
     }
 }

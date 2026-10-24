@@ -9,6 +9,8 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.kpa
 import com.masselis.tpmsadvanced.data.vehicle.model.PressureCalibration
 import com.masselis.tpmsadvanced.data.vehicle.model.Sensor
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorCalibration
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.Axle.FRONT
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.Axle.REAR
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.FRONT_LEFT
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.FRONT_RIGHT
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.REAR_LEFT
@@ -112,12 +114,13 @@ internal class SensorDatabaseTest {
         assertSensorCount(0, currentVehicleUuid)
     }
 
-    private fun reading(location: Location, timestamp: Double, sensorId: Int) = database.readingQueries
-        .insert(currentVehicleUuid, location, timestamp, sensorId, -60, "0303a5270308425208ff801b1b02a584ea")
+    private fun reading(location: Location, timestamp: Double, sensorId: Int, vehicleUuid: UUID = currentVehicleUuid) =
+        database.readingQueries
+            .insert(vehicleUuid, location, timestamp, sensorId, -60, "0303a5270308425208ff801b1b02a584ea")
 
     /** Each reading of the tyre at [location], as its sensor and time */
-    private fun readings(location: Location) = database.readingQueries
-        .allByLocation(currentVehicleUuid, location)
+    private fun readings(location: Location, vehicleUuid: UUID = currentVehicleUuid) = database.readingQueries
+        .allByLocation(vehicleUuid, location)
         .executeAsList()
         .map { it.sensorId to it.timestamp }
 
@@ -173,5 +176,67 @@ internal class SensorDatabaseTest {
         assertSensorId(1, currentVehicleUuid, Location.Wheel(FRONT_RIGHT))
         assertEquals(calibration, sensorDatabase.selectCalibration(1).execute())
         assertEquals(SensorCalibration.None, sensorDatabase.selectCalibration(2).execute())
+    }
+
+    private fun otherVehicle() = UUID.randomUUID().also { vehicleQueries.insert(it, Kind.MOTORCYCLE, "OTHER", false) }
+
+    @Test
+    fun movedToAnotherVehicleWithItsCalibrationAndReadings() = runTest {
+        val other = otherVehicle()
+        val calibration = SensorCalibration(true, PressureCalibration((-93f).kpa, 1.05f))
+        sensorDatabase.upsert(Sensor(1, Location.Wheel(FRONT_LEFT), PECHAM), currentVehicleUuid)
+        sensorDatabase.updateCalibration(1, calibration)
+        reading(Location.Wheel(FRONT_LEFT), 1.0, 1)
+        // A sensor unbound since, its readings stay with the tyre
+        reading(Location.Wheel(FRONT_LEFT), 2.0, 9)
+
+        sensorDatabase.moveToVehicle(currentVehicleUuid, Location.Wheel(FRONT_LEFT), other, Location.Axle(REAR), false)
+
+        assertSensorCount(0, currentVehicleUuid)
+        assertSensorId(1, other, Location.Axle(REAR))
+        assertEquals(calibration, sensorDatabase.selectCalibration(1).execute())
+        assertEquals(listOf(1 to 1.0), readings(Location.Axle(REAR), other))
+        assertEquals(listOf(9 to 2.0), readings(Location.Wheel(FRONT_LEFT)))
+    }
+
+    @Test
+    fun swappedWithAnotherVehiclesSensor() = runTest {
+        val other = otherVehicle()
+        sensorDatabase.upsert(Sensor(1, Location.Wheel(FRONT_LEFT), PECHAM), currentVehicleUuid)
+        sensorDatabase.upsert(Sensor(2, Location.Axle(FRONT), PECHAM), other)
+        // Read at the same time, each keeps its own
+        reading(Location.Wheel(FRONT_LEFT), 1.0, 1)
+        reading(Location.Axle(FRONT), 1.0, 2, other)
+
+        sensorDatabase.moveToVehicle(currentVehicleUuid, Location.Wheel(FRONT_LEFT), other, Location.Axle(FRONT), true)
+
+        assertSensorId(2, currentVehicleUuid, Location.Wheel(FRONT_LEFT))
+        assertSensorId(1, other, Location.Axle(FRONT))
+        assertEquals(listOf(2 to 1.0), readings(Location.Wheel(FRONT_LEFT)))
+        assertEquals(listOf(1 to 1.0), readings(Location.Axle(FRONT), other))
+    }
+
+    @Test
+    fun replacesAnotherVehiclesSensor() = runTest {
+        val other = otherVehicle()
+        sensorDatabase.upsert(Sensor(1, Location.Wheel(FRONT_LEFT), PECHAM), currentVehicleUuid)
+        sensorDatabase.upsert(Sensor(2, Location.Axle(FRONT), PECHAM), other)
+
+        sensorDatabase.moveToVehicle(currentVehicleUuid, Location.Wheel(FRONT_LEFT), other, Location.Axle(FRONT), false)
+
+        assertSensorCount(0, currentVehicleUuid)
+        assertSensorCount(1, other)
+        assertSensorId(1, other, Location.Axle(FRONT))
+        assertEquals(null, sensorQueries.selectById(2).executeAsOneOrNull())
+    }
+
+    @Test
+    fun movingToALocationTheOtherVehicleDoesntHaveFails() = runTest {
+        val other = otherVehicle()
+        sensorDatabase.upsert(Sensor(1, Location.Wheel(FRONT_LEFT), PECHAM), currentVehicleUuid)
+        assertFailsWith<IllegalArgumentException> {
+            sensorDatabase.moveToVehicle(currentVehicleUuid, Location.Wheel(FRONT_LEFT), other, Location.Wheel(FRONT_LEFT), false)
+        }
+        assertSensorId(1, currentVehicleUuid, Location.Wheel(FRONT_LEFT))
     }
 }
