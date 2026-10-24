@@ -23,7 +23,10 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.ProvidableCompositionLocal
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
@@ -50,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import com.masselis.tpmsadvanced.core.ui.isWideWindow
 import com.masselis.tpmsadvanced.core.ui.viewModel
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation
+import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location
 import com.masselis.tpmsadvanced.feature.main.R
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.ManageSensorsViewModel
@@ -58,13 +62,15 @@ import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent.Factory.Companion.key
 import com.masselis.tpmsadvanced.feature.main.model.MoveChain
 import com.masselis.tpmsadvanced.feature.main.model.MoveChain.Step
+import java.util.UUID
 
 /**
  * The vehicle's sensors, laid out like the main screen: every location is outlined, tapping one
  * manages its sensor, or assigns it one by [scanQrCode], [scanBluetooth] or the sensor detected
- * there. Moving a sensor picks where it goes on the vehicle, see [MoveChain].
+ * there. Moving a sensor picks where it goes on the vehicle, see [MoveChain], or [moveToVehicle]
+ * opens the vehicle with this id to pick where it goes there, see [MoveSensorToVehicle].
  */
-@Suppress("LongMethod", "CyclomaticComplexMethod")
+@Suppress("LongParameterList")
 @Composable
 public fun ManageSensors(
     snackbarHostState: SnackbarHostState,
@@ -72,10 +78,41 @@ public fun ManageSensors(
     scanBluetooth: (Location) -> Unit,
     /** Opens the calibration of the sensor with this id */
     calibrate: (Int) -> Unit,
+    moveToVehicle: (Location, UUID) -> Unit,
     modifier: Modifier = Modifier,
     /** In a wide window, see [isWideWindow], the top bar makes way: the page shows its own */
     navigationIcon: @Composable () -> Unit = {},
     component: VehicleComponent = LocalVehicleComponent.current,
+) {
+    SensorsPage(
+        snackbarHostState = snackbarHostState,
+        incoming = null,
+        scanQrCode = scanQrCode,
+        scanBluetooth = scanBluetooth,
+        calibrate = calibrate,
+        moveToVehicle = moveToVehicle,
+        modifier = modifier,
+        navigationIcon = navigationIcon,
+        component = component,
+    )
+}
+
+/**
+ * [ManageSensors], or, with [incoming], the page of another vehicle where the user taps the wheel
+ * a sensor goes to, see [MoveSensorToVehicle]
+ */
+@Suppress("LongMethod", "CyclomaticComplexMethod", "LongParameterList")
+@Composable
+internal fun SensorsPage(
+    snackbarHostState: SnackbarHostState,
+    incoming: IncomingSensor?,
+    scanQrCode: (Location) -> Unit,
+    scanBluetooth: (Location) -> Unit,
+    calibrate: (Int) -> Unit,
+    moveToVehicle: (Location, UUID) -> Unit,
+    modifier: Modifier,
+    navigationIcon: @Composable () -> Unit,
+    component: VehicleComponent,
 ) {
     val viewModel: ManageSensorsViewModel = component.viewModel(component.key()) { it.ManageSensorsViewModel() }
     val vehicle by component.vehicleStateFlow.collectAsState()
@@ -87,6 +124,8 @@ public fun ManageSensors(
     var asking by rememberSaveable { mutableStateOf<MoveChain?>(null) }
     // Ready, its arrows shown until the user applies or cancels it
     var confirming by rememberSaveable { mutableStateOf<MoveChain?>(null) }
+    // The incoming sensor's wheel has one: swap them, or replace it
+    var askingIncoming by rememberSaveable { mutableStateOf<Location?>(null) }
     // Where each tyre is in the window, for the arrows of the moves
     val tyreCenters = remember { mutableStateMapOf<Location, Offset>() }
     val outlines = remember { mutableStateMapOf<Location, Rect>() }
@@ -114,9 +153,9 @@ public fun ManageSensors(
                 textAlign = TextAlign.Center,
             )
         }
-        val cancel: @Composable () -> Unit = {
+        val cancel: @Composable (() -> Unit) -> Unit = { onClick ->
             OutlinedButton(
-                onClick = ::stop,
+                onClick = onClick,
                 modifier = Modifier.fillMaxWidth().testTag(ManageSensorsTags.cancelMove),
             ) { Text("Cancel") }
         }
@@ -127,8 +166,13 @@ public fun ManageSensors(
         ) {
             val chain = confirming
             when {
+                incoming != null -> {
+                    prompt(MOVE_PROMPT)
+                    cancel(incoming.cancel)
+                }
+
                 chain != null -> {
-                    cancel()
+                    cancel(::stop)
                     Button(
                         onClick = { viewModel.apply(chain); stop() },
                         modifier = Modifier.fillMaxWidth().testTag(ManageSensorsTags.confirmMove),
@@ -137,7 +181,7 @@ public fun ManageSensors(
 
                 moving != null -> {
                     prompt(MOVE_PROMPT)
-                    cancel()
+                    cancel(::stop)
                 }
 
                 else -> prompt(MANAGE_PROMPT)
@@ -146,37 +190,51 @@ public fun ManageSensors(
     }
     val vehicleWithArrows: @Composable (Modifier) -> Unit = { modifier ->
         Box(modifier) {
-            Vehicle(
-                component = component,
-                snackbarHostState = snackbarHostState,
-                taps = TyreTaps(
-                    isManaging = true,
-                    scanQrCode = scanQrCode,
-                    scanBluetooth = scanBluetooth,
-                    calibrate = calibrate,
-                    // Once complete, the tyres show as usual: the arrows tell what's going to happen
-                    move = moving?.takeIf { confirming == null }?.let { chain ->
-                        TyreMove(chain, all) { target ->
-                            when (val step = chain.tap(target, occupied, all)) {
-                                is Step.Done -> confirming = step.chain
-                                is Step.AskSwapOrChain -> asking = step.chain
-                                is Step.Continue -> moving = step.chain
+            CompositionLocalProvider(
+                LocalManageSensorsActions provides ManageSensorsActions(snackbarHostState) { location, other ->
+                    moveToVehicle(location, other.uuid)
+                }
+            ) {
+                Vehicle(
+                    component = component,
+                    snackbarHostState = snackbarHostState,
+                    taps = TyreTaps(
+                        isManaging = true,
+                        scanQrCode = scanQrCode,
+                        scanBluetooth = scanBluetooth,
+                        calibrate = calibrate,
+                        // Once complete, the tyres show as usual: the arrows tell what's going to happen
+                        move = incoming
+                            ?.let { incoming ->
+                                // Any wheel, its sensor is swapped or replaced
+                                TyreMove(null, { true }) { target ->
+                                    if (target in occupied) askingIncoming = target
+                                    else incoming.move(target, false)
+                                }
                             }
-                        }
-                    },
-                    startMove = { location ->
-                        if (all.size <= 2)
-                        // Nowhere to pick, straight to the confirmation
-                            all.first { it != location }.let { confirming = MoveChain.from(location).plus(it) }
-                        else
-                            moving = MoveChain.from(location)
-                    },
-                    onTyrePositioned = { location, bounds -> tyreCenters[location] = bounds.center },
-                    onOutlinePositioned = { location, outline -> outlines[location] = outline },
-                    canMove = all.size > 1,
-                ),
-                modifier = Modifier.fillMaxSize(),
-            )
+                            ?: moving?.takeIf { confirming == null }?.let { chain ->
+                                TyreMove(chain, all) { target ->
+                                    when (val step = chain.tap(target, occupied, all)) {
+                                        is Step.Done -> confirming = step.chain
+                                        is Step.AskSwapOrChain -> asking = step.chain
+                                        is Step.Continue -> moving = step.chain
+                                    }
+                                }
+                            },
+                        startMove = { location ->
+                            if (all.size <= 2)
+                            // Nowhere to pick, straight to the confirmation
+                                all.first { it != location }.let { confirming = MoveChain.from(location).plus(it) }
+                            else
+                                moving = MoveChain.from(location)
+                        },
+                        onTyrePositioned = { location, bounds -> tyreCenters[location] = bounds.center },
+                        onOutlinePositioned = { location, outline -> outlines[location] = outline },
+                        canMove = all.size > 1,
+                    ),
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
             MoveArrows(
                 // Each move picked so far, all of them once the chain is complete
                 moves = confirming?.moves(occupied)
@@ -227,7 +285,7 @@ public fun ManageSensors(
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(TOP_BAR_HEIGHT)) {
                 Box(Modifier.padding(start = 4.dp)) { navigationIcon() }
                 Text(
-                    text = "Manage sensors",
+                    text = if (incoming != null) "Move to" else "Manage sensors",
                     style = MaterialTheme.typography.titleLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -241,6 +299,18 @@ public fun ManageSensors(
             vehicleWithArrows(Modifier.weight(1f))
             HorizontalDivider()
             actions(Modifier.fillMaxWidth().padding(16.dp))
+        }
+    }
+    incoming?.also { incoming ->
+        askingIncoming?.also { target ->
+            SwapOrReplaceDialog(
+                vehicleName = vehicle.name,
+                from = incoming.location,
+                to = target,
+                move = { swap -> askingIncoming = null; incoming.move(target, swap) },
+                back = { askingIncoming = null },
+                onDismissRequest = { askingIncoming = null },
+            )
         }
     }
     asking?.also { chain ->
@@ -260,6 +330,19 @@ public fun ManageSensors(
         )
     }
 }
+
+/**
+ * What a tyre of [ManageSensors] reaches its page by: the snackbar telling what it did, and
+ * [moveToVehicle] opening another vehicle to move its sensor there
+ */
+internal class ManageSensorsActions(
+    val snackbarHostState: SnackbarHostState,
+    val moveToVehicle: (Location, Vehicle) -> Unit,
+)
+
+@Suppress("CompositionLocalAllowlist")
+internal val LocalManageSensorsActions: ProvidableCompositionLocal<ManageSensorsActions?> =
+    compositionLocalOf { null }
 
 /**
  * An arrow from each move's location to the next over the vehicle, [tyreCenters] being in the

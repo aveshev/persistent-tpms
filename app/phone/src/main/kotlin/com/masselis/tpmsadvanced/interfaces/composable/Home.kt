@@ -35,6 +35,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -87,6 +88,7 @@ import com.masselis.tpmsadvanced.feature.main.interfaces.composable.SimulateRead
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.isReadingSimulationAvailable
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.LocalVehicleComponent
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.ManageSensors
+import com.masselis.tpmsadvanced.feature.main.interfaces.composable.MoveSensorToVehicle
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
 import com.masselis.tpmsadvanced.feature.qrcode.interfaces.QrCodeScan
 import com.masselis.tpmsadvanced.feature.qrcode.model.QrCodeResult
@@ -99,6 +101,7 @@ import com.masselis.tpmsadvanced.interfaces.viewmodel.VehicleHomeViewModel
 import com.masselis.tpmsadvanced.interfaces.viewmodel.VehicleHomeViewModel.Event
 import com.masselis.tpmsadvanced.ioc.Bindings.Companion.HomeViewModel
 import com.masselis.tpmsadvanced.ioc.Bindings.Companion.VehicleHomeViewModel
+import kotlinx.coroutines.launch
 import java.util.UUID
 
 @Composable
@@ -138,6 +141,8 @@ internal fun VehicleHome(
         var showAndroidAutoSupportAlert by remember { mutableStateOf(false) }
         var showWicarlinkSupportAlert by remember { mutableStateOf(false) }
         val snackbarHostState = remember { SnackbarHostState() }
+        // Outlives the pages, for a snackbar told by a page as it leaves
+        val scope = rememberCoroutineScope()
         // A QR code scanned for this location, shown once its camera is closed, see QrCodeResultDialog
         var qrCodeResult by rememberSaveable { mutableStateOf<QrCodeResult?>(null) }
         var qrCodeLocation by rememberSaveable { mutableIntStateOf(0) }
@@ -163,7 +168,7 @@ internal fun VehicleHome(
         // The main screen draws its own, see CurrentVehicle, and Manage sensors its own beside the
         // vehicle in a wide window, see isWideWindow
         val barPath = currentPath?.takeIf {
-            (it is Path.Home || (it is Path.ManageSensors && isWideWindow())).not()
+            (it is Path.Home || ((it is Path.ManageSensors || it is Path.MoveToVehicle) && isWideWindow())).not()
         }
         // Kept while the bar fades out with the screen it was on
         var lastBarPath by remember { mutableStateOf(barPath) }
@@ -252,8 +257,41 @@ internal fun VehicleHome(
                                 navController.navigate("${Path.BluetoothAssign(vehicleUuid, locations.indexOf(it))}")
                             },
                             calibrate = { navController.navigate("${Path.Calibration(vehicleUuid, it)}") },
+                            moveToVehicle = { location, toVehicle ->
+                                navController.navigate(
+                                    "${Path.MoveToVehicle(vehicleUuid, locations.indexOf(location), toVehicle)}"
+                                )
+                            },
                             // Like the main screen, without the room of a bar it won't have: the
                             // vehicle is then sized once, not again when the bar's gone, see topBar
+                            modifier = if (isWideWindow()) {
+                                Modifier
+                                    .windowInsetsPadding(ScaffoldDefaults.contentWindowInsets)
+                                    .fillMaxSize()
+                            } else {
+                                modifier
+                            },
+                            navigationIcon = { BackButton() },
+                        )
+                    }
+                    composable(
+                        route = Path.MoveToVehicle.route(vehicleUuid),
+                        arguments = listOf(
+                            navArgument("location") { type = NavType.IntType },
+                            navArgument("toVehicle") { type = NavType.StringType },
+                        ),
+                    ) { entry ->
+                        val arguments = requireNotNull(entry.arguments)
+                        MoveSensorToVehicle(
+                            location = locations[arguments.getInt("location")],
+                            vehicleUuid = UUID.fromString(arguments.getString("toVehicle")),
+                            snackbarHostState = snackbarHostState,
+                            onMoved = { message ->
+                                navController.popBackStack()
+                                scope.launch { snackbarHostState.showSnackbar(message) }
+                            },
+                            onCancel = { navController.popBackStack() },
+                            // Like Manage sensors, see there
                             modifier = if (isWideWindow()) {
                                 Modifier
                                     .windowInsetsPadding(ScaffoldDefaults.contentWindowInsets)
@@ -573,6 +611,7 @@ private fun TopAppBar(
                 )
 
                 is Path.ManageSensors -> Text(text = "Manage sensors")
+                is Path.MoveToVehicle -> Text(text = "Move to")
                 is Path.PressureSettings -> Text(text = "Pressure")
                 is Path.TemperatureSettings -> Text(text = "Temperature")
                 is Path.Calibration -> Text(text = "Calibrate sensor")
@@ -605,6 +644,7 @@ private fun TopAppBar(
             when (currentPath) {
                 is Path.Settings,
                 is Path.ManageSensors,
+                is Path.MoveToVehicle,
                 is Path.PressureSettings,
                 is Path.TemperatureSettings,
                 is Path.Calibration,
@@ -645,6 +685,7 @@ private fun TopAppBar(
 
                 is Path.Settings,
                 is Path.ManageSensors,
+                is Path.MoveToVehicle,
                 is Path.PressureSettings,
                 is Path.TemperatureSettings,
                 is Path.Calibration,

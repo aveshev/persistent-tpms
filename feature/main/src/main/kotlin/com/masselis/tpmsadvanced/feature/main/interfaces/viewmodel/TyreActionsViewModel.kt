@@ -3,9 +3,12 @@ package com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.masselis.tpmsadvanced.data.vehicle.model.Sensor
+import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
+import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location
 import com.masselis.tpmsadvanced.data.vehicle.usecase.DemoOrBleScannerUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.LocatedTyreScannerUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.SensorBindingUseCase
+import com.masselis.tpmsadvanced.feature.main.usecase.SensorBindingUseCase.OtherVehicle
 import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -47,6 +50,11 @@ internal class TyreActionsViewModel(
         else -> State.Unassigned(detected)
     }
 
+    /** Where the assigned sensor can be moved to, besides this vehicle */
+    val otherVehicles: StateFlow<List<OtherVehicle>> = sensorBindingUseCase
+        .otherVehicles()
+        .stateIn(viewModelScope, WhileSubscribed(), emptyList())
+
     fun assign(sensor: Sensor) {
         viewModelScope.launch { sensorBindingUseCase.bind(sensor) }
     }
@@ -54,4 +62,8 @@ internal class TyreActionsViewModel(
     fun delete() {
         viewModelScope.launch { sensorBindingUseCase.unbind() }
     }
+
+    /** Suspends until it's moved, a page leaving once it's done would cancel it in viewModelScope */
+    suspend fun moveToVehicle(vehicle: Vehicle, location: Location, swap: Boolean): Unit =
+        sensorBindingUseCase.moveToVehicle(vehicle, location, swap)
 }
