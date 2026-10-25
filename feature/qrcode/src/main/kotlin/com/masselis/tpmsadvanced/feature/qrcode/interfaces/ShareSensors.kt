@@ -59,8 +59,8 @@ public fun ShareSensors(
 
             is State.Ready -> {
                 Text(
-                    text = "On the other phone, open this app's vehicle settings, tap “Scan shared sensors” " +
-                        "and point the camera at this code",
+                    text = "On the other phone, tap a wheel without a sensor, choose “Scan QR code” " +
+                        "and point the camera at this code: every sensor is assigned at once",
                     textAlign = TextAlign.Center,
                 )
                 QrCode(

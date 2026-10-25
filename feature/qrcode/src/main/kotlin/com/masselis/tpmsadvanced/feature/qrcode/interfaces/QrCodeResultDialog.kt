@@ -26,8 +26,8 @@ import java.util.UUID
 /**
  * What [result], a scanned QR code, leads to on the vehicle [vehicleUuid] it was scanned for, at
  * [location] for a code with a single sensor, shown
- * on the screen the scan started from once the camera is closed. [scan] tells one scan from the
- * next, so a code scanned again is worked out again. [onDismiss] once answered, [scanBluetooth] for
+ * on the screen the scan started from once the camera is closed. [scan] tells one scan from any
+ * other, on any vehicle, so a code scanned again is worked out again. [onDismiss] once answered, [scanBluetooth] for
  * a code the app can't use.
  */
 @Suppress("MaxLineLength", "LongMethod", "CyclomaticComplexMethod")
@@ -36,7 +36,7 @@ public fun QrCodeResultDialog(
     vehicleUuid: UUID,
     location: Location,
     result: QrCodeResult,
-    scan: Int,
+    scan: UUID,
     scanBluetooth: () -> Unit,
     onDismiss: () -> Unit,
 ) {

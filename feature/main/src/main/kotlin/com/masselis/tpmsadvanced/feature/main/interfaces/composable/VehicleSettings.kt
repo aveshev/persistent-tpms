@@ -39,7 +39,7 @@ import kotlinx.coroutines.delay
  * The vehicle's settings, the alerts being summarised here and edited on their own pages opened by
  * [openPressure], [openTemperature] and [openBattery]. [openManageSensors] manages the
  * sensors on the main screen, where each sensor is calibrated. [openShareSensors] shows them as a
- * QR code for another phone, which assigns them with [scanSharedSensors].
+ * QR code for another phone, scanned from a wheel's assignment.
  */
 @Suppress("LongMethod", "MaxLineLength", "CyclomaticComplexMethod")
 @Composable
@@ -49,7 +49,6 @@ public fun VehicleSettings(
     openBattery: () -> Unit,
     openManageSensors: () -> Unit,
     openShareSensors: () -> Unit,
-    scanSharedSensors: () -> Unit,
     modifier: Modifier = Modifier,
     backgroundSettings: @Composable (VehicleComponent) -> Unit = backgroundSettingsPlaceholder,
     component: VehicleComponent = LocalVehicleComponent.current,
@@ -136,12 +135,6 @@ public fun VehicleSettings(
                 onClick = openShareSensors,
                 modifier = Modifier.testTag(VehicleSettingsTags.shareSensors),
             )
-            TextSettingsItem(
-                headline = "Scan shared sensors",
-                supporting = "From another phone's QR",
-                onClick = scanSharedSensors,
-                modifier = Modifier.testTag(VehicleSettingsTags.scanSharedSensors),
-            )
             ClearBoundSensorsButton()
         }
         SettingsSectionHeader("Vehicle")
@@ -214,7 +207,6 @@ internal fun RenameVehicleDialogPreview() {
 internal object VehicleSettingsTags {
     const val manageSensors = "VehicleSettingsTags_manageSensors"
     const val shareSensors = "VehicleSettingsTags_shareSensors"
-    const val scanSharedSensors = "VehicleSettingsTags_scanSharedSensors"
     const val battery = "VehicleSettingsTags_battery"
 }
 

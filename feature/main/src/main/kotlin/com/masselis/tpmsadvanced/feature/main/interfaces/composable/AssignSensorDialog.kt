@@ -56,7 +56,7 @@ internal fun AssignSensorDialog(
                 DialogOption(
                     icon = { Icon(ImageVector.vectorResource(R.drawable.qr_code_24px), null) },
                     title = "Scan QR code",
-                    subtitle = "Printed on the sensors' box, card or cap",
+                    subtitle = "Printed on the sensors' box, card or cap, or shared by another phone",
                     onClick = scanQrCode,
                     modifier = Modifier.testTag(AssignSensorDialogTags.qrCode),
                 )

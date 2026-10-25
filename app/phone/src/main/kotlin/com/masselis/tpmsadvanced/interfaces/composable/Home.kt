@@ -142,7 +142,9 @@ internal fun VehicleHome(
         // A QR code scanned for this location, shown once its camera is closed, see QrCodeResultDialog
         var qrCodeResult by rememberSaveable { mutableStateOf<QrCodeResult?>(null) }
         var qrCodeLocation by rememberSaveable { mutableIntStateOf(0) }
-        var qrCodeScan by rememberSaveable { mutableIntStateOf(0) }
+        // Unique, not a count: this restarts with each vehicle while the dialogs' view models are
+        // the activity's, a count would hand a scan the view model of another vehicle's scan
+        var qrCodeScan by rememberSaveable { mutableStateOf(UUID.randomUUID()) }
         val currentPath = navController.currentBackStackEntryAsState()
             .value
             ?.destination
@@ -241,8 +243,6 @@ internal fun VehicleHome(
                                 navController.navigate("${Path.ManageSensors(vehicleComponent.vehicle.uuid)}")
                             },
                             openShareSensors = { navController.navigate("${Path.ShareSensors(vehicleUuid)}") },
-                            // A shared code holds every sensor's wheel, whichever wheel the scan is for
-                            scanSharedSensors = { navController.navigate("${Path.QrCode(vehicleUuid, 0)}") },
                             modifier = modifier
                         )
                     }
@@ -474,7 +474,7 @@ internal fun VehicleHome(
                             onFound = {
                                 qrCodeResult = it
                                 qrCodeLocation = location
-                                qrCodeScan++
+                                qrCodeScan = UUID.randomUUID()
                                 navController.popBackStack()
                             },
                             modifier = modifier
