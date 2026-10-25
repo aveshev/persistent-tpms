@@ -7,6 +7,7 @@ import com.masselis.tpmsadvanced.core.database.QueryOne.Companion.asOne
 import com.masselis.tpmsadvanced.core.database.QueryOneOrNull
 import com.masselis.tpmsadvanced.core.database.QueryOneOrNull.Companion.asOneOrNull
 import com.masselis.tpmsadvanced.data.vehicle.Database
+import com.masselis.tpmsadvanced.data.vehicle.Sensor as SensorRow
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure
 import com.masselis.tpmsadvanced.data.vehicle.model.PressureCalibration
 import com.masselis.tpmsadvanced.data.vehicle.model.Sensor
@@ -58,25 +59,73 @@ public class SensorDatabase internal constructor(
     public suspend fun move(vehicleId: UUID, moves: List<Pair<Location, Location>>): Unit = withContext(IO) {
         database.transaction {
             moves
-                // The whole row, the sensor keeps its calibration
-                .map { (from, to) -> queries.selectByVehicleAndLocation(vehicleId, from).executeAsOne() to to }
-                // All freed first, a sensor can take a location another one is leaving
-                .onEach { (sensor, _) -> queries.deleteByVehicleAndLocation(vehicleId, sensor.location) }
-                .forEach { (sensor, to) ->
-                    queries.insertMoved(
-                        sensor.id,
-                        to,
-                        vehicleId,
-                        sensor.brand,
-                        sensor.pressureCalibration,
-                        sensor.pressureOffset,
-                        sensor.pressureMultiplier,
-                    )
-                    database.readingQueries.parkSensor(to, vehicleId, sensor.location, sensor.id)
+                .map { (from, to) ->
+                    Placement(queries.selectByVehicleAndLocation(vehicleId, from).executeAsOne(), vehicleId, to)
                 }
-            database.readingQueries.unparkSensors(vehicleId)
-            database.readingQueries.dropParked(vehicleId)
+                .place()
         }
+    }
+
+    /**
+     * Moves the sensor at [location] of the vehicle [vehicleId] to [toLocation] of the vehicle
+     * [toVehicleId], along with its readings and its calibration. The sensor already there, if any,
+     * comes to [location] when [swap], with its own, and is unbound otherwise.
+     */
+    public suspend fun moveToVehicle(
+        vehicleId: UUID,
+        location: Location,
+        toVehicleId: UUID,
+        toLocation: Location,
+        swap: Boolean,
+    ): Unit = withContext(IO) {
+        require(vehicleId != toVehicleId) { "Moving on the same vehicle, see move()" }
+        database.transaction {
+            vehicleQueries
+                .selectByUuid(toVehicleId)
+                .executeAsOne()
+                .kind
+                .also { kind -> require(toLocation in kind.locations) { "$toLocation isn't a location of $kind" } }
+            listOfNotNull(
+                queries
+                    .selectByVehicleAndLocation(vehicleId, location)
+                    .executeAsOne()
+                    .let { Placement(it, toVehicleId, toLocation) },
+                queries
+                    .selectByVehicleAndLocation(toVehicleId, toLocation)
+                    .executeAsOneOrNull()
+                    // Replaced, its readings stay with the tyre like those of any sensor unbound
+                    ?.also { if (swap.not()) queries.deleteByVehicleAndLocation(toVehicleId, toLocation) }
+                    ?.takeIf { swap }
+                    ?.let { Placement(it, vehicleId, location) },
+            ).place()
+        }
+    }
+
+    /** A sensor's whole row, so it keeps its calibration, and where it goes */
+    private data class Placement(val sensor: SensorRow, val vehicleId: UUID, val location: Location)
+
+    /** Within a transaction, puts each sensor where it goes, with its readings */
+    private fun List<Placement>.place() {
+        // All freed first, a sensor can take a location another one is leaving
+        onEach { (sensor) -> queries.deleteByVehicleAndLocation(sensor.vehicleId, sensor.location) }
+            .forEach { (sensor, vehicleId, location) ->
+                queries.insertMoved(
+                    sensor.id,
+                    location,
+                    vehicleId,
+                    sensor.brand,
+                    sensor.pressureCalibration,
+                    sensor.pressureOffset,
+                    sensor.pressureMultiplier,
+                )
+                database.readingQueries.parkSensor(vehicleId, location, sensor.vehicleId, sensor.location, sensor.id)
+            }
+        flatMap { listOf(it.sensor.vehicleId, it.vehicleId) }
+            .distinct()
+            .forEach { vehicleId ->
+                database.readingQueries.unparkSensors(vehicleId)
+                database.readingQueries.dropParked(vehicleId)
+            }
     }
 
     /** Unbinds the sensor at [location] of the vehicle, if any */

@@ -116,6 +116,8 @@ The name is shown in the app settings. `./gradlew :app:phone:firebaseReleaseNote
 ### Branching
 New feature/fix work always branches from `develop`, never `main` — before creating a new branch, run `git checkout develop && git pull` first. `main` only holds released code and is the source for hotfix branches (see Versioning above).
 
+The main checkout is shared between sessions and is often left on another session's branch, behind `develop`, and worktrees can be cut from a stale local `develop`. To answer what the app does now (whether a feature exists, how something behaves), `git fetch origin` and read `origin/develop` (`git grep <pattern> origin/develop`, `git show origin/develop:<path>`), not the working tree. When the checked-out branch is behind it, say so before relying on what it contains.
+
 ### Remotes
 This checkout has two remotes: `origin` (the user's fork, `aveshev/persistent-tpms`, formerly `TPMS-advanced-NE`) and `upstream` (`VincentMasselis/TPMS-advanced`, the original project). Nothing from this project — branches, pushes, PRs — should go to `upstream` unless specifically asked to do so. Default to `origin` for pushes and PRs (`gh repo set-default aveshev/persistent-tpms` keeps `gh pr create` from guessing wrong).
 

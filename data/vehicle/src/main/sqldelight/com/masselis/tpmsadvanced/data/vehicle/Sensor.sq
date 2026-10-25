@@ -11,7 +11,7 @@ CREATE TABLE Sensor(
     vehicleId BLOB AS UUID NOT NULL,
     brand INTEGER AS SensorBrand NOT NULL,
     -- Its calibration, it's the sensor which reads too high or too low. Kept when it's moved or
-    -- swapped on its vehicle, deleted with it.
+    -- swapped, on its vehicle or to another one (SensorDatabase.moveToVehicle), deleted with it.
     pressureCalibration INTEGER AS Boolean NOT NULL DEFAULT 0,
     pressureOffset REAL AS Pressure NOT NULL DEFAULT 0,
     pressureMultiplier REAL NOT NULL DEFAULT 1,
@@ -36,7 +36,7 @@ UPDATE SET
     pressureMultiplier=CASE WHEN vehicleId = excluded.vehicleId THEN pressureMultiplier ELSE 1 END,
     vehicleId=excluded.vehicleId;
 
--- A sensor moved on its vehicle, with the calibration it had: it's the sensor's
+-- A sensor moved, with the calibration it had: it's the sensor's
 insertMoved:
 INSERT INTO Sensor (id, location, vehicleId, brand, pressureCalibration, pressureOffset, pressureMultiplier)
 VALUES (?, ?, ?, ?, ?, ?, ?);

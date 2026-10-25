@@ -25,12 +25,12 @@ CREATE TABLE Reading(
 insert:
 INSERT OR IGNORE INTO Reading (vehicleId, location, timestamp, sensorId, rssi, raw) VALUES (?, ?, ?, ?, ?, ?);
 
--- A sensor's readings follow it to its new location, the other sensors' stay. They're parked under
--- a negative timestamp first: another sensor of the same move may not have left :to yet, and its
--- readings can share a timestamp with these (a simulated reading of every tyre at once). See
--- unparkSensors.
+-- A sensor's readings follow it to its new location, on its vehicle or another one, the other
+-- sensors' stay. They're parked under a negative timestamp first: another sensor of the same move
+-- may not have left :to yet, and its readings can share a timestamp with these (a simulated reading
+-- of every tyre at once). See unparkSensors.
 parkSensor:
-UPDATE Reading SET location = :to, timestamp = -timestamp
+UPDATE Reading SET vehicleId = :toVehicleId, location = :to, timestamp = -timestamp
 WHERE vehicleId = :vehicleId AND location = :from AND sensorId = :sensorId AND timestamp > 0;
 
 -- Once every sensor of the move has left. A reading still in the way, of a sensor which didn't

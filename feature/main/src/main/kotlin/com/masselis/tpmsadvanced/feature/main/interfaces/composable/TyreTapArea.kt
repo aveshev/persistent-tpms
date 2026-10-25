@@ -17,6 +17,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -45,6 +46,7 @@ import com.masselis.tpmsadvanced.feature.main.ioc.tyre.TyreBindings.Companion.Ty
 import com.masselis.tpmsadvanced.feature.main.ioc.tyre.TyreComponent.Companion.TyreComponent
 import com.masselis.tpmsadvanced.feature.main.ioc.tyre.TyreComponent.Companion.keyed
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
+import kotlinx.coroutines.launch
 
 /** How far a location's outline reaches past its tyre and readout */
 internal val OUTLINE_OUTSET = 6.dp
@@ -90,10 +92,13 @@ internal fun TyreTapArea(
     // A dialog to assign a sensor, or to manage the assigned one
     var isOpen by rememberSaveable { mutableStateOf(false) }
     var confirmDelete by rememberSaveable { mutableStateOf(false) }
+    var isMovingToVehicle by rememberSaveable { mutableStateOf(false) }
+    val pageActions = LocalManageSensorsActions.current
+    val scope = rememberCoroutineScope()
     val isUnassigned = state is State.Unassigned
     val isWaiting = move?.chain?.last == location
     // Gone through by the chain, unless it can close on it
-    val isInChain = move?.let { location in it.chain.locations && it.canTap(location).not() } == true
+    val isInChain = move?.chain?.let { location in it.locations && move.canTap(location).not() } == true
     val onTap: (() -> Unit)? = when {
         move != null -> if (move.canTap(location)) ({ move.onTap(location) }) else null
         state is State.Unassigned || (state is State.Assigned && isManaging) -> ({ isOpen = true })
@@ -156,14 +161,39 @@ internal fun TyreTapArea(
     (state as? State.Assigned)
         ?.takeIf { isOpen }
         ?.also { assigned ->
+            // Only while it's open, rather than for every tyre of every screen
+            val otherVehicles by viewModel.otherVehicles.collectAsState()
             ManageSensorDialog(
                 location = location,
                 sensor = assigned.sensor,
                 move = { isOpen = false; startMove(location) },
                 canMove = canMove,
+                moveToVehicle = { isOpen = false; isMovingToVehicle = true },
+                canMoveToVehicle = otherVehicles.isNotEmpty(),
                 calibrate = { isOpen = false; calibrate(assigned.sensor.id) },
                 delete = { isOpen = false; confirmDelete = true },
                 onDismissRequest = { isOpen = false },
+            )
+        }
+    (state as? State.Assigned)
+        ?.takeIf { isMovingToVehicle }
+        ?.also {
+            val otherVehicles by viewModel.otherVehicles.collectAsState()
+            MoveToVehicleDialog(
+                location = location,
+                otherVehicles = otherVehicles,
+                open = { vehicle ->
+                    isMovingToVehicle = false
+                    pageActions?.moveToVehicle?.invoke(location, vehicle)
+                },
+                move = { vehicle, target, swap ->
+                    isMovingToVehicle = false
+                    scope.launch {
+                        viewModel.moveToVehicle(vehicle, target, swap)
+                        pageActions?.snackbarHostState?.showSnackbar(movedMessage(vehicle, target, swap))
+                    }
+                },
+                onDismissRequest = { isMovingToVehicle = false },
             )
         }
     (state as? State.Unassigned)
@@ -241,12 +271,15 @@ private fun Modifier.outset(outset: Dp, extraTop: Int = 0) = layout { measurable
 }
 
 /** What can be done with the [sensor] assigned to [location], under its position, brand and id */
+@Suppress("LongMethod", "LongParameterList")
 @Composable
 private fun ManageSensorDialog(
     location: Location,
     sensor: Sensor,
     move: () -> Unit,
     canMove: Boolean,
+    moveToVehicle: () -> Unit,
+    canMoveToVehicle: Boolean,
     calibrate: () -> Unit,
     delete: () -> Unit,
     onDismissRequest: () -> Unit,
@@ -279,6 +312,14 @@ private fun ManageSensorDialog(
                     onClick = move,
                     isEnabled = canMove,
                     modifier = Modifier.testTag(TyreTapAreaTags.move),
+                )
+                DialogOption(
+                    icon = { Icon(ImageVector.vectorResource(R.drawable.directions_car_24px), null) },
+                    title = "Move to another vehicle",
+                    subtitle = "Assign this sensor to a wheel of another vehicle",
+                    onClick = moveToVehicle,
+                    isEnabled = canMoveToVehicle,
+                    modifier = Modifier.testTag(TyreTapAreaTags.moveToVehicle),
                 )
                 DialogOption(
                     icon = { Icon(ImageVector.vectorResource(R.drawable.tune_24px), null) },
@@ -318,6 +359,8 @@ internal fun ManageSensorDialogPreview() {
         Sensor(0x0A0B0C, Location.Wheel(FRONT_RIGHT), PECHAM),
         move = {},
         canMove = true,
+        moveToVehicle = {},
+        canMoveToVehicle = true,
         calibrate = {},
         delete = {},
         onDismissRequest = {},
@@ -330,6 +373,7 @@ internal object TyreTapAreaTags {
     const val manageDialog = "TyreTapAreaTags_manageDialog"
     const val brand = "TyreTapAreaTags_brand"
     const val move = "TyreTapAreaTags_move"
+    const val moveToVehicle = "TyreTapAreaTags_moveToVehicle"
     const val calibrate = "TyreTapAreaTags_calibrate"
     const val delete = "TyreTapAreaTags_delete"
     const val manageCancel = "TyreTapAreaTags_manageCancel"
