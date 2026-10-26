@@ -44,7 +44,11 @@ internal enum class MockSensor {
         override fun advertisement(reading: Reading): ByteArray = "0201060303B0FB12FFAC00D043520008DA001D10FF1100AF2206"
             .hexToByteArray()
             .also { bytes ->
-                (reading.kpa.within("kpa", 0f..1606f) / 3.144f)
+                // Read in steps of 0.1 bar, as a real sensor does, see RawWicarlink.pressure
+                (reading.kpa.within("kpa", 0f..1600f) / RawWicarlink.KPA_PER_STEP)
+                    .roundToInt()
+                    .times(RawWicarlink.KPA_PER_STEP)
+                    .div(RawWicarlink.KPA_PER_UNIT)
                     .roundToInt()
                     .let { pressure ->
                         bytes[12] = pressure.toByte()

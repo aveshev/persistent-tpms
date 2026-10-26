@@ -7,6 +7,7 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Temperature.CREATOR.celsius
 import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import com.masselis.tpmsadvanced.data.vehicle.model.Voltage.CREATOR.volts
 import java.util.UUID.fromString
+import kotlin.math.roundToInt
 
 @Suppress("MagicNumber")
 internal class RawWicarlink private constructor(private val data: ByteArray) : Raw {
@@ -17,9 +18,14 @@ internal class RawWicarlink private constructor(private val data: ByteArray) : R
         ((data[24].toInt() and 0xFF) shl 8) or
         ((data[25].toInt() and 0xFF) shl 16)
 
+    // The sensor reads steps of 0.1 bar, sent rounded to units of 3.144 kPa: 48 units are its 150
+    // kPa, not 150.9. Every value of real sensors is the nearest unit to a step.
     fun pressure() = (data[12].toInt() and 0xFF)
         .let { raw -> if ((data[17].toInt() and 0xFF) == 1) raw + 256 else raw }
-        .times(3.144f)
+        .times(KPA_PER_UNIT)
+        .div(KPA_PER_STEP)
+        .roundToInt()
+        .times(KPA_PER_STEP)
         .kpa
 
     fun voltage() = (data[11].toInt() and 0xFF) * 0.01f + 1.22f // Returns 2.7 for 2.7 Volts
@@ -44,6 +50,10 @@ internal class RawWicarlink private constructor(private val data: ByteArray) : R
 
     companion object {
         private const val LEAKAGE_STATE: Byte = 0x01
+        internal const val KPA_PER_UNIT = 3.144f
+
+        /** 0.1 bar */
+        internal const val KPA_PER_STEP = 10f
 
         internal val SERVICE_UUID = ParcelUuid(fromString("0000fbb0-0000-1000-8000-00805f9b34fb"))
 

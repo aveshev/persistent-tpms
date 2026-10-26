@@ -35,6 +35,26 @@ internal class WircarlinkTest {
     }
 
     @Test
+    fun `the pressure is the sensor's step of 0_1 bar`() {
+        // Two real sensors' readings, from 140 to 590 kPa: never 1 or 2 units apart, the nearest
+        // unit of 3.144 kPa to each step of 10 kPa
+        listOf(
+            "0201060303B0FB12FFAC00C22D51000DC2001C10FF1100C52122" to 140f,
+            "0201060303B0FB12FFAC00C73056000DAE00FA10FF1100C52122" to 150f,
+            "0201060303B0FB12FFAC00C63355000D6400BA10FF1100C52122" to 160f,
+            "0201060303B0FB12FFAC00C35350010D9A00D710FF1100C42122" to 260f,
+            "0201060303B0FB12FFAC00C36353000D3F007C10FF1100C42122" to 310f,
+            "0201060303B0FB12FFAC00C47350010D3800E610FF1100C42122" to 360f,
+            "0201060303B0FB12FFAC00C48657020DB2006E10FF1100C42122" to 420f,
+            "0201060303B0FB12FFAC00C68F54000DB900EB10FF1100C42122" to 450f,
+            "0201060303B0FB12FFAC00C6A253020DE2008C10FF1100C42122" to 510f,
+            "0201060303B0FB12FFAC00C7BC52000D7900AC10FF1100C52122" to 590f,
+        ).forEach { (sample, kpa) ->
+            assertEquals(kpa, assertNotNull(sample.hexToByteArray().decodedTyre(), sample).pressure.kpa, sample)
+        }
+    }
+
+    @Test
     fun `a pressure drop is an alarm`() {
         // A real sensor on a test stand: a scheduled packet, then the one sent at once when some
         // air was let out
