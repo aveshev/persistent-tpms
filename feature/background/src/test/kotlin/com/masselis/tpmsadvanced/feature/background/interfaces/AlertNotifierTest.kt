@@ -16,10 +16,13 @@ import com.masselis.tpmsadvanced.data.vehicle.model.TyreAtmosphere
 import com.masselis.tpmsadvanced.data.vehicle.model.Voltage.CREATOR.volts
 import com.masselis.tpmsadvanced.feature.background.interfaces.AlertNotifier.Action
 import com.masselis.tpmsadvanced.feature.background.interfaces.AlertNotifier.Companion.action
+import com.masselis.tpmsadvanced.feature.background.interfaces.AlertNotifier.Companion.raises
 import com.masselis.tpmsadvanced.feature.background.interfaces.AlertNotifier.Companion.reevaluation
 import com.masselis.tpmsadvanced.feature.background.interfaces.AlertNotifier.Shown
 import org.junit.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 @Suppress("MaxLineLength")
 internal class AlertNotifierTest {
@@ -156,5 +159,20 @@ internal class AlertNotifierTest {
     @Test
     fun `another sensor's notification is left to the next reading`() {
         assertEquals(Action.None, reevaluation(reevaluated(250f, 200f), PRESSURE, Shown(2, RED), notSnoozed))
+    }
+
+    @Test
+    fun `a new notification or a higher level waits before it's raised`() {
+        assertTrue(action(alerts(190f), null).raises(null, 1))
+        assertTrue(action(alerts(90f), Shown(1, RED), isHeld = true).raises(Shown(1, RED), 1))
+        assertTrue(action(alerts(190f), Shown(2, RED)).raises(Shown(2, RED), 1))
+    }
+
+    @Test
+    fun `the same level, a lower one or a hold isn't raised`() {
+        assertFalse(action(alerts(190f), Shown(1, RED), isHeld = true).raises(Shown(1, RED), 1))
+        assertFalse(action(alerts(190f), Shown(1, CRIMSON)).raises(Shown(1, CRIMSON), 1))
+        assertFalse(action(alerts(250f), Shown(1, RED), isHeld = true).raises(Shown(1, RED), 1))
+        assertFalse(action(alerts(250f), null).raises(null, 1))
     }
 }
