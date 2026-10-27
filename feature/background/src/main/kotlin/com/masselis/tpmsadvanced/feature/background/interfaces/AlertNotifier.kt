@@ -31,6 +31,7 @@ import com.masselis.tpmsadvanced.data.vehicle.model.AlertLevel.CRIMSON
 import com.masselis.tpmsadvanced.data.vehicle.model.AlertLevel.RED
 import com.masselis.tpmsadvanced.data.vehicle.model.PressureLoss
 import com.masselis.tpmsadvanced.data.vehicle.model.TyreAlerts
+import com.masselis.tpmsadvanced.data.vehicle.model.TyreAtmosphere
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import com.masselis.tpmsadvanced.feature.background.R
 import com.masselis.tpmsadvanced.feature.background.usecase.AlertSnoozeUseCase
@@ -53,6 +54,7 @@ import kotlin.math.roundToLong
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
 
@@ -79,8 +81,23 @@ internal class AlertNotifier(
      */
     private val holds = mutableMapOf<String, Hold>()
 
-    /** [pending] is the latest reading which would lower the notification, applied when it ends */
-    private data class Hold(val until: TimeMark, val job: Job, val pending: Update? = null)
+    /**
+     * [posted] is the reading the notification shows, at [level]. [pending] is the latest reading
+     * which would lower it, applied when it ends.
+     */
+    private data class Hold(
+        val until: TimeMark,
+        val job: Job,
+        val posted: Update,
+        val level: AlertLevel,
+        val pending: Update? = null,
+    )
+
+    /** The notifications raised [RAISE_DELAY] after their first reading, by tag, see [raises] */
+    private val raises = mutableMapOf<String, Raise>()
+
+    /** [update] is the latest reading raising the notification, posted when [job] ends */
+    private data class Raise(val update: Update, val job: Job)
 
     /** The updates hold the vehicles as they were when the tyres started being followed */
     private val latestVehicles = vehicleListUseCase
@@ -120,6 +137,7 @@ internal class AlertNotifier(
                         tag(event.vehicle, event.location, alertClass).also { tag ->
                             notificationManager.cancel(tag, NOTIFICATION_ID)
                             holds.remove(tag)?.job?.cancel()
+                            raises.remove(tag)?.job?.cancel()
                             speaker.stop(tag, isDismissed = true)
                         }
                     }
@@ -145,14 +163,36 @@ internal class AlertNotifier(
             }
         }
 
-    /** [isSpoken] is false for a reading which was already spoken, held until now */
-    @Suppress("MaxLineLength", "CyclomaticComplexMethod", "LongMethod")
-    private fun Update.notify(alertClass: AlertClass, shown: Map<String?, Shown>, isSpoken: Boolean = true) {
+    /**
+     * [isSpoken] is false for a reading which was already spoken, held until now. [isRaiseDue] is
+     * true for the reading raising the notification once [RAISE_DELAY] passed, see [raises].
+     */
+    @Suppress("MaxLineLength", "CyclomaticComplexMethod", "LongMethod", "ReturnCount")
+    private fun Update.notify(alertClass: AlertClass, shown: Map<String?, Shown>, isSpoken: Boolean = true, isRaiseDue: Boolean = false) {
         val tag = tag(vehicle, location, alertClass)
         val sensorId = requireNotNull(alerts.latest).sensorId
         val current = shown[tag]
         val isHeld = holds[tag]?.until?.hasNotPassedNow() == true
         val action = action(alerts, alertClass, current, isHeld) { snoozeUseCase.isSnoozed(sensorId, alertClass, it) }
+        if (isRaiseDue.not()) {
+            if (action.raises(current, sensorId)) {
+                // The first raising reading's delay, a sensor reporting faster than it still alerts
+                raises[tag]
+                    ?.also { raises[tag] = it.copy(update = this) }
+                    ?: run {
+                        raises[tag] = Raise(
+                            this,
+                            scope.launch {
+                                delay(RAISE_DELAY)
+                                raises.remove(tag)?.update?.notify(alertClass, shown(), isRaiseDue = true)
+                            },
+                        )
+                    }
+                return
+            }
+            // A reading which doesn't raise it came meanwhile: the raising one was a single one
+            raises.remove(tag)?.job?.cancel()
+        }
         when (action) {
             Action.None -> Unit
             Action.Cancel -> {
@@ -170,10 +210,22 @@ internal class AlertNotifier(
                         // The latest reading which would have lowered it goes through now
                         holds.remove(tag)?.pending?.notify(alertClass, shown(), isSpoken = false)
                     },
+                    this,
+                    action.level,
                 )
             }
 
-            is Action.Hold -> holds[tag] = requireNotNull(holds[tag]).copy(pending = this)
+            is Action.Hold -> requireNotNull(holds[tag])
+                .copy(pending = this)
+                .also { holds[tag] = it }
+                // Still at its level, telling the latest reading too, which the main screen shows
+                .also { hold ->
+                    notificationManager.notify(
+                        tag,
+                        NOTIFICATION_ID,
+                        hold.posted.notification(tag, alertClass, Action.Post(hold.level, sound = false), now = alerts.latest),
+                    )
+                }
         }
         // Unlike the notification, the speech follows the reading right away: it stops, or turns red
         if (isSpoken) when {
@@ -198,6 +250,8 @@ internal class AlertNotifier(
         val current = shown[tag] ?: return
         val sensorId = requireNotNull(alerts.latest).sensorId
         val action = reevaluation(alerts, alertClass, current) { snoozeUseCase.isSnoozed(sensorId, alertClass, it) }
+        // About a reading already stored, which a threshold change doesn't alert about
+        raises.remove(tag)?.job?.cancel()
         when (action) {
             Action.Cancel -> {
                 notificationManager.cancel(tag, NOTIFICATION_ID)
@@ -220,8 +274,9 @@ internal class AlertNotifier(
         }
     }
 
-    @Suppress("LongMethod")
-    private fun Update.notification(tag: String, alertClass: AlertClass, action: Action.Post) = NotificationCompat
+    /** [now] is a newer reading, which doesn't lower the notification yet, see [HOLD] */
+    @Suppress("LongMethod", "MaxLineLength")
+    private fun Update.notification(tag: String, alertClass: AlertClass, action: Action.Post, now: TyreAtmosphere? = null) = NotificationCompat
         .Builder(appContext, action.level.channel)
         .setSmallIcon(R.drawable.car_tire_alert)
         .setColor(
@@ -239,7 +294,7 @@ internal class AlertNotifier(
         .setOnlyAlertOnce(action.sound.not())
         .setSubText((latestVehicles.value.firstOrNull { it.uuid == vehicle.uuid } ?: vehicle).name)
         .setContentTitle(title(alertClass, action.level))
-        .setContentText(text(alertClass))
+        .setContentText(text(alertClass, now))
         // The reading's own time, a notification left over from earlier looks its age
         .setWhen(requireNotNull(alerts.latest).timestamp.times(MILLIS_PER_SECOND).roundToLong())
         .setShowWhen(true)
@@ -297,19 +352,28 @@ internal class AlertNotifier(
         SENSOR_ALARM -> "May be leaking"
     }
 
-    private fun Update.text(alertClass: AlertClass): String = buildString {
+    private fun Update.text(alertClass: AlertClass, now: TyreAtmosphere?): String = buildString {
         appendLoc(location, capitalized = true)
         append(": ")
-        append(details(alertClass))
+        append(details(alertClass, now))
+    }
+
+    /** The value [alertClass] is about, as [reading] has it */
+    private fun value(alertClass: AlertClass, reading: TyreAtmosphere): String = when (alertClass) {
+        TEMPERATURE -> reading.temperature.string(unitPreferences.temperature.value)
+        BATTERY -> reading.batteryVoltage?.string() ?: "${reading.batteryPercent}%"
+        PRESSURE, PRESSURE_LOSS, SENSOR_ALARM -> reading.pressure.string(unitPreferences.pressure.value)
     }
 
     @Suppress("CyclomaticComplexMethod")
-    private fun Update.details(alertClass: AlertClass): String {
+    private fun Update.details(alertClass: AlertClass, now: TyreAtmosphere?): String {
         val reading = requireNotNull(alerts.latest)
         val pressureUnit = unitPreferences.pressure.value
+        // "21.0 psi (now 22.4 psi)": the newer reading the main screen already shows
+        val values = value(alertClass, reading) + (now?.let { " (now ${value(alertClass, it)})" } ?: "")
         return when (alertClass) {
             PRESSURE -> buildString {
-                append("${reading.pressure.string(pressureUnit)}, ")
+                append("$values, ")
                 append(
                     if (isLowPressure) "minimum ${thresholds.lowPressure.string(pressureUnit)}"
                     else "maximum ${thresholds.highPressure.string(pressureUnit)}"
@@ -321,18 +385,12 @@ internal class AlertNotifier(
                 }
             }
 
-            TEMPERATURE -> unitPreferences.temperature.value.let { unit ->
-                "${reading.temperature.string(unit)}, hot from ${thresholds.highTemp.string(unit)}"
-            }
+            TEMPERATURE -> "$values, hot from ${thresholds.highTemp.string(unitPreferences.temperature.value)}"
 
             BATTERY -> reading
                 .batteryVoltage
-                ?.let { voltage ->
-                    "${voltage.string()}, alarm at ${
-                        thresholds.lowBatteryVoltage.alarmAt(reading.temperature).string()
-                    }"
-                }
-                ?: "${reading.batteryPercent}%, alarm at ${thresholds.lowBatteryPercent}%"
+                ?.let { "$values, alarm at ${thresholds.lowBatteryVoltage.alarmAt(reading.temperature).string()}" }
+                ?: "$values, alarm at ${thresholds.lowBatteryPercent}%"
             PRESSURE_LOSS -> loss
                 ?.let { "${it.summary(pressureUnit)}, now ${reading.pressure.string(pressureUnit)}" }
                 ?: reading.pressure.string(pressureUnit)
@@ -441,6 +499,17 @@ internal class AlertNotifier(
 
         /** A value hovering on a boundary while riding, read about once a minute, doesn't flicker */
         val HOLD = 3.minutes
+
+        /**
+         * A reading raising a notification, new or to a higher level, waits this long: the sensors
+         * send a few readings seconds apart when the pressure changes, and a single one raising it
+         * followed by one which doesn't is a value on a boundary, see docs/alerts.md
+         */
+        val RAISE_DELAY = 5.seconds
+
+        /** Whether this, for a reading of [sensorId], raises the [shown] notification: new or higher */
+        fun Action.raises(shown: Shown?, sensorId: Int): Boolean =
+            this is Action.Post && (shown == null || shown.sensorId != sensorId || level > shown.level)
 
         fun tag(vehicle: Vehicle, location: Vehicle.Kind.Location, alertClass: AlertClass) =
             "alert/${vehicle.uuid}/$location/${alertClass.name}"

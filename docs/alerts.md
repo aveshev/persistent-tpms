@@ -127,7 +127,7 @@ pumping up, which the silence button or a dismiss quiets.
 
 | Event | Effect |
 |---|---|
-| A class goes to a higher level | Notification updated on the new level's channel, **sounds** |
+| A class goes to a higher level | Notification updated on the new level's channel, **sounds**, [5 s later](#waiting-before-raising) |
 | A new red or crimson qualifying reading at the same level | **Sounds again**, at every reading, with no minimum gap |
 | A new amber qualifying reading at the same level | Silent update |
 | A class goes down to a lower level, still alerting | Silent update on the lower level's channel, once the [hold](#holding-a-notification-at-its-level) ends |
@@ -136,6 +136,18 @@ pumping up, which the silence button or a dismiss quiets.
 Re-sounding on every red or crimson reading is intended: a tyre losing pressure fast enough to
 transmit every few seconds is worth hearing about that often. Bursts are already collapsed into
 one reading, so a single reading sounds once.
+
+### Waiting before raising
+
+A reading which would post a new notification, or raise one to a higher level, waits **5 seconds**.
+A later reading meanwhile which would raise it too takes its place, without starting the 5 seconds
+over: a sensor reporting faster still alerts. A reading which wouldn't raise it, at a lower level or
+none, drops it: nothing is posted nor said. Re-sounding at the same level doesn't wait.
+
+A tyre whose pressure sits on a boundary between two of its sensor's steps (0.1 bar for Wicarlink)
+reads the lower step once when it's cold, then the upper one seconds later: without the wait, that
+single reading sounds a red alert the main screen no longer shows. The main screen shows every
+reading right away. The wait is kept in memory, the process dying drops it until the next reading.
 
 ### Holding a notification at its level
 
@@ -149,6 +161,11 @@ hovering on a boundary would otherwise clear and post its notification again, wi
 minute or two. A sensor reporting once an hour isn't affected, its lowering going through right
 away. The hold is kept in memory: after the process died, a notification keeps its level until its
 next reading.
+
+While held, a reading which would lower or clear it updates its text silently with the newer
+value, at the level and the time it was posted: "Front wheel: 20.5 psi (now 21.9 psi), minimum 21.5
+psi", the "now" following each reading. The main screen showing 21.9 psi isn't at odds with it.
+Not for a leak or the sensor's own alarm, whose text already tells the pressure now.
 
 The hold only concerns the notification. The speech follows each reading right away: a reading
 lowering a crimson alert stops its loop at once, and a red one is said as red.
