@@ -11,7 +11,8 @@ import com.masselis.tpmsadvanced.core.ui.TextSettingsItem
 
 /**
  * The page opened from [TimeSinceUpdateDetails]: how often each sensor brand sends an update, and
- * how to tell a silent sensor from a broken one. Only the schedules measured on real sensors.
+ * how to tell a silent sensor from a broken one. Only the schedules and pressure steps measured on
+ * real sensors, see RawWicarlink.pressure.
  */
 @Suppress("MaxLineLength")
 @Composable
@@ -23,11 +24,11 @@ public fun SensorReadingsUpdateDetails(modifier: Modifier = Modifier): Unit = Co
     SettingsGroup {
         TextSettingsItem(
             headline = "WiCarLink",
-            supporting = "Every 5.5 minutes, whether the vehicle moves or not, and whenever pressure changes significantly",
+            supporting = "Every 5.5 minutes, whether the vehicle moves or not, and whenever pressure changes significantly. Reads the pressure in steps of 0.1 bar (about 1.5 psi): a tyre between two steps can read one step lower when cold, and the next one up once warm",
         )
         TextSettingsItem(
             headline = "Pecham",
-            supporting = "Every minute while the wheel rotates. While stationary, only when the pressure is below ~22 psi, and in either case, whenever pressure changes significantly",
+            supporting = "Every minute while the wheel rotates. While stationary, only when the pressure is below ~22 psi, and in either case, whenever pressure changes significantly. Reads the pressure in steps of about 0.45 psi (3.1 kPa), shown rounded to 0.1 psi: a steady tyre can go back and forth by one step",
         )
     }
     SettingsSectionHeader("When updates seem to be missing")

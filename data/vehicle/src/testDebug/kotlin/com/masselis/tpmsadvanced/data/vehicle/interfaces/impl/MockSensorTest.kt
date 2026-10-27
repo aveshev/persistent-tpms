@@ -43,7 +43,8 @@ internal class MockSensorTest {
     private val resolution = mapOf(
         PECHAM to 0.6895f,
         BEKUBEE_KY to 0.6895f,
-        WICARLINK to 3.144f,
+        // Steps of 0.1 bar
+        WICARLINK to 10f,
         BEKUBEE_TPMS to 1f,
         SYSGRATION to 0.001f,
     )
