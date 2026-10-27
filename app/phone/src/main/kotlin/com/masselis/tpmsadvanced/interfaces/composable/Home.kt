@@ -84,6 +84,7 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.ui.SilenceAlertsB
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.CurrentVehicle
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.CurrentVehicleDropdown
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.DimWhenIdle
+import com.masselis.tpmsadvanced.feature.main.interfaces.composable.DimmedNotice
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.SimulateReadingDialog
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.isReadingSimulationAvailable
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.LocalVehicleComponent
@@ -204,14 +205,15 @@ internal fun VehicleHome(
                         // The bell tells the status here, nothing to hear
                         QuietScanStatusAnnouncementsEffect()
                         val alerts = alertingVehicles()
-                        DimWhenIdle(isAlerting = alerts.isNotEmpty()) {
+                        DimWhenIdle(isAlerting = alerts.isNotEmpty()) { isDimmed ->
                             CurrentVehicle(
                                 snackbarHostState = snackbarHostState,
                                 // Without the top bar's room, it's never shown with its own, see topBar
                                 modifier = Modifier
                                     .windowInsetsPadding(ScaffoldDefaults.contentWindowInsets)
                                     .fillMaxSize(),
-                                center = { SilenceAlertsButton(it) },
+                                // Never both: an alert to silence keeps the screen bright
+                                center = { if (isDimmed) DimmedNotice(it) else SilenceAlertsButton(it) },
                                 scanQrCode = {
                                     navController.navigate("${Path.QrCode(vehicleUuid, locations.indexOf(it))}")
                                 },

@@ -164,6 +164,7 @@ internal object TyreDisplaySettingsTags {
     const val theme = "TyreDisplaySettingsTags_theme"
     const val dimDisplay = "TyreDisplaySettingsTags_dimDisplay"
     const val dimDisplayDelay = "TyreDisplaySettingsTags_dimDisplayDelay"
+    const val pocketGuard = "TyreDisplaySettingsTags_pocketGuard"
     const val textSize = "TyreDisplaySettingsTags_textSize"
     const val textSizeSlider = "TyreDisplaySettingsTags_textSizeSlider"
     const val timeSinceUpdateDetails = "TyreDisplaySettingsTags_timeSinceUpdateDetails"
