@@ -12,6 +12,7 @@ import com.masselis.tpmsadvanced.core.ui.RadioSettingsItem
 import com.masselis.tpmsadvanced.core.ui.SettingsGroup
 import com.masselis.tpmsadvanced.core.ui.SettingsIntro
 import com.masselis.tpmsadvanced.core.ui.SettingsSectionHeader
+import com.masselis.tpmsadvanced.core.ui.SwitchSettingsItem
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.TyreDisplaySettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.TyreDisplaySettingsViewModel
 
@@ -26,9 +27,12 @@ internal fun DimDisplayDelay(
     viewModel: TyreDisplaySettingsViewModel = viewModel { TyreDisplaySettingsViewModel() },
 ) {
     val seconds by viewModel.dimDisplaySeconds.collectAsState()
+    val pocketGuard by viewModel.pocketGuard.collectAsState()
     DimDisplayDelay(
         seconds = seconds,
         onSeconds = { viewModel.dimDisplaySeconds.value = it },
+        pocketGuard = pocketGuard,
+        onPocketGuard = { viewModel.pocketGuard.value = it },
         modifier = modifier,
     )
 }
@@ -37,6 +41,8 @@ internal fun DimDisplayDelay(
 private fun DimDisplayDelay(
     seconds: Int,
     onSeconds: (Int) -> Unit,
+    pocketGuard: Boolean,
+    onPocketGuard: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) = Column(modifier) {
     @Suppress("MaxLineLength")
@@ -53,6 +59,16 @@ private fun DimDisplayDelay(
                 modifier = Modifier.testTag("${TyreDisplaySettingsTags.dimDisplayDelay}_$option"),
             )
         }
+    }
+    SettingsSectionHeader("In a pocket")
+    SettingsGroup {
+        SwitchSettingsItem(
+            headline = "Block touches in a pocket",
+            supporting = "Turns the screen black and ignores touches",
+            checked = pocketGuard,
+            onCheckedChange = onPocketGuard,
+            modifier = Modifier.testTag(TyreDisplaySettingsTags.pocketGuard),
+        )
     }
 }
 
@@ -71,5 +87,5 @@ private val DIM_DISPLAY_SECONDS = listOf(15, 30, 60, 120, 300)
 @Preview
 @Composable
 internal fun DimDisplayDelayPreview() {
-    DimDisplayDelay(seconds = 60, onSeconds = {})
+    DimDisplayDelay(seconds = 60, onSeconds = {}, pocketGuard = true, onPocketGuard = {})
 }

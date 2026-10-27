@@ -129,6 +129,16 @@ public class AppPreferences internal constructor(
         sharedPreferences.edit { putInt("DIM_DISPLAY_SECONDS", newValue) }
     }
 
+    /**
+     * While dimmed, and shortly after, the proximity sensor covered (a pocket) blocks the main
+     * screen's touches, see [dimDisplay], and after a while lets the screen turn off
+     */
+    public val pocketGuard: MutableStateFlow<Boolean> = observableStateFlow(
+        sharedPreferences.getBoolean("POCKET_GUARD", true)
+    ) { _, newValue ->
+        sharedPreferences.edit { putBoolean("POCKET_GUARD", newValue) }
+    }
+
     /** Whether the app is light or dark, [Theme.SYSTEM] following the phone's own setting */
     public val theme: MutableStateFlow<Theme> = observableStateFlow(
         sharedPreferences

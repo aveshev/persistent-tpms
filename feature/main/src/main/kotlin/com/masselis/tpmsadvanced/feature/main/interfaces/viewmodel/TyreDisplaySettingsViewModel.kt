@@ -15,6 +15,7 @@ internal class TyreDisplaySettingsViewModel(
     val theme = appPreferences.theme
     val dimDisplay = appPreferences.dimDisplay
     val dimDisplaySeconds = appPreferences.dimDisplaySeconds
+    val pocketGuard = appPreferences.pocketGuard
     val readoutTextScale = appPreferences.readoutTextScale
     val pressureUnit = unitPreferences.pressure
     val temperatureUnit = unitPreferences.temperature
