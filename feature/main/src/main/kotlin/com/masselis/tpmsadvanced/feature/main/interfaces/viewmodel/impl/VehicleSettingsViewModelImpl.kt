@@ -10,6 +10,7 @@ import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.BatteryKinds
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.VehicleSettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.usecase.RenameVehicleUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.VehicleRangesUseCase
+import kotlinx.coroutines.flow.SharingStarted.Companion.Eagerly
 import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -46,12 +47,14 @@ internal class VehicleSettingsViewModelImpl(
 
     override val isFullyAssigned = sensorDatabase
         .selectListByVehicleId(vehicle.value.uuid)
-        // Read now rather than after the first frame, the vehicle's size depends on it
-        .asStateFlow(viewModelScope, WhileSubscribed())
+        // Read now rather than after the first frame, the vehicle's size depends on it. Eagerly, not
+        // only while collected: the sensors cleared from the vehicle's settings, while the main
+        // screen behind them collects nothing, wouldn't be read again once it's back, see asStateFlow
+        .asStateFlow(viewModelScope, Eagerly)
         .let { sensors ->
             sensors
                 .map { vehicle.value.isFullyAssigned(it) }
-                .stateIn(viewModelScope, WhileSubscribed(), vehicle.value.isFullyAssigned(sensors.value))
+                .stateIn(viewModelScope, Eagerly, vehicle.value.isFullyAssigned(sensors.value))
         }
 
     private fun Vehicle.isFullyAssigned(sensors: List<Sensor>) = sensors
