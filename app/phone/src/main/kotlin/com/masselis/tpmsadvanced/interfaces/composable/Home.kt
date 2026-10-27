@@ -94,6 +94,7 @@ import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
 import com.masselis.tpmsadvanced.feature.qrcode.interfaces.QrCodeScan
 import com.masselis.tpmsadvanced.feature.qrcode.model.QrCodeResult
 import com.masselis.tpmsadvanced.feature.qrcode.interfaces.QrCodeResultDialog
+import com.masselis.tpmsadvanced.feature.qrcode.interfaces.ShareSensors
 import com.masselis.tpmsadvanced.feature.unlocated.interfaces.ui.BluetoothAssign
 import com.masselis.tpmsadvanced.interfaces.composable.HomeTags.backButton
 import com.masselis.tpmsadvanced.interfaces.composable.HomeTags.carListDropdownMenu
@@ -147,7 +148,9 @@ internal fun VehicleHome(
         // A QR code scanned for this location, shown once its camera is closed, see QrCodeResultDialog
         var qrCodeResult by rememberSaveable { mutableStateOf<QrCodeResult?>(null) }
         var qrCodeLocation by rememberSaveable { mutableIntStateOf(0) }
-        var qrCodeScan by rememberSaveable { mutableIntStateOf(0) }
+        // Unique, not a count: this restarts with each vehicle while the dialogs' view models are
+        // the activity's, a count would hand a scan the view model of another vehicle's scan
+        var qrCodeScan by rememberSaveable { mutableStateOf(UUID.randomUUID()) }
         val currentPath = navController.currentBackStackEntryAsState()
             .value
             ?.destination
@@ -246,6 +249,7 @@ internal fun VehicleHome(
                             openManageSensors = {
                                 navController.navigate("${Path.ManageSensors(vehicleComponent.vehicle.uuid)}")
                             },
+                            openShareSensors = { navController.navigate("${Path.ShareSensors(vehicleUuid)}") },
                             modifier = modifier
                         )
                     }
@@ -274,6 +278,12 @@ internal fun VehicleHome(
                                 modifier
                             },
                             navigationIcon = { BackButton() },
+                        )
+                    }
+                    composable("${Path.ShareSensors(vehicleUuid)}") {
+                        ShareSensors(
+                            vehicleUuid = vehicleUuid,
+                            modifier = modifier
                         )
                     }
                     composable(
@@ -504,7 +514,7 @@ internal fun VehicleHome(
                             onFound = {
                                 qrCodeResult = it
                                 qrCodeLocation = location
-                                qrCodeScan++
+                                qrCodeScan = UUID.randomUUID()
                                 navController.popBackStack()
                             },
                             modifier = modifier
@@ -613,6 +623,7 @@ private fun TopAppBar(
                 )
 
                 is Path.ManageSensors -> Text(text = "Manage sensors")
+                is Path.ShareSensors -> Text(text = "Share sensors")
                 is Path.MoveToVehicle -> Text(text = "Move to")
                 is Path.PressureSettings -> Text(text = "Pressure")
                 is Path.TemperatureSettings -> Text(text = "Temperature")
@@ -646,6 +657,7 @@ private fun TopAppBar(
             when (currentPath) {
                 is Path.Settings,
                 is Path.ManageSensors,
+                is Path.ShareSensors,
                 is Path.MoveToVehicle,
                 is Path.PressureSettings,
                 is Path.TemperatureSettings,
@@ -687,6 +699,7 @@ private fun TopAppBar(
 
                 is Path.Settings,
                 is Path.ManageSensors,
+                is Path.ShareSensors,
                 is Path.MoveToVehicle,
                 is Path.PressureSettings,
                 is Path.TemperatureSettings,
