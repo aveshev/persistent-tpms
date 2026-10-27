@@ -26,4 +26,17 @@ public sealed interface QrCodeResult : Parcelable {
     @Parcelize
     @JvmInline
     public value class Wicarlink internal constructor(internal val id: Int) : QrCodeResult
+
+    /** Another phone's sensors, for the vehicle the scan was started from, see [SharedSensors] */
+    @Parcelize
+    @JvmInline
+    public value class Shared internal constructor(internal val shared: SharedSensors) : QrCodeResult
+
+    /** Sensors shared by a newer version of the app, in a format this one can't read */
+    @Parcelize
+    public data object SharedByNewerApp : QrCodeResult
+
+    /** Sensors shared by another phone, but the code is damaged */
+    @Parcelize
+    public data object SharedUnreadable : QrCodeResult
 }

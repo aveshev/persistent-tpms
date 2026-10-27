@@ -12,6 +12,7 @@ import com.masselis.tpmsadvanced.feature.qrcode.model.QrCodeResult
 import com.masselis.tpmsadvanced.feature.qrcode.model.QrCodeSensor
 import com.masselis.tpmsadvanced.feature.qrcode.model.QrCodeSensors.FourWheel
 import com.masselis.tpmsadvanced.feature.qrcode.model.QrCodeSensors.TwoWheel
+import com.masselis.tpmsadvanced.feature.qrcode.model.SharedSensors
 import kotlinx.coroutines.Dispatchers.Default
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOn
@@ -32,7 +33,15 @@ internal class QrCodeSensorUseCase(
         .findQrCode(controller)
         .onEach { logger.d { "QR code read: $it" } }
         .map { code ->
-            fourSensorRegex.find(code)?.groupValues?.subList(1, 5)?.asSysgration()
+            // First, the kit formats look for their ids anywhere in a code
+            try {
+                SharedSensors.decode(code)?.let(QrCodeResult::Shared)
+            } catch (_: SharedSensors.UnsupportedVersion) {
+                QrCodeResult.SharedByNewerApp
+            } catch (_: IllegalArgumentException) {
+                QrCodeResult.SharedUnreadable
+            }
+                ?: fourSensorRegex.find(code)?.groupValues?.subList(1, 5)?.asSysgration()
                 ?: twoSensorRegex.find(code)?.groupValues?.subList(1, 3)?.asSysgration()
                 // Printed the way the cap reads, the id's most significant byte first
                 ?: wicarlinkSensorRegex.find(code.trim())?.groupValues?.get(1)?.toInt(16)?.let(QrCodeResult::Wicarlink)

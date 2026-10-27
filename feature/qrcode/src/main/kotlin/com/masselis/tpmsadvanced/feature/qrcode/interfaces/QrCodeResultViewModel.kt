@@ -9,6 +9,8 @@ import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.WICARLINK
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location
 import com.masselis.tpmsadvanced.feature.qrcode.model.QrCodeResult
+import com.masselis.tpmsadvanced.feature.qrcode.model.SharedSensor
+import com.masselis.tpmsadvanced.feature.qrcode.model.SharedSensors
 import com.masselis.tpmsadvanced.feature.qrcode.model.sensorsFor
 import com.masselis.tpmsadvanced.feature.qrcode.usecase.BoundSensorMapUseCase
 import dev.zacsweers.metro.Assisted
@@ -70,6 +72,29 @@ internal class QrCodeResultViewModel(
         /** The code can't be assigned as it is */
         @JvmInline
         value class Unusable(val result: QrCodeResult) : State
+
+        /**
+         * Assign the [sensors] another phone shared from its vehicle [from] to [vehicle]? Each
+         * sensor's current place on this phone, by id, in [reassigns] when it's moved, [overwrites]
+         * like [Ask]'s. [skipped] are the shared ones on a wheel [vehicle] doesn't have.
+         */
+        data class AskShared(
+            val vehicle: Vehicle,
+            val from: String,
+            val sensors: List<SharedSensor>,
+            val reassigns: Map<Int, Assigned>,
+            val overwrites: Boolean,
+            val skipped: List<SharedSensor>,
+        ) : State
+
+        /** None of the [shared] sensors is on a wheel [vehicle] has */
+        data class NoSharedSensorFits(val vehicle: Vehicle, val shared: SharedSensors) : State
+
+        /** See [QrCodeResult.SharedByNewerApp] */
+        data object SharedByNewerApp : State
+
+        /** See [QrCodeResult.SharedUnreadable] */
+        data object SharedUnreadable : State
     }
 
     private val mutableStateFlow = MutableStateFlow<State>(State.Loading)
@@ -91,37 +116,84 @@ internal class QrCodeResultViewModel(
 
                 is QrCodeResult.Wicarlink -> ask(vehicle, listOf(Sensor(result.id, location, WICARLINK)))
 
+                is QrCodeResult.Shared -> result
+                    .shared
+                    .sensors
+                    .partition { it.sensor.location in vehicle.kind.locations }
+                    .let { (fitting, skipped) ->
+                        if (fitting.isEmpty()) State.NoSharedSensorFits(vehicle, result.shared)
+                        else withContext(IO) {
+                            fitting
+                                .map { it.sensor }
+                                .let { sensors ->
+                                    State.AskShared(
+                                        vehicle = vehicle,
+                                        from = result.shared.name,
+                                        sensors = fitting,
+                                        reassigns = reassigns(vehicle, sensors),
+                                        overwrites = overwrites(vehicle, sensors),
+                                        skipped = skipped,
+                                    )
+                                }
+                        }
+                    }
+
+                QrCodeResult.SharedByNewerApp -> State.SharedByNewerApp
+
+                QrCodeResult.SharedUnreadable -> State.SharedUnreadable
+
                 is QrCodeResult.DuplicateWheelLocation, is QrCodeResult.DuplicateId -> State.Unusable(result)
             }
         }
     }
 
     private suspend fun ask(vehicle: Vehicle, sensors: List<Sensor>) = withContext(IO) {
-        val assigned = sensorDatabase.selectListByVehicleId(vehicle.uuid).execute()
         State.Ask(
             vehicle,
             sensors,
-            overwrites = sensors.any { sensor ->
-                assigned.any { it.location == sensor.location && it.id != sensor.id }
-            },
-            reassigns = sensors.firstNotNullOfOrNull { sensor ->
-                sensorDatabase
-                    .selectById(sensor.id)
-                    .execute()
-                    ?.let { current ->
-                        State.Assigned(
-                            checkNotNull(vehicleDatabase.selectBySensorId(sensor.id).execute()),
-                            current.location,
-                        )
-                    }
-                    ?.takeIf { it.vehicle.uuid != vehicle.uuid || it.location != sensor.location }
-            },
+            overwrites = overwrites(vehicle, sensors),
+            reassigns = reassigns(vehicle, sensors).values.firstOrNull(),
         )
     }
 
+    /** One of the vehicle's wheels has another sensor than the one [sensors] puts there */
+    private fun overwrites(vehicle: Vehicle, sensors: List<Sensor>) = sensorDatabase
+        .selectListByVehicleId(vehicle.uuid)
+        .execute()
+        .let { assigned ->
+            sensors.any { sensor -> assigned.any { it.location == sensor.location && it.id != sensor.id } }
+        }
+
+    /** Where each of [sensors] assigned already, to another wheel or vehicle, is now */
+    private fun reassigns(vehicle: Vehicle, sensors: List<Sensor>) = sensors
+        .mapNotNull { sensor ->
+            sensorDatabase
+                .selectById(sensor.id)
+                .execute()
+                ?.let { current ->
+                    State.Assigned(
+                        checkNotNull(vehicleDatabase.selectBySensorId(sensor.id).execute()),
+                        current.location,
+                    )
+                }
+                ?.takeIf { it.vehicle.uuid != vehicle.uuid || it.location != sensor.location }
+                ?.let { sensor.id to it }
+        }
+        .toMap()
+
     /** Kept by the activity, it outlives the dialog closing as soon as it's answered */
     fun bind() = viewModelScope.launch {
-        val state = mutableStateFlow.value as? State.Ask ?: return@launch
-        boundSensorMapUseCase.bind(state.vehicle.uuid, state.sensors)
+        when (val state = mutableStateFlow.value) {
+            is State.Ask -> boundSensorMapUseCase.bind(state.vehicle.uuid, state.sensors)
+
+            // Their calibration comes along, it's the sensor which reads too high or too low
+            is State.AskShared -> boundSensorMapUseCase.bind(
+                state.vehicle.uuid,
+                state.sensors.map { it.sensor },
+                state.sensors.associate { it.sensor.id to it.calibration },
+            )
+
+            else -> {}
+        }
     }
 }
