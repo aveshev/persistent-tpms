@@ -205,6 +205,9 @@ internal fun DimWhenIdle(
         if (isDimmed || isBlocked) brightness.start()
         onDispose { brightness.stop() }
     }
+    LaunchedEffect(brightness, isDimmed || isBlocked) {
+        if (isDimmed || isBlocked) brightness.follow()
+    }
     val dimmedBrightness = brightness.dimmedBy(divisor)
     // At the lowest brightness already, it wouldn't look dimmed otherwise
     val isDarkened = isDimmed && brightness.isLow
