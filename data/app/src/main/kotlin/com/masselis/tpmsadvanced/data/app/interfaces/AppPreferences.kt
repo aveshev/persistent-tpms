@@ -130,6 +130,16 @@ public class AppPreferences internal constructor(
     }
 
     /**
+     * What the brightness the system would give the screen is divided by when dimmed, rounded
+     * down, see [dimDisplay]
+     */
+    public val dimDisplayDivisor: MutableStateFlow<Int> = observableStateFlow(
+        sharedPreferences.getInt("DIM_DISPLAY_DIVIDED_BY", DEFAULT_DIM_DISPLAY_DIVISOR)
+    ) { _, newValue ->
+        sharedPreferences.edit { putInt("DIM_DISPLAY_DIVIDED_BY", newValue) }
+    }
+
+    /**
      * While dimmed, and shortly after, the proximity sensor covered (a pocket) blocks the main
      * screen's touches, see [dimDisplay], and after a while lets the screen turn off
      */
@@ -486,5 +496,6 @@ public class AppPreferences internal constructor(
         private const val DEFAULT_PRESSURE_LOSS_MIN_DROP = 7f
         private const val DEFAULT_MAGNIFIER_SECONDS = 5
         private const val DEFAULT_DIM_DISPLAY_SECONDS = 60
+        private const val DEFAULT_DIM_DISPLAY_DIVISOR = 50
     }
 }

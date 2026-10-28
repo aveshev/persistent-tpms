@@ -1,7 +1,6 @@
 package com.masselis.tpmsadvanced.feature.main.interfaces.composable
 
 import android.annotation.SuppressLint
-import android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LOCKED
 import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES.P
 import android.os.PowerManager
@@ -29,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -45,7 +45,9 @@ import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat.Type.systemBars
 import androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+import androidx.lifecycle.Lifecycle.Event.ON_PAUSE
 import androidx.lifecycle.Lifecycle.State.RESUMED
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.currentStateAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -67,10 +69,13 @@ import kotlinx.coroutines.delay
  * say, see [DimDisplayDelay]: no touch, no new warning or alert of the shown vehicle's tyres. While
  * [isAlerting], a red or critical alert of any vehicle going on, it stays bright.
  *
+ * Dimmed, the screen is at the brightness the system would give it divided as the settings say,
+ * see [SystemBrightness]. At its lowest already, the screen is made darker over [content] too, which
+ * wouldn't look dimmed otherwise, though the system bars stay as they are.
+ *
  * Dimmed, a touch only brightens the screen: [content], and the dialogs over it, get nothing until
  * every finger is lifted. [content] is told whether it's dimmed, to say so, see [DimmedNotice].
- * Dimmed, and while the pocket guard below watches, the screen's orientation is locked: turning
- * the phone into a pocket would otherwise recreate the activity, which forgets it was dimmed.
+ * Turning the phone, which recreates the activity, leaves it as it was: dimmed, it stays so.
  *
  * With the pocket guard on, while dimmed and for [POCKET_GRACE] after, the proximity sensor is
  * watched: covered (the phone put in a pocket, the screen looking off), the screen goes black and
@@ -108,6 +113,7 @@ internal fun DimWhenIdle(
     val isEnabled by settings.dimDisplay.collectAsState()
     val seconds by settings.dimDisplaySeconds.collectAsState()
     val isPocketGuard by settings.pocketGuard.collectAsState()
+    val divisor by settings.dimDisplayDivisor.collectAsState()
     // Back from another app, or with the screen turned back on, it starts bright
     val isResumed = LocalLifecycleOwner.current.lifecycle.currentStateAsState().value.isAtLeast(RESUMED)
     val warnings = vehicleComponent.vehicle.kind.locations
@@ -126,18 +132,39 @@ internal fun DimWhenIdle(
         if (warnings.raisesFrom(warned)) wakes++
         warned = warnings
     }
-    var isDimmed by remember { mutableStateOf(false) }
+    var isDimmed by rememberSaveable { mutableStateOf(false) }
+    // Paused for the phone turning, which recreates the activity, until resumed again
+    var isTurning by rememberSaveable { mutableStateOf(false) }
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LocalActivity.current?.also { activity ->
+        DisposableEffect(lifecycle, activity) {
+            // Before the state is saved, which follows the pause
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == ON_PAUSE && activity.isChangingConfigurations) isTurning = true
+            }
+            lifecycle.addObserver(observer)
+            onDispose { lifecycle.removeObserver(observer) }
+        }
+    }
     LaunchedEffect(isEnabled, seconds, isAlerting, isResumed, wakes) {
-        isDimmed = false
-        if (isEnabled && isAlerting.not() && isResumed) {
-            delay(seconds.seconds)
-            isDimmed = true
+        when {
+            isTurning && isResumed.not() -> Unit
+            // Turned dimmed, it stays so
+            isTurning && isDimmed -> isTurning = false
+            else -> {
+                isTurning = false
+                isDimmed = false
+                if (isEnabled && isAlerting.not() && isResumed) {
+                    delay(seconds.seconds)
+                    isDimmed = true
+                }
+            }
         }
     }
     // The touch which brightened the screen, until its fingers are lifted
     var isWaking by remember { mutableStateOf(false) }
     // Brightened again a moment ago: the phone may be on its way into a pocket all the same
-    var isJustWoken by remember { mutableStateOf(false) }
+    var isJustWoken by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(isDimmed || isWaking) {
         if (isDimmed || isWaking) isJustWoken = true
         else {
@@ -154,19 +181,11 @@ internal fun DimWhenIdle(
         onDispose { proximity.stop() }
     }
     val isBlocked = proximity.isCovered
-    if (isDimmedOrJustWoken || isBlocked) LocalActivity.current?.also { activity ->
-        DisposableEffect(activity) {
-            val requested = activity.requestedOrientation
-            activity.requestedOrientation = SCREEN_ORIENTATION_LOCKED
-            onDispose { activity.requestedOrientation = requested }
-        }
-    }
     val powerManager = LocalContext.current.let { remember(it) { it.getSystemService(PowerManager::class.java) } }
     val canTurnScreenOff = remember(powerManager) {
         powerManager?.isWakeLockLevelSupported(PROXIMITY_SCREEN_OFF_WAKE_LOCK) == true
     }
     val context = LocalContext.current
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
     if (isBlocked && canTurnScreenOff) DisposableEffect(powerManager) {
         // Released once uncovered, or with the app no longer resumed, which stops the sensor
         @SuppressLint("WakelockTimeout")
@@ -177,9 +196,18 @@ internal fun DimWhenIdle(
             screenOff?.release(RELEASE_FLAG_WAIT_FOR_NO_PROXIMITY)
             // Uncovered, rather than the sensor stopped with the app leaving the screen
             if (lifecycle.currentState.isAtLeast(RESUMED))
-                Toast.makeText(context, "Screen was turned off by the proximity sensor", LENGTH_LONG).show()
+                Toast.makeText(context, "Screen was turned off by \"Block touches in a pocket\"", LENGTH_LONG).show()
         }
     }
+    val brightness = LocalContext.current.let { remember(it) { SystemBrightness(it) } }
+    // Read before the dimmed window sets the brightness, then followed through the light sensor
+    DisposableEffect(brightness, isDimmed || isBlocked) {
+        if (isDimmed || isBlocked) brightness.start()
+        onDispose { brightness.stop() }
+    }
+    val dimmedBrightness = brightness.dimmedBy(divisor)
+    // At the lowest brightness already, it wouldn't look dimmed otherwise
+    val isDarkened = isDimmed && brightness.isLow
     if (isBlocked && canTurnScreenOff.not()) LocalActivity.current?.window?.also { window ->
         DisposableEffect(window) {
             WindowCompat.getInsetsController(window, window.decorView).apply {
@@ -214,7 +242,7 @@ internal fun DimWhenIdle(
                         // Leaves the focus, and the keyboard, to the window under it
                         addFlags(FLAG_NOT_FOCUSABLE)
                         attributes = attributes.apply {
-                            screenBrightness = if (isDimmed || isBlocked) DIMMED_BRIGHTNESS else BRIGHTNESS_OVERRIDE_NONE
+                            screenBrightness = if (isDimmed || isBlocked) dimmedBrightness else BRIGHTNESS_OVERRIDE_NONE
                             // Over the cutout too, in landscape, whose touches would go through
                             if (SDK_INT >= P) layoutInDisplayCutoutMode = LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
                         }
@@ -225,7 +253,13 @@ internal fun DimWhenIdle(
                 Modifier
                     .fillMaxSize()
                     .testTag(DimWhenIdleTags.overlay)
-                    .then(if (isBlocked && canTurnScreenOff.not()) Modifier.background(Color.Black) else Modifier)
+                    .then(
+                        when {
+                            isBlocked && canTurnScreenOff.not() -> Modifier.background(Color.Black)
+                            isDarkened -> Modifier.background(Color.Black.copy(alpha = DARKENED_ALPHA))
+                            else -> Modifier
+                        }
+                    )
                     .pointerInput(Unit) {
                         awaitEachGesture {
                             awaitFirstDown(requireUnconsumed = false).consume()
@@ -291,14 +325,11 @@ internal fun Map<Pair<Location, AlertClass>, AlertLevel>.raisesFrom(
     previous: Map<Pair<Location, AlertClass>, AlertLevel>
 ): Boolean = any { (key, level) -> previous[key]?.let { level > it } ?: true }
 
-/**
- * The lowest brightness the window can ask for, short of 0, which turns the backlight off on some
- * phones
- */
-private const val DIMMED_BRIGHTNESS = 0.01f
+/** How dark the screen is made over its content, dimmed at the lowest brightness already */
+private const val DARKENED_ALPHA = 0.3f
 
 /** How long after brightening again the proximity sensor is still watched */
-private val POCKET_GRACE = 3.seconds
+private val POCKET_GRACE = 1.seconds
 
 /** How often the blocked touches' text moves */
 private val BLOCKED_SHIFT = 5.seconds

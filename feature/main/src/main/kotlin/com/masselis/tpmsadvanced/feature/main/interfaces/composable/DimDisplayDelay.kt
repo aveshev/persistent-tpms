@@ -9,6 +9,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.masselis.tpmsadvanced.core.ui.RadioSettingsItem
+import com.masselis.tpmsadvanced.core.ui.SegmentedSettingsItem
 import com.masselis.tpmsadvanced.core.ui.SettingsGroup
 import com.masselis.tpmsadvanced.core.ui.SettingsIntro
 import com.masselis.tpmsadvanced.core.ui.SettingsSectionHeader
@@ -27,10 +28,13 @@ internal fun DimDisplayDelay(
     viewModel: TyreDisplaySettingsViewModel = viewModel { TyreDisplaySettingsViewModel() },
 ) {
     val seconds by viewModel.dimDisplaySeconds.collectAsState()
+    val divisor by viewModel.dimDisplayDivisor.collectAsState()
     val pocketGuard by viewModel.pocketGuard.collectAsState()
     DimDisplayDelay(
         seconds = seconds,
         onSeconds = { viewModel.dimDisplaySeconds.value = it },
+        divisor = divisor,
+        onDivisor = { viewModel.dimDisplayDivisor.value = it },
         pocketGuard = pocketGuard,
         onPocketGuard = { viewModel.pocketGuard.value = it },
         modifier = modifier,
@@ -41,6 +45,8 @@ internal fun DimDisplayDelay(
 private fun DimDisplayDelay(
     seconds: Int,
     onSeconds: (Int) -> Unit,
+    divisor: Int,
+    onDivisor: (Int) -> Unit,
     pocketGuard: Boolean,
     onPocketGuard: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
@@ -59,6 +65,17 @@ private fun DimDisplayDelay(
                 modifier = Modifier.testTag("${TyreDisplaySettingsTags.dimDisplayDelay}_$option"),
             )
         }
+    }
+    SettingsSectionHeader("Brightness")
+    SettingsGroup {
+        SegmentedSettingsItem(
+            headline = "Divide brightness by",
+            options = DIVISORS,
+            selected = divisor,
+            onSelect = onDivisor,
+            label = { "$it×" },
+            modifier = Modifier.testTag(TyreDisplaySettingsTags.dimDisplayDivisor),
+        )
     }
     SettingsSectionHeader("In a pocket")
     SettingsGroup {
@@ -81,11 +98,14 @@ internal fun Int.asDimDelay(): String = when {
 }
 
 @Suppress("MagicNumber")
+private val DIVISORS = listOf(50, 25, 10)
+
+@Suppress("MagicNumber")
 private val DIM_DISPLAY_SECONDS = listOf(15, 30, 60, 120, 300)
 
 @Suppress("MagicNumber")
 @Preview
 @Composable
 internal fun DimDisplayDelayPreview() {
-    DimDisplayDelay(seconds = 60, onSeconds = {}, pocketGuard = true, onPocketGuard = {})
+    DimDisplayDelay(seconds = 60, onSeconds = {}, divisor = 50, onDivisor = {}, pocketGuard = true, onPocketGuard = {})
 }
