@@ -32,6 +32,7 @@ jobs:
         with:
           free-disk-space: false
           bitwarden: false
+          gradle-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
 
       - name: Run buildSrc unit tests
         run: ./gradlew -p buildSrc test --stacktrace
@@ -111,6 +112,7 @@ jobs:
         with:
           free-disk-space: false
           bitwarden: false
+          gradle-encryption-key: ${{ secrets.GRADLE_ENCRYPTION_KEY }}
           gradle-cache-read-only: true
 
       - name: Run the instrumented tests and take the screenshots
