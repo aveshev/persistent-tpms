@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   build:
-    name: Build everything, test and report
+    name: Build, analyse and unit test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout project
@@ -29,6 +29,9 @@ jobs:
           ref: ${{ github.event.pull_request.head.ref }}
 
       - uses: ./.github/actions/setup
+        with:
+          free-disk-space: false
+          bitwarden: false
 
       - name: Run buildSrc unit tests
         run: ./gradlew -p buildSrc test --stacktrace
@@ -38,9 +41,6 @@ jobs:
           ./gradlew
           build
           verifyPaparazzi
-          pixel2api34DebugAndroidTest
-          copyScreenshot
-          -Pandroid.experimental.testOptions.managedDevices.maxConcurrentDevices=1
           --scan
           --stacktrace
 
@@ -71,20 +71,6 @@ jobs:
           name: Paparazzi-failures
           path: "**/build/paparazzi/failures/**/*.png"
 
-      - name: Instrumented tests reports
-        uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: Instrumented-reports
-          path: "**/build/reports/androidTests/**/*.html"
-
-      - name: Screenshots report
-        uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: Screenshots-reports
-          path: "**/graphics/phone-screenshots/*.png"
-
       - name: APKs
         uses: actions/upload-artifact@v7
         if: always()
@@ -105,3 +91,79 @@ jobs:
         with:
           name: Resource-monitor-report
           path: "build/reports/resources/*.csv"
+
+  # Runs alongside the build job, the emulators mostly wait on the device, not on the CPU
+  android-test:
+    name: Instrumented tests and screenshots
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+          # Uses the latest commit from the branch when running a pull request instead of compiling a merge commit
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      # setup-gradle falls back on the build job's cache, which holds nearly everything this job
+      # needs: saving another one on develop would only add minutes at the end of this job.
+      - uses: ./.github/actions/setup
+        with:
+          bitwarden: false
+          gradle-cache-read-only: true
+
+      - name: Run the instrumented tests and take the screenshots
+        run: >
+          ./gradlew
+          pixel2api34DebugAndroidTest
+          copyScreenshot
+          -Pandroid.experimental.testOptions.managedDevices.maxConcurrentDevices=2
+          --scan
+          --stacktrace
+
+      - name: Instrumented tests reports
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Instrumented-reports
+          path: "**/build/reports/androidTests/**/*.html"
+
+      - name: Screenshots report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Screenshots-reports
+          path: "**/graphics/phone-screenshots/*.png"
+
+      - name: Instrumented tests APKs
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: AndroidTest-APKs
+          path: "**/build/outputs/apk/androidTest/**/*.apk"
+
+      - name: Configuration cache reports
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Configuration-cache-report-instrumented
+          path: "build/reports/configuration-cache/*/*/configuration-cache-report.html"
+
+      - name: Resources monitor report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Resource-monitor-report-instrumented
+          path: "build/reports/resources/*.csv"
+
+  # The check the develop ruleset requires, passing only once both jobs above have
+  report:
+    name: Build everything, test and report
+    needs: [ build, android-test ]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check the jobs' results
+        run: |
+          echo "build: ${{ needs.build.result }}, android-test: ${{ needs.android-test.result }}"
+          test "${{ needs.build.result }}" = success
+          test "${{ needs.android-test.result }}" = success
