@@ -20,6 +20,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.ProvideTextStyle
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -226,7 +227,8 @@ private val Kind.readoutInset: Float
 public fun CurrentVehicle(
     snackbarHostState: SnackbarHostState,
     modifier: Modifier = Modifier,
-    center: @Composable (Modifier) -> Unit = {},
+    /** Placed over the vehicle where it covers none of its readings, see [ClearOfReadouts] */
+    overlay: @Composable () -> Unit = {},
     scanQrCode: (Location) -> Unit = {},
     scanBluetooth: (Location) -> Unit = {},
     /**
@@ -242,31 +244,43 @@ public fun CurrentVehicle(
     // collects would keep the previous vehicle's values for a few frames, its size and place with
     // them
     key(component.vehicle.uuid) {
+        val bounds = remember { VehicleBounds() }
         Magnifiable(modifier) { reports ->
-            VehicleWithTopBar(
-                sizing = rememberVehicleSizing(component, isManaging = false),
-                navigationIcon = navigationIcon,
-                title = title,
-                actions = actions,
-                vehicle = { corners ->
-                    Vehicle(
-                        component = component,
-                        snackbarHostState = snackbarHostState,
-                        center = center,
-                        taps = TyreTaps(
-                            isManaging = false,
-                            scanQrCode = scanQrCode,
-                            scanBluetooth = scanBluetooth,
-                            onTyrePositioned = reports.onTyrePositioned,
-                            onOutlinePositioned = reports.onOutlinePositioned,
-                        ),
-                        corners = corners,
-                    )
-                },
-                // Fills the magnifier's box, its top bar is where the magnifier finds it
-                modifier = Modifier.fillMaxSize(),
-                onBarPositioned = reports.onBarPositioned,
-            )
+            CompositionLocalProvider(LocalVehicleBounds provides bounds) {
+                VehicleWithTopBar(
+                    sizing = rememberVehicleSizing(component, isManaging = false),
+                    navigationIcon = navigationIcon,
+                    title = title,
+                    actions = actions,
+                    vehicle = { corners ->
+                        Vehicle(
+                            component = component,
+                            snackbarHostState = snackbarHostState,
+                            // Where its middle is, for the overlay to go there when it fits. From its
+                            // position: it has no size, and the bounds of nothing are at the
+                            // window's corner
+                            center = { centered ->
+                                Box(centered.onGloballyPositioned { bounds.middle = it.positionInWindow() })
+                            },
+                            taps = TyreTaps(
+                                isManaging = false,
+                                scanQrCode = scanQrCode,
+                                scanBluetooth = scanBluetooth,
+                                onTyrePositioned = reports.onTyrePositioned,
+                                onOutlinePositioned = reports.onOutlinePositioned,
+                            ),
+                            corners = corners,
+                        )
+                    },
+                    // Fills the magnifier's box, its top bar is where the magnifier finds it
+                    modifier = Modifier.fillMaxSize(),
+                    onBarPositioned = { rects ->
+                        reports.onBarPositioned(rects)
+                        bounds.bar = rects
+                    },
+                )
+            }
+            ClearOfReadouts(bounds, Modifier.fillMaxSize(), overlay)
         }
     }
 }
@@ -620,6 +634,7 @@ private fun ConstraintLayoutScope.VehicleImage(
                 centerTo(parent)
                 height = Dimension.percent(imageHeight)
             }
+            .reportsImage()
     )
 }
 

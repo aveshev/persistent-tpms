@@ -213,7 +213,7 @@ internal fun VehicleHome(
                                     .windowInsetsPadding(ScaffoldDefaults.contentWindowInsets)
                                     .fillMaxSize(),
                                 // Never both: an alert to silence keeps the screen bright
-                                center = { if (isDimmed) DimmedNotice(it) else SilenceAlertsButton(it) },
+                                overlay = { if (isDimmed) DimmedNotice() else SilenceAlertsButton() },
                                 scanQrCode = {
                                     navController.navigate("${Path.QrCode(vehicleUuid, locations.indexOf(it))}")
                                 },
