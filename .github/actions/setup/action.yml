@@ -1,5 +1,18 @@
 name: Setup project and android
 description: Specific steps to checkout the project and setup the environment
+inputs:
+  free-disk-space:
+    description: Removes unused runner tools, to make room for the emulators
+    default: "true"
+  bitwarden:
+    description: Installs the Bitwarden CLI, only needed to download the secret files
+    default: "true"
+  gradle-cache-read-only:
+    description: Never writes the Gradle cache, not even on the default branch where setup-gradle writes it by default
+    default: "false"
+  gradle-encryption-key:
+    description: Encrypts the configuration cache saved with the Gradle cache, which isn't saved without it
+    default: ""
 runs:
   using: "composite"
   steps:
@@ -11,18 +24,21 @@ runs:
         echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
         sudo udevadm control --reload-rules
         sudo udevadm trigger --name-match=kvm
-        
-        # Free some space on the current runner to allow installation of bigger emulators
-        # Copy/paste from https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
-        sudo rm -rf /usr/share/dotnet
-        sudo rm -rf /opt/ghc
-        sudo rm -rf "/usr/local/share/boost"
-        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-        
+
         # Read the expected emulator package
         # Inspired by https://github.com/amyu/setup-android?tab=readme-ov-file#usage
         package=`perl -nlE 'say if s/garunner-emulator \= \"(.*)\"/$1/g' gradle/libs.versions.toml`
         echo "emulatorPackage=$package" >> $GITHUB_OUTPUT
+
+    # Free some space on the current runner to allow installation of bigger emulators
+    # Copy/paste from https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
+    # Deleting takes about 50 s, so it runs in the background: Gradle only installs the emulator
+    # once the build is configured and compiling, which leaves it enough time.
+    - name: Free disk space
+      if: inputs.free-disk-space == 'true'
+      shell: bash
+      run: |
+        nohup sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" > /dev/null 2>&1 &
 
     # This JDK is downloaded because Gradle needs a basic java environment to start before
     # downloading its own JDK distribution and also because some tools used by
@@ -45,8 +61,13 @@ runs:
         packages: platform-tools
 
     - name: Install Bitwarden CLI
+      if: inputs.bitwarden == 'true'
       shell: bash
       run: npm install -g @bitwarden/cli@2026.6.0
 
     - name: Setup Gradle
       uses: gradle/actions/setup-gradle@v5
+      with:
+        # setup-gradle's own default, only the default branch writes, unless the job opts out
+        cache-read-only: ${{ inputs.gradle-cache-read-only == 'true' || github.ref_name != github.event.repository.default_branch }}
+        cache-encryption-key: ${{ inputs.gradle-encryption-key }}
