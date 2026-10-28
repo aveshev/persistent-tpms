@@ -106,8 +106,10 @@ jobs:
 
       # setup-gradle falls back on the build job's cache, which holds nearly everything this job
       # needs: saving another one on develop would only add minutes at the end of this job.
+      # The runner has about 86 GB free, plenty for the emulators without freeing any
       - uses: ./.github/actions/setup
         with:
+          free-disk-space: false
           bitwarden: false
           gradle-cache-read-only: true
 

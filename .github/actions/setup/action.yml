@@ -27,8 +27,6 @@ runs:
         package=`perl -nlE 'say if s/garunner-emulator \= \"(.*)\"/$1/g' gradle/libs.versions.toml`
         echo "emulatorPackage=$package" >> $GITHUB_OUTPUT
 
-        df -h /
-
     # Free some space on the current runner to allow installation of bigger emulators
     # Copy/paste from https://github.com/actions/runner-images/issues/2840#issuecomment-790492173
     # Deleting takes about 50 s, so it runs in the background: Gradle only installs the emulator
