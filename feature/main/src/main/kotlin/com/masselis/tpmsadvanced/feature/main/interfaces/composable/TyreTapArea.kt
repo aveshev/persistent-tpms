@@ -130,6 +130,7 @@ internal fun TyreTapArea(
                     ?.let { report -> onGloballyPositioned { report(location, it.boundsInWindow()) } }
                     ?: this
             }
+            .reportsFrame(location, isDrawn = frame != null, titleInset = titleInset)
     ) {
         Box(
             Modifier

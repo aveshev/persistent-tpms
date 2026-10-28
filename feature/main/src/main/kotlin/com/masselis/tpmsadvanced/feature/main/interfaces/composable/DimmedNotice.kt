@@ -16,16 +16,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.masselis.tpmsadvanced.feature.main.R
 
 /**
- * Says the screen is dimmed, see [DimWhenIdle], where the alerts' silence button shows: the middle
- * of the vehicle, readable in the dark. Looks like that button, though a tap anywhere is what
- * brightens the screen.
+ * Says the screen is dimmed, see [DimWhenIdle], where the alerts' silence button shows: clear of
+ * the readings, see [ClearOfReadouts], readable in the dark. Looks like that button, though a tap
+ * anywhere is what brightens the screen.
  */
 @Composable
 public fun DimmedNotice(modifier: Modifier = Modifier): Unit = Surface(
@@ -33,19 +35,22 @@ public fun DimmedNotice(modifier: Modifier = Modifier): Unit = Surface(
     color = MaterialTheme.colorScheme.secondaryContainer,
     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
     modifier = modifier
-        .heightIn(min = 72.dp)
+        // As tall as the silence button, both smaller where ClearOfReadouts has them smaller
+        .heightIn(min = with(LocalDensity.current) { 65.sp.toDp() })
         .testTag(DimWhenIdleTags.dimmed),
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
-        modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
     ) {
         Icon(painterResource(R.drawable.light_mode_24px), contentDescription = null, Modifier.size(32.dp))
         Spacer(Modifier.width(12.dp))
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text = "Screen dimmed", style = MaterialTheme.typography.titleMedium)
-            Text(text = "Tap anywhere to un-dim", style = MaterialTheme.typography.bodyMedium)
+            // As large as the silence button's, each on a line of its own in the narrowest room
+            // ClearOfReadouts gives it
+            Text(text = "Screen dimmed", style = MaterialTheme.typography.headlineSmall)
+            Text(text = "Tap anywhere to un-dim", style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp))
         }
     }
 }
