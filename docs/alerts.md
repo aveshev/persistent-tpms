@@ -106,7 +106,7 @@ pumping up, which the silence button or a dismiss quiets.
   new rather than as an update of the first.
 - **Except a leak while the pressure is red or crimson**: a pressure loss or the sensor's own
   alarm isn't notified on its own then, its notification going at once if it was shown. It's told
-  in the pressure's notification instead ("Rear left: 21.0 psi, minimum 30.0 psi, down
+  in the pressure's notification instead ("Rear left: 21.0 psi, min 30.0 psi, down
   3.0 psi in 5 min"), and the main screen still shows "Leak?". The pressure already says more
   than the leak's amber: another notification would only be one more sound and one more thing to
   dismiss. While the pressure is fine or amber, a leak is the earliest warning, notified on its
@@ -118,7 +118,7 @@ pumping up, which the silence button or a dismiss quiets.
 - Each notification names the vehicle (as its subtext) and the tyre position, and gives the
   reading and the threshold it crossed. The title is the condition alone ("Pressure critically
   low"), short enough not to be cut off beside the vehicle's name, the tyre position starting the
-  text ("Rear left: 5.8 psi, minimum 14.5 psi").
+  text ("Rear left: 5.8 psi, min 14.5 psi").
 - `setWhen` is the reading's own timestamp, so a notification left over from earlier looks its
   age.
 - Tapping it opens the app on its vehicle, as today.
@@ -163,7 +163,7 @@ away. The hold is kept in memory: after the process died, a notification keeps i
 next reading.
 
 While held, a reading which would lower or clear it updates its text silently with the newer
-value, at the level and the time it was posted: "Front: 20.5 psi (now 21.9 psi), minimum 21.5
+value, at the level and the time it was posted: "Front: 20.5 psi (now 21.9 psi), min 21.5
 psi", the "now" following each reading. The main screen showing 21.9 psi isn't at odds with it.
 Not for a leak or the sensor's own alarm, whose text already tells the pressure now.
 

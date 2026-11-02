@@ -375,8 +375,8 @@ internal class AlertNotifier(
             PRESSURE -> buildString {
                 append("$values, ")
                 append(
-                    if (isLowPressure) "minimum ${thresholds.lowPressure.string(pressureUnit)}"
-                    else "maximum ${thresholds.highPressure.string(pressureUnit)}"
+                    if (isLowPressure) "min ${thresholds.lowPressure.string(pressureUnit)}"
+                    else "max ${thresholds.highPressure.string(pressureUnit)}"
                 )
                 // Not notified on their own then, see action()
                 if (alerts.foldsLeaks) {
