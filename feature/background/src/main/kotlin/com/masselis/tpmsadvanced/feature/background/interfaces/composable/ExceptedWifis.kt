@@ -28,6 +28,8 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.ui.SettingsOnScre
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningSettingsViewModel
 import com.masselis.tpmsadvanced.feature.background.ioc.Bindings.Companion.PersistentScanningSettingsViewModel
 import com.masselis.tpmsadvanced.feature.background.usecase.WifiConnectionUseCase
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * The page opened from the "...except some WiFis" item of [SuspendScanConditions]. A removed WiFi
@@ -70,26 +72,26 @@ private fun ExceptedWifis(
 ) = Column(modifier) {
     @Suppress("MaxLineLength")
     SettingsIntro(
-        "Background scanning is not suspended while connected to one of these WiFis. Your car hotspot, WiFis only found in your garage or parking lot, city-wide WiFis you have credentials for, etc., all go here. To add another WiFi to this list, use the menu on the previous page while connected to it."
+        stringResource(CommonR.string.background_scanning_is_not_suspended_while_connected)
     )
-    SettingsSectionHeader("Excepted WiFis")
+    SettingsSectionHeader(stringResource(CommonR.string.excepted_wifis))
     SettingsGroup {
-        if (ssids.isEmpty()) SettingsItem { Text("No WiFi excepted yet") }
+        if (ssids.isEmpty()) SettingsItem { Text(stringResource(CommonR.string.no_wifi_excepted_yet)) }
         ssids.forEach { ssid ->
             val isRemoved = ssid in removed
             ActionSettingsItem(
                 headline = ssid,
-                supporting = "Connected".takeIf { ssid == connectedSsid },
+                supporting = stringResource(CommonR.string.connected_2).takeIf { ssid == connectedSsid },
                 struckOut = isRemoved,
                 modifier = Modifier.testTag("${PersistentScanningSettingsTags.exceptedWifi}_$ssid"),
             ) {
                 if (isRemoved) {
-                    TextButton(onClick = { onUndo(ssid) }) { Text("Undo") }
+                    TextButton(onClick = { onUndo(ssid) }) { Text(stringResource(CommonR.string.undo)) }
                 } else {
                     IconButton(onClick = { onRemove(ssid) }) {
                         Icon(
                             imageVector = ImageVector.vectorResource(R.drawable.delete_24px),
-                            contentDescription = "Remove $ssid",
+                            contentDescription = stringResource(CommonR.string.remove_3, ssid),
                         )
                     }
                 }

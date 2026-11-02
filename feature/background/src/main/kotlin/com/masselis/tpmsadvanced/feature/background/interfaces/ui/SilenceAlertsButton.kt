@@ -1,3 +1,5 @@
+@file:Suppress("MaxLineLength")
+
 package com.masselis.tpmsadvanced.feature.background.interfaces.ui
 
 import androidx.compose.foundation.layout.Column
@@ -35,6 +37,8 @@ import com.masselis.tpmsadvanced.feature.background.usecase.SilenceAlertsUseCase
 import kotlinx.coroutines.delay
 import kotlin.math.ceil
 import kotlin.time.Duration.Companion.seconds
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * Silences the alerts' speech for a while, shown over the vehicle, clear of its readings, while a
@@ -83,8 +87,8 @@ private fun SilenceAlertsButton(
             Spacer(Modifier.width(12.dp))
             // Wrapped to the width it's given, see ClearOfReadouts, "for 10 min" kept together
             Text(
-                text = "Silence ${if (state.isCritical) "critical alerts" else "alerts"} " +
-                    "for\u00A0${SilenceAlertsUseCase.DURATION.inWholeMinutes}\u00A0min",
+                text = if (state.isCritical) stringResource(CommonR.string.silence_critical_alerts_for, SilenceAlertsUseCase.DURATION.inWholeMinutes)
+                else stringResource(CommonR.string.silence_alerts_for, SilenceAlertsUseCase.DURATION.inWholeMinutes),
                 style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center,
             )
@@ -105,12 +109,12 @@ private fun SilenceAlertsButton(
             Spacer(Modifier.width(12.dp))
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = if (state.isCritical) "All alerts silenced" else "Alerts silenced",
+                    text = if (state.isCritical) stringResource(CommonR.string.all_alerts_silenced) else stringResource(CommonR.string.alerts_silenced),
                     style = MaterialTheme.typography.headlineSmall,
                     textAlign = TextAlign.Center,
                 )
                 Text(
-                    text = "$minutesLeft min left, tap to unmute",
+                    text = stringResource(CommonR.string.min_left_tap_to_unmute, minutesLeft),
                     style = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center,
                 )

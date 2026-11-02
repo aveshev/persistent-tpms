@@ -19,6 +19,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.masselis.tpmsadvanced.core.common.Fraction
 import com.masselis.tpmsadvanced.feature.main.usecase.TyreIconStateFlow.State
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * The top of the pressure and temperature settings pages: demo tyres drawn exactly like the real
@@ -56,11 +58,11 @@ internal fun TyreLegend(
 @Composable
 internal fun TyreLegendPreview() {
     TyreLegend(
-        text = "Explanation of the colours",
+        text = stringResource(CommonR.string.explanation_of_the_colours),
         entries = listOf(
-            State.Normal.BlueToGreen(Fraction(0f)) to "Cold\n20 °C",
-            State.Normal.BlueToGreen(Fraction(1f)) to "Normal\n45 °C",
-            State.Alerting() to "Hot\n90 °C",
+            State.Normal.BlueToGreen(Fraction(0f)) to stringResource(CommonR.string.legend_cold),
+            State.Normal.BlueToGreen(Fraction(1f)) to stringResource(CommonR.string.legend_normal),
+            State.Alerting() to stringResource(CommonR.string.legend_hot),
         ),
     )
 }

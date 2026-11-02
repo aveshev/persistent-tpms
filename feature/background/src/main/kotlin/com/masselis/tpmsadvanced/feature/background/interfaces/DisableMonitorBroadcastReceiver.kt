@@ -4,13 +4,15 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.masselis.tpmsadvanced.core.common.appContext
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import com.masselis.tpmsadvanced.core.common.localized
 
 internal class DisableMonitorBroadcastReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         appContext
             .stopService(Intent(appContext, MonitorService::class.java))
             .takeIf { it }
-            ?.also { appContext.flash("Disabled TPMS background monitoring") }
+            ?.also { appContext.flash(localized(CommonR.string.disabled_tpms_background_monitoring)) }
     }
 
     internal companion object {

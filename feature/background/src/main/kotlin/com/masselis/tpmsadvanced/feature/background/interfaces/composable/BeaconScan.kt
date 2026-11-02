@@ -1,3 +1,5 @@
+@file:Suppress("MaxLineLength")
+
 package com.masselis.tpmsadvanced.feature.background.interfaces.composable
 
 import androidx.compose.foundation.layout.Column
@@ -45,6 +47,8 @@ import kotlin.math.ceil
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * The page opened from the "Add a beacon" item of [Beacons]: the named devices advertising around,
@@ -93,14 +97,14 @@ private fun BeaconScan(
     modifier: Modifier = Modifier,
 ) = Column(modifier) {
     SettingsIntro(
-        "Come close to your vehicle: the beacons with the strongest signal are shown at the top of the list."
+        stringResource(CommonR.string.come_close_to_your_vehicle_the_beacons)
     )
-    SettingsSectionHeader("Scanning")
+    SettingsSectionHeader(stringResource(CommonR.string.scanning))
     SettingsGroup {
         when (page) {
             null -> TextSettingsItem(
-                headline = "Bluetooth is off",
-                supporting = "Turn it on to look for beacons",
+                headline = stringResource(CommonR.string.bluetooth_is_off),
+                supporting = stringResource(CommonR.string.turn_it_on_to_look_for_beacons),
                 onClick = onTurnOnBluetooth,
                 modifier = Modifier.testTag(BeaconScanTags.bluetoothOff),
             )
@@ -110,7 +114,7 @@ private fun BeaconScan(
         }
     }
     if (page !is Page.Listed) return@Column
-    SettingsSectionHeader("Beacons found") {
+    SettingsSectionHeader(stringResource(CommonR.string.beacons_found)) {
         // Sorts again by the current signal, the new beacons included
         // Greyed out while already sorted
         IconButton(
@@ -131,17 +135,17 @@ private fun BeaconScan(
         }
     }
     SettingsGroup {
-        if (page.devices.isEmpty()) SettingsItem { Text("No beacon nearby") }
+        if (page.devices.isEmpty()) SettingsItem { Text(stringResource(CommonR.string.no_beacon_nearby)) }
         page.devices.forEach { device ->
             val isAdded = device.address in added
             ActionSettingsItem(
                 headline = device.name,
-                supporting = listOfNotNull(device.address, "Added".takeIf { isAdded })
+                supporting = listOfNotNull(device.address, stringResource(CommonR.string.added).takeIf { isAdded })
                     .joinToString(" · ") + "\n" + listOfNotNull(
-                    "${device.rssi} dBm",
-                    device.period?.let { "every ${it.asSeconds()}" },
-                    "Not heard lately".takeIf { device.isQuiet },
-                    "Weak signal".takeIf { device.isQuiet.not() && device.isStrong.not() },
+                    stringResource(CommonR.string.dbm, device.rssi),
+                    device.period?.let { stringResource(CommonR.string.every, it.asSeconds()) },
+                    stringResource(CommonR.string.not_heard_lately).takeIf { device.isQuiet },
+                    stringResource(CommonR.string.weak_signal).takeIf { device.isQuiet.not() && device.isStrong.not() },
                 ).joinToString(" · "),
                 // Too weak or gone for now, may come back
                 enabled = device.isCandidate,
@@ -151,7 +155,7 @@ private fun BeaconScan(
                     IconButton(onClick = { onRemove(device.address) }) {
                         Icon(
                             imageVector = ImageVector.vectorResource(R.drawable.close_24px),
-                            contentDescription = "Remove ${device.name}",
+                            contentDescription = stringResource(CommonR.string.remove, device.name),
                             tint = MaterialTheme.colorScheme.error,
                         )
                     }
@@ -159,7 +163,7 @@ private fun BeaconScan(
                     IconButton(onClick = { onAdd(device) }) {
                         Icon(
                             imageVector = ImageVector.vectorResource(R.drawable.add_24px),
-                            contentDescription = "Add ${device.name}",
+                            contentDescription = stringResource(CommonR.string.add, device.name),
                         )
                     }
                 }
@@ -187,17 +191,17 @@ private fun ScanningItem(page: Page, onReload: () -> Unit) =
                     Text(
                         when (page) {
                             is Page.Searching ->
-                                "Listing beacons in ${ceil(page.remaining.inWholeMilliseconds / 1000.0).toInt()} s"
-                            is Page.Listed -> "Listening for new beacons…"
+                                stringResource(CommonR.string.listing_beacons_in, ceil(page.remaining.inWholeMilliseconds / 1000.0).toInt())
+                            is Page.Listed -> stringResource(CommonR.string.listening_for_new_beacons)
                         },
                         style = MaterialTheme.typography.bodyLarge,
                     )
                     Text(
                         when {
-                            page is Page.Searching -> "${page.found} found so far"
-                            notShown == 0 -> "No new beacons"
-                            notShown == 1 -> "1 additional beacon found"
-                            else -> "$notShown additional beacons found"
+                            page is Page.Searching -> stringResource(CommonR.string.found_so_far, page.found)
+                            notShown == 0 -> stringResource(CommonR.string.no_new_beacons)
+                            notShown == 1 -> stringResource(CommonR.string.n1_additional_beacon_found)
+                            else -> stringResource(CommonR.string.additional_beacons_found, notShown)
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = when {
@@ -212,7 +216,7 @@ private fun ScanningItem(page: Page, onReload: () -> Unit) =
                     onClick = onReload,
                     modifier = Modifier.testTag(BeaconScanTags.reload),
                 ) {
-                    Text("Reload")
+                    Text(stringResource(CommonR.string.reload))
                 }
             }
             val progressModifier = Modifier

@@ -4,6 +4,8 @@ import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES.Q
 import android.os.Build.VERSION_CODES.S
 import androidx.compose.runtime.Composable
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * Location must be "Allow all the time" (API 29+, where that option exists): that is the only way
@@ -18,27 +20,23 @@ internal fun rememberWifiExceptionJourney(
 ): PermissionJourney = rememberPermissionJourney(
     permissions = permissions,
     systemPopupFirst = false,
-    rationale = "Identifying which WiFi network you're connected to — so it can be excepted from" +
-            " the WiFi suspend setting — needs the location permission. In the app's settings," +
+    rationale = stringResource(CommonR.string.wifi_rationale_start) +
             when {
-                SDK_INT >= S -> " open Permissions → Location, then select \"Allow all the time\"" +
-                        " and turn on \"Use precise location\"."
+                SDK_INT >= S -> stringResource(CommonR.string.wifi_rationale_s)
 
-                SDK_INT >= Q -> " open Permissions → Location, then select \"Allow all the time\"."
-                else -> " open Permissions, then allow Location."
+                SDK_INT >= Q -> stringResource(CommonR.string.wifi_rationale_q)
+                else -> stringResource(CommonR.string.wifi_rationale_old)
             } +
             if (SDK_INT >= Q) {
-                " This is the only way the current WiFi name can be read while the app is in the" +
-                        " background."
+                stringResource(CommonR.string.wifi_rationale_only_way)
             } else "",
-    disabledInfo = "The exception for certain WiFis has been turned off, because the location" +
-            " permission it needs" +
+    disabledInfo = stringResource(CommonR.string.wifi_disabled_start) +
             when {
-                SDK_INT >= S -> " (\"Allow all the time\", with \"Use precise location\")"
-                SDK_INT >= Q -> " (\"Allow all the time\")"
+                SDK_INT >= S -> stringResource(CommonR.string.wifi_disabled_s)
+                SDK_INT >= Q -> stringResource(CommonR.string.wifi_disabled_q)
                 else -> ""
             } +
-            " was not granted. You can turn it on again in App settings, under Background scanning.",
+            stringResource(CommonR.string.wifi_disabled_end),
     isSettingsOnScreen = isSettingsOnScreen,
     onDenied = onDenied,
 )

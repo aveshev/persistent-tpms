@@ -18,6 +18,8 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.Backgro
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.BackgroundViewModel.Event
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.BackgroundViewModel.State
 import com.masselis.tpmsadvanced.feature.background.ioc.Bindings
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 @Composable
 internal fun BackgroundIconButton(
@@ -39,7 +41,7 @@ internal fun BackgroundIconButton(
             ) {
                 Icon(
                     ImageVector.vectorResource(R.drawable.format_vertical_align_center),
-                    contentDescription = "Enable background monitoring",
+                    contentDescription = stringResource(CommonR.string.enable_background_monitoring),
                 )
             }
 
@@ -49,7 +51,7 @@ internal fun BackgroundIconButton(
             ) {
                 Icon(
                     ImageVector.vectorResource(R.drawable.cancel),
-                    contentDescription = "Cancel background monitoring",
+                    contentDescription = stringResource(CommonR.string.cancel_background_monitoring),
                 )
             }
         }

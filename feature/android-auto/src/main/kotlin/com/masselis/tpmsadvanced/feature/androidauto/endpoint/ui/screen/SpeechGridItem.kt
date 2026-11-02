@@ -11,6 +11,8 @@ import com.masselis.tpmsadvanced.core.ui.LightColors
 import com.masselis.tpmsadvanced.feature.androidauto.R
 import com.masselis.tpmsadvanced.feature.androidauto.endpoint.ui.viewmodel.TabScreenViewModel.Speech
 import com.masselis.tpmsadvanced.feature.background.usecase.SilenceAlertsUseCase
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import com.masselis.tpmsadvanced.core.common.localized
 
 /**
  * Silences the alerts' speech for a while, as the main screen's button does. Always there with the
@@ -25,7 +27,7 @@ internal fun SpeechGridItem(
     onUnmute: () -> Unit,
 ) = GridItem
     .Builder()
-    .setTitle("Alert speech")
+    .setTitle(localized(CommonR.string.alert_speech))
     .setImage(
         CarIcon
             .Builder(createWithResource(screen.carContext, if (speech is Speech.Silenced) R.drawable.volume_off else R.drawable.volume_up))
@@ -37,11 +39,12 @@ internal fun SpeechGridItem(
     )
     .setText(
         when (speech) {
-            Speech.On -> "On"
+            Speech.On -> localized(CommonR.string.text_on)
             is Speech.Offer ->
-                "Tap to silence ${if (speech.isCritical) "all " else ""}${SilenceAlertsUseCase.DURATION.inWholeMinutes} min"
+                if (speech.isCritical) localized(CommonR.string.aa_silence_all, SilenceAlertsUseCase.DURATION.inWholeMinutes)
+                else localized(CommonR.string.aa_silence, SilenceAlertsUseCase.DURATION.inWholeMinutes)
 
-            is Speech.Silenced -> "Off ${speech.minutesLeft} min, tap to unmute"
+            is Speech.Silenced -> localized(CommonR.string.aa_off, speech.minutesLeft)
         }
     )
     .apply {

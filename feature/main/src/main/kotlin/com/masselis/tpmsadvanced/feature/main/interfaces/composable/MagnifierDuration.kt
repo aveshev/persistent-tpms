@@ -14,6 +14,9 @@ import com.masselis.tpmsadvanced.core.ui.SettingsIntro
 import com.masselis.tpmsadvanced.core.ui.SettingsSectionHeader
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.TyreDisplaySettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.TyreDisplaySettingsViewModel
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
+import com.masselis.tpmsadvanced.core.common.localizedPlural
 
 /** The page opened from the "Tap to magnify" item of [DisplaySettings] */
 @Composable
@@ -41,13 +44,13 @@ private fun MagnifierDuration(
 ) = Column(modifier) {
     @Suppress("MaxLineLength")
     SettingsIntro(
-        "Tap near a tyre on the main screen to temporarily show its readings in a large font size, easy to read even on a rough road."
+        stringResource(CommonR.string.tap_near_a_tyre_on_the_main)
     )
-    SettingsSectionHeader("Show for")
+    SettingsSectionHeader(stringResource(CommonR.string.show_for))
     SettingsGroup {
         MAGNIFIER_SECONDS.forEach { option ->
             RadioSettingsItem(
-                headline = "$option seconds",
+                headline = localizedPlural(CommonR.plurals.seconds, option, option),
                 selected = option == seconds,
                 onClick = { onSeconds(option) },
                 modifier = Modifier.testTag("${TyreDisplaySettingsTags.magnifierDuration}_$option"),

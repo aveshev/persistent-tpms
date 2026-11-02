@@ -61,6 +61,8 @@ import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.display
 import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.readings
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
 import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 @Composable
 internal fun AppSettings(
@@ -75,58 +77,58 @@ internal fun AppSettings(
     openLicenses: () -> Unit,
     modifier: Modifier = Modifier,
 ) = SettingsPage(modifier) {
-    SettingsSectionHeader("Display")
+    SettingsSectionHeader(stringResource(CommonR.string.display))
     DisplaySettings(
         openTextSize = openTextSize,
         openMagnifier = openMagnifier,
         openDimDisplay = openDimDisplay,
         modifier = Modifier.testTag(display),
     )
-    SettingsSectionHeader("Readings")
+    SettingsSectionHeader(stringResource(CommonR.string.readings))
     ReadingsSettings(
         openTimeSinceUpdate = openTimeSinceUpdate,
         modifier = Modifier.testTag(readings),
         leadingItems = { UnitsSettingsItems() },
     )
-    SettingsSectionHeader("Alerts")
+    SettingsSectionHeader(stringResource(CommonR.string.alerts))
     AlertsSettings(openAlertSound, Modifier.testTag(alerts))
-    SettingsSectionHeader("Background monitoring")
+    SettingsSectionHeader(stringResource(CommonR.string.background_monitoring))
     // A page of its own, also opened from the main screen's menu
     SettingsGroup {
         TextSettingsItem(
-            headline = "Persistent mode",
-            supporting = "Persistent scanning and its scan conditions",
+            headline = stringResource(CommonR.string.persistent_mode),
+            supporting = stringResource(CommonR.string.persistent_scanning_and_its_scan_conditions),
             onClick = openPersistentMode,
             modifier = Modifier.testTag(persistentMode),
         )
     }
     // Its own section, only while the other version of the app (Lite or Pro) is installed
     ImportSettings()
-    SettingsSectionHeader("About")
+    SettingsSectionHeader(stringResource(CommonR.string.about))
     LocalUriHandler.current.also { uriHandler ->
         SettingsGroup {
             VersionSettingsItem(BuildConfig.VERSION_NAME)
             TextSettingsItem(
-                headline = "Based on TPMS Advanced",
-                supporting = "By Vincent Masselis, under the Apache License 2.0",
+                headline = stringResource(CommonR.string.based_on_tpms_advanced),
+                supporting = stringResource(CommonR.string.by_vincent_masselis_under_the_apache_license),
                 onClick = { uriHandler.openUri("https://github.com/VincentMasselis/TPMS-advanced") },
             )
             TextSettingsItem(
-                headline = "Source code",
+                headline = stringResource(CommonR.string.source_code),
                 supporting = "github.com/aveshev/persistent-tpms",
                 onClick = { uriHandler.openUri("https://github.com/aveshev/persistent-tpms") },
             )
             TextSettingsItem(
-                headline = "Privacy policy",
+                headline = stringResource(CommonR.string.privacy_policy),
                 onClick = { uriHandler.openUri("https://aveshev.com/persistent-tpms/privacy/") },
             )
             TextSettingsItem(
-                headline = "Open-source licenses",
+                headline = stringResource(CommonR.string.open_source_licenses),
                 onClick = openLicenses,
             )
         }
     }
-    SettingsSectionHeader("Misc")
+    SettingsSectionHeader(stringResource(CommonR.string.misc))
     MiscSettings(
         openDebug = openDebug,
         openPressureLoss = openPressureLoss,
@@ -148,7 +150,7 @@ internal fun PersistentModeSettings(
 ) = SettingsPage(modifier) {
     @Suppress("MaxLineLength")
     SettingsIntro(
-        "When on, keeps monitoring your tyres in the background, even after the phone restarts, starting and suspending scanning based on the options below. That way you don't have to open the app manually each ride."
+        stringResource(CommonR.string.when_on_keeps_monitoring_your_tyres_in)
     )
     when (AppTier.current) {
         // Its few conditions are right on this page, the condition pages aren't reachable

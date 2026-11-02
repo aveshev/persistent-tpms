@@ -1,5 +1,5 @@
 // One preview per state variant
-@file:Suppress("TooManyFunctions")
+@file:Suppress("MaxLineLength", "TooManyFunctions")
 
 package com.masselis.tpmsadvanced.feature.main.interfaces.composable
 
@@ -59,6 +59,9 @@ import com.masselis.tpmsadvanced.feature.main.usecase.TyreStatsStateFlow.State
 import kotlinx.coroutines.delay
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
+import com.masselis.tpmsadvanced.core.common.localized
 
 /**
  * A sensor id the way its [brand] prints it, on the sensor or its QR code, in hex when it doesn't
@@ -139,7 +142,7 @@ internal fun TyreStat(
             Modifier.align(alignment),
             // Still on the sensors' page, where they're only checked
             blinks = isBasic.not(),
-            criticalLabel = if (detected?.isHighPressure == true) "HIGH!" else "LOW!",
+            criticalLabel = if (detected?.isHighPressure == true) stringResource(CommonR.string.high) else stringResource(CommonR.string.low),
         )
 
         Reading(
@@ -149,7 +152,7 @@ internal fun TyreStat(
             fontSize = 16.sp,
             blinks = isBasic.not(),
             // Only a high temperature alerts
-            criticalLabel = "HIGH!",
+            criticalLabel = stringResource(CommonR.string.high),
         )
 
         if (showTimeSinceUpdate && detected != null) {
@@ -167,7 +170,7 @@ internal fun TyreStat(
         // pressure and temperature above stay as the sensor read them. The same goes for the
         // pressure falling while riding.
         if (isBasic.not() && (PRESSURE_LOSS in levels || SENSOR_ALARM in levels)) {
-            Reading("Leak?", AMBER, Modifier.align(alignment), fontSize = 16.sp)
+            Reading(stringResource(CommonR.string.leak), AMBER, Modifier.align(alignment), fontSize = 16.sp)
         }
 
         // A battery getting low shows whatever the setting
@@ -268,11 +271,11 @@ private fun elapsedLabel(timestamp: Double, now: Double): String {
     val totalMinutes = totalMinutesSince(timestamp, now)
     val totalHours = totalMinutes / MINUTES_PER_HOUR
     return when {
-        totalMinutes == 0L -> "<1 min"
-        totalMinutes < HOUR_TIER_START_MINUTES -> "$totalMinutes min"
-        totalHours < DAY_TIER_START_HOURS -> "$totalHours hours"
-        totalHours / HOURS_PER_DAY > MAX_DAYS -> "$MAX_DAYS+ days"
-        else -> "${totalHours / HOURS_PER_DAY} days"
+        totalMinutes == 0L -> localized(CommonR.string.n1_min)
+        totalMinutes < HOUR_TIER_START_MINUTES -> localized(CommonR.string.min, totalMinutes)
+        totalHours < DAY_TIER_START_HOURS -> localized(CommonR.string.hours, totalHours)
+        totalHours / HOURS_PER_DAY > MAX_DAYS -> localized(CommonR.string.days, MAX_DAYS)
+        else -> localized(CommonR.string.days_2, totalHours / HOURS_PER_DAY)
     }
 }
 

@@ -22,6 +22,8 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.kpa
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.PressureLossSettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.PressureLossSettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.usecase.VehiclePressureLossUseCase
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * The page of the experimental pressure loss warning, opened from [MiscSettings]. It
@@ -61,11 +63,11 @@ private fun PressureLossSettings(
     modifier: Modifier = Modifier,
 ) = Column(modifier) {
     SettingsIntro(
-        "Experimental. Shows \"Leak?\" under a tyre losing pressure while riding, and notifies about it: its pressure falling from its highest reading of the ride by at least the minimum drop, on two readings in a row, while the tyre isn't cooling down.\n\nRiding warms a tyre up, which only raises its pressure, so a fall is air getting out. A leak too slow to show within a ride is left to the low pressure alert, once the tyre is cold. Letting air out shows as a loss too."
+        stringResource(CommonR.string.experimental_shows_leak_under_a_tyre_losing)
     )
     SettingsGroup(Modifier.padding(top = 24.dp)) {
         SwitchSettingsItem(
-            headline = "Pressure loss warning",
+            headline = stringResource(CommonR.string.pressure_loss_warning),
             checked = enabled,
             onCheckedChange = onEnabled,
             modifier = Modifier.testTag(PressureLossSettingsTags.enabled),
@@ -73,7 +75,7 @@ private fun PressureLossSettings(
     }
     SettingsGroup(Modifier.padding(top = 24.dp)) {
         SegmentedSettingsItem(
-            headline = "Minimum drop, in ${unit.symbol()}",
+            headline = stringResource(CommonR.string.minimum_drop_in, unit.symbol()),
             options = VehiclePressureLossUseCase.MIN_DROPS,
             selected = minDrop,
             onSelect = onMinDrop,

@@ -22,6 +22,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import com.masselis.tpmsadvanced.core.common.localized
 
 @Suppress("LongParameterList")
 internal class PersistentScanningViewModel(
@@ -112,7 +114,7 @@ internal class PersistentScanningViewModel(
             mutableOtherAppCheck.value = otherApp
                 .status()
                 ?.takeIf { it.persistentScanning }
-                ?.let { Conflict(otherApp.label() ?: "the other version of this app") }
+                ?.let { Conflict(otherApp.label() ?: localized(CommonR.string.the_other_version)) }
                 ?: Clear
         }
     }

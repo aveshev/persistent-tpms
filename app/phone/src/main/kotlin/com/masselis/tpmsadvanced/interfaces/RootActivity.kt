@@ -1,5 +1,6 @@
 package com.masselis.tpmsadvanced.interfaces
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
@@ -19,6 +20,9 @@ import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.Theme.SYSTEM
 import com.masselis.tpmsadvanced.interfaces.composable.Main
 import com.masselis.tpmsadvanced.interfaces.composable.TpmsAdvancedTheme
 import com.masselis.tpmsadvanced.ioc.Bindings
+import com.masselis.tpmsadvanced.core.common.AppLanguage
+import com.masselis.tpmsadvanced.core.common.applyAppLanguage
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import java.util.UUID
@@ -28,6 +32,11 @@ public class RootActivity : AppCompatActivity() {
     private val counter = ScreenOnCounter.Activity()
 
     private var hasConsumedIntent by saved { false }
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(newBase)
+        applyAppLanguage()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Set before super.onCreate() so that the first frame already has the chosen theme. A change
@@ -39,6 +48,12 @@ public class RootActivity : AppCompatActivity() {
             .appPreferences
             .theme
             .onEach { AppCompatDelegate.setDefaultNightMode(it.nightMode) }
+            .launchIn(lifecycleScope)
+        // Every text is read again in the chosen language
+        AppLanguage
+            .current
+            .drop(1)
+            .onEach { recreate() }
             .launchIn(lifecycleScope)
 
         val expectedVehicle = intent

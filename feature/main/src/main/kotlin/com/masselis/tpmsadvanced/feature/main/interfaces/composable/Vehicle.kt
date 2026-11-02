@@ -1,4 +1,4 @@
-@file:Suppress("LongMethod")
+@file:Suppress("MaxLineLength", "LongMethod")
 
 package com.masselis.tpmsadvanced.feature.main.interfaces.composable
 
@@ -83,6 +83,8 @@ import com.masselis.tpmsadvanced.feature.main.model.MoveChain
 import java.text.DecimalFormatSymbols
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /*
  * Every vehicle image is drawn on a 208:462 canvas, but the car with a spare's cropped to its
@@ -597,14 +599,15 @@ internal fun rememberWidestReadoutWidth(
     val measurer = rememberTextMeasurer()
     val pressureStyle = LocalTextStyle.current.copy(fontWeight = FontWeight.SemiBold)
     val systemDensity = LocalDensity.current
+    val tapTo = stringResource(CommonR.string.tap_to_first_line)
     // Each style's widest line, found once at the system's size: glyphs keep their proportions at
     // any size, so only these are measured again while FitsText tries smaller ones
-    val widestLines = remember(measurer, pressureStyle, systemDensity, pressureUnit, isOutlined) {
+    val widestLines = remember(measurer, pressureStyle, systemDensity, pressureUnit, isOutlined, tapTo) {
         listOfNotNull(
             pressureStyle to pressureUnit.widestReadout.withEveryDigit,
             pressureStyle.copy(fontSize = 16.sp) to WIDEST_DETAILS.flatMap { it.withEveryDigit },
             // What a location without a sensor shows instead, see TyreReadout
-            (pressureStyle.copy(fontSize = 20.sp) to listOf("Tap to")).takeIf { isOutlined },
+            (pressureStyle.copy(fontSize = 20.sp) to listOf(tapTo)).takeIf { isOutlined },
         ).map { (style, lines) ->
             style to lines.maxBy { measurer.measure(it, style, density = systemDensity).size.width }
         }
@@ -763,7 +766,7 @@ private fun Car(
             rearRightStats,
             rearRightTap
         ) = createRefs()
-        VehicleImage(vehicleImage, R.drawable.schema_car_top_view, "Image of your car", imageHeight)
+        VehicleImage(vehicleImage, R.drawable.schema_car_top_view, stringResource(CommonR.string.image_of_your_car), imageHeight)
         ImageSpan(track, CAR_TRACK, imageHeight)
         // The body reaches past the tyres, the readouts sit against it
         val frontBody = createRef().also { ImageSpan(it, CAR_FRONT_BODY, imageHeight) }
@@ -971,7 +974,7 @@ private fun CarWithSpare(
         VehicleImage(
             vehicleImage,
             R.drawable.schema_car_with_spare_top_view,
-            "Image of your car",
+            stringResource(CommonR.string.image_of_your_car),
             imageHeight,
             SPARE_CAR_IMAGE_RATIO
         )
@@ -1249,7 +1252,7 @@ private fun CarWithSpare(
                 calibrate = taps.calibrate,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
-                title = "Spare".takeIf { spareBeside },
+                title = stringResource(CommonR.string.spare).takeIf { spareBeside },
                 // Around its readings beside, as tall as the rear right one's. Otherwise around the
                 // spare as drawn across, rather than its tyre's upright layout, and its readings
                 // under it.
@@ -1298,7 +1301,7 @@ private fun Monowheel(
 ) {
     ConstraintLayout(modifier = modifier) {
         val (vehicleImage, tyre, stats, tap) = createRefs()
-        VehicleImage(vehicleImage, R.drawable.schema_monowheel_top_view, "Image of your monowheel", imageHeight)
+        VehicleImage(vehicleImage, R.drawable.schema_monowheel_top_view, stringResource(CommonR.string.image_of_your_monowheel), imageHeight)
         val wheelY = .505f
         val axle = imageGuideline(wheelY, imageHeight)
         with(Location.Single) {
@@ -1381,7 +1384,7 @@ private fun SingleAxleTrailer(
         VehicleImage(
             vehicleImage,
             R.drawable.schema_single_axle_trailer_top_view,
-            "Image of your trailer",
+            stringResource(CommonR.string.image_of_your_trailer),
             imageHeight
         )
         ImageSpan(track, TRAILER_TRACK, imageHeight)
@@ -1498,7 +1501,7 @@ private fun Motorcycle(
         VehicleImage(
             vehicleImage,
             R.drawable.schema_motorcycle_top_view,
-            "Image of your motorcycle",
+            stringResource(CommonR.string.image_of_your_motorcycle),
             imageHeight
         )
         val frontY = .0865f
@@ -1619,7 +1622,7 @@ private fun TadpoleThreadWheeler(
         VehicleImage(
             vehicleImage,
             R.drawable.schema_tadpole_three_wheeler_top_view,
-            "Image of your three-wheeler",
+            stringResource(CommonR.string.image_of_your_three_wheeler),
             imageHeight
         )
         ImageSpan(frontTrack, TADPOLE_FRONT_TRACK, imageHeight)
@@ -1781,7 +1784,7 @@ private fun DeltaThreeWheeler(
         VehicleImage(
             vehicleImage,
             R.drawable.schema_delta_three_wheeler_top_view,
-            "Image of your three-wheeler",
+            stringResource(CommonR.string.image_of_your_three_wheeler),
             imageHeight
         )
         ImageSpan(rearTrack, .713f, imageHeight)

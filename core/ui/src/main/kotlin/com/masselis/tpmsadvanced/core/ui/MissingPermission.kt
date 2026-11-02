@@ -28,6 +28,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.MultiplePermissionsState
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import com.masselis.tpmsadvanced.core.common.localized
 
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -89,8 +91,8 @@ public fun MissingPermission(
                     requestPermission()
             }) {
                 Text(
-                    if (hasRefusedGrant) "Open settings"
-                    else "Grant permission"
+                    if (hasRefusedGrant) localized(CommonR.string.open_settings)
+                    else localized(CommonR.string.grant_permission)
                 )
             }
         }

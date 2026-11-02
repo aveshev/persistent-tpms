@@ -13,6 +13,8 @@ import com.masselis.tpmsadvanced.core.ui.SwitchNavigationSettingsItem
 import com.masselis.tpmsadvanced.core.ui.SwitchSettingsItem
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.TyreDisplaySettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.TyreDisplaySettingsViewModel
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * The "Readings" group of the app settings, about what each tyre's reading shows,
@@ -64,7 +66,7 @@ private fun ReadingsSettings(
 ) = SettingsGroup(modifier) {
     leadingItems()
     SwitchNavigationSettingsItem(
-        headline = "Time since last update",
+        headline = stringResource(CommonR.string.time_since_last_update),
         checked = showTimeSinceUpdate,
         onCheckedChange = onShowTimeSinceUpdate,
         onClick = openTimeSinceUpdate,
@@ -73,8 +75,8 @@ private fun ReadingsSettings(
         modifier = Modifier.testTag(TyreDisplaySettingsTags.showTimeSinceUpdate),
     )
     SwitchSettingsItem(
-        headline = "Always show battery",
-        supporting = "(even when not low)",
+        headline = stringResource(CommonR.string.always_show_battery),
+        supporting = stringResource(CommonR.string.even_when_not_low),
         checked = showBatteryVoltage,
         onCheckedChange = onShowBatteryVoltage,
         modifier = Modifier.testTag(TyreDisplaySettingsTags.showBatteryVoltage),
