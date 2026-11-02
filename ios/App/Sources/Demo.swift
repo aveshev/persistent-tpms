@@ -31,6 +31,9 @@ enum Demo {
     }
 
     #if DEBUG
+    /// `-pocket`: dimmed, and saying the screen was just turned off in a pocket, for -render
+    static var isPocketShown: Bool { ProcessInfo.processInfo.arguments.contains("-pocket") }
+
     /// Renders the main screen into the file `-render <path>`, in the room an iPhone's safe area leaves
     /// (`-landscape`, or portrait), then quits. Runs without a Simulator as Mac Catalyst, see README.md:
     /// it's the same SwiftUI and fonts, in a plain window. One a launch: `textScale` is read as views

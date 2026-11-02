@@ -55,6 +55,7 @@ struct MainView: View {
                 case "settings": sheet = .settings
                 default: break
                 }
+                if Demo.isPocketShown { isDimmed = true }
                 Demo.renderScreen(monitor: monitor, settings: settings)
                 Demo.checkLayouts()
                 #endif
@@ -90,7 +91,7 @@ struct MainView: View {
             }
         }
         // Over the top bar too, whose taps would go through otherwise
-        .modifier(DimWhenIdle(monitor: monitor, settings: settings, isShown: scenePhase == .active && selected == nil && sheet == nil && assigning == nil, isDimmed: $isDimmed))
+        .modifier(DimWhenIdle(monitor: monitor, settings: settings, isShown: scenePhase == .active && selected == nil && sheet == nil && assigning == nil, barHeight: barHeight, isDimmed: $isDimmed))
     }
 
     /// A tyre's readout in a large font, easy to read on a rough road, like the Android app's
