@@ -1,12 +1,18 @@
 import Foundation
 import TPMSCore
+import SwiftUI
 
 /// The demo mode of the settings, or a launch with `-demo`, shows made-up vehicles from real advertisements, in an
 /// in-memory database and without scanning, to look at every state of the screens (the Simulator
 /// has no Bluetooth). `-screen tyre|vehicle|vehicles|settings|manage` opens that screen too, and
 /// `-screen empty|assign|bluetooth|qr` the steps of assigning a sensor to a vehicle without any.
-/// `-scanned <code>` stands for what the QR code scanner's camera would read.
+/// `-scanned <code>` stands for what the QR code scanner's camera would read. `-kind <VehicleKind's raw
+/// value>` shows that kind of vehicle, a reading on each tyre, or without sensors with `-unassigned`.
+/// `-render <dir>` and `-layoutcheck`, for what's below.
 enum Demo {
+    /// On top of Dynamic Type, which Catalyst ignores: `-textscale <the system's scale at a size>` for -render
+    static let textScale: CGFloat = argument("-textscale").flatMap(Double.init).map { CGFloat($0) } ?? 1
+
     static var isOn: Bool { ProcessInfo.processInfo.arguments.contains("-demo") || UserDefaults.standard.bool(forKey: Settings.demoModeKey) }
 
     static var screen: String? {
@@ -18,6 +24,89 @@ enum Demo {
         let arguments = ProcessInfo.processInfo.arguments
         return arguments.firstIndex(of: "-scanned").flatMap { arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil }
     }
+
+    private static func argument(_ name: String) -> String? {
+        let arguments = ProcessInfo.processInfo.arguments
+        return arguments.firstIndex(of: name).flatMap { arguments.indices.contains($0 + 1) ? arguments[$0 + 1] : nil }
+    }
+
+    #if DEBUG
+    /// Renders the main screen into the file `-render <path>`, in the room an iPhone's safe area leaves
+    /// (`-landscape`, or portrait), then quits. Runs without a Simulator as Mac Catalyst, see README.md:
+    /// it's the same SwiftUI and fonts, in a plain window. One a launch: `textScale` is read as views
+    /// are evaluated, so it can't change while they're shown.
+    static func renderScreen(monitor: Monitor, settings: Settings) {
+        guard let path = argument("-render"), let window = UIApplication.shared.connectedScenes
+            .compactMap({ $0 as? UIWindowScene })
+            .first
+            .flatMap({ scene -> UIWindow? in
+                scene.sizeRestrictions?.minimumSize = CGSize(width: 1000, height: 1000)
+                return scene.windows.first
+            })
+        else { return }
+        let room = ProcessInfo.processInfo.arguments.contains("-landscape") ? CGSize(width: 750, height: 369) : CGSize(width: 390, height: 763)
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(1))
+            let host = UIHostingController(rootView: Group {
+                if screen == "manage", let vehicle = monitor.current {
+                    NavigationStack { ManageSensorsView(vehicleId: vehicle.id, monitor: monitor, settings: settings) }
+                } else {
+                    MainView(monitor: monitor, settings: settings)
+                }
+            }.tint(Theme.primary))
+            host.view.frame = CGRect(origin: .zero, size: room)
+            window.addSubview(host.view)
+            try? await Task.sleep(for: .seconds(1.5))
+            let image = UIGraphicsImageRenderer(bounds: host.view.bounds).image { _ in
+                host.view.drawHierarchy(in: host.view.bounds, afterScreenUpdates: true)
+            }
+            try? image.pngData()?.write(to: URL(fileURLWithPath: path))
+            exit(0)
+        }
+    }
+
+    /// Every kind at every Dynamic Type size of the largest and smallest iPhones' rooms, each way up,
+    /// with and without sensors, and with every line the settings add: what still overlaps at the
+    /// smallest text it can go to, and the text and image sizes each ends up with
+    static func checkLayouts() {
+        guard ProcessInfo.processInfo.arguments.contains("-layoutcheck") else { return }
+        // The safe areas' sizes: an SE, a 13 Pro, a 16 Pro Max
+        let rooms: [(String, CGSize)] = [
+            ("se portrait", CGSize(width: 375, height: 647)), ("se landscape", CGSize(width: 667, height: 375)),
+            ("13pro portrait", CGSize(width: 390, height: 763)), ("13pro landscape", CGSize(width: 750, height: 369)),
+            ("max portrait", CGSize(width: 440, height: 840)), ("max landscape", CGSize(width: 824, height: 419)),
+        ]
+        // UIFontMetrics' body scale at each end, xSmall and accessibility 5
+        let sizes: [(String, CGFloat)] = [("xs", 14.0 / 17), ("large", 1), ("ax5", 53.0 / 17)]
+        let all = ReadoutLines(showsLeak: true, battery: "3.0V", sensorId: "012345", flags: [0x12, 0x34])
+        let states: [(String, (VehicleKind) -> VehicleLayout.Content)] = [
+            ("assigned", { .init(kind: $0, kinds: Dictionary(uniqueKeysWithValues: $0.locations.map { ($0, ReadoutKind.lines(.basic)) }), outlined: [], isManaging: false, pressureUnit: .kiloPascal, textSize: TyreReadout.baseSize) }),
+            ("unassigned", { .init(kind: $0, kinds: Dictionary(uniqueKeysWithValues: $0.locations.map { ($0, ReadoutKind.tapToAssign(isDetected: true)) }), outlined: Set($0.locations), isManaging: false, pressureUnit: .kiloPascal, textSize: TyreReadout.baseSize) }),
+            ("managing", { .init(kind: $0, kinds: Dictionary(uniqueKeysWithValues: $0.locations.map { ($0, ReadoutKind.lines(.basic)) }), outlined: Set($0.locations), isManaging: true, pressureUnit: .kiloPascal, textSize: TyreReadout.baseSize) }),
+            ("all lines", { .init(kind: $0, kinds: Dictionary(uniqueKeysWithValues: $0.locations.map { ($0, ReadoutKind.lines(all)) }), outlined: [], isManaging: false, pressureUnit: .kiloPascal, textSize: TyreReadout.baseSize) }),
+        ]
+        var misfits = 0
+        for kind in VehicleKind.allCases {
+            for (roomName, room) in rooms {
+                for (sizeName, scale) in sizes {
+                    for (stateName, state) in states {
+                        let base = state(kind)
+                        let content = VehicleLayout.Content(kind: kind, kinds: base.kinds, outlined: base.outlined, isManaging: base.isManaging, pressureUnit: .kiloPascal, textSize: TyreReadout.baseSize * scale)
+                        let corners = VehicleLayout.Corners(start: 0, end: 150, height: 44 * max(1, scale * 0.8))
+                        let over = VehicleLayout(content, room: CGSize(width: room.width, height: room.height - corners.height), corners: nil)
+                        let beside = VehicleLayout(content, room: room, corners: corners)
+                        let isBeside = VehicleLayout.isBesideBetter(beside, than: over)
+                        let layout = isBeside ? beside : over
+                        if layout.isMisfit { misfits += 1 }
+                        print("LAYOUT \(kind.rawValue) \(roomName) \(sizeName) \(stateName) \(isBeside ? "beside" : "over"): text \(String(format: "%.1f", layout.textSize)) image \(Int(layout.image.height))\(layout.isMisfit ? " MISFIT" : "")")
+                    }
+                }
+            }
+        }
+        print("LAYOUT misfits: \(misfits)")
+        exit(0)
+    }
+    #endif
 
     private static var startsEmpty: Bool { ["empty", "assign", "bluetooth", "qr"].contains(screen) }
 
@@ -35,6 +124,19 @@ enum Demo {
     /// Fills [database], returning the readings of unassigned sensors heard around
     static func seed(_ database: Database) throws -> [SensorReading] {
         let now = Date().timeIntervalSince1970
+        if let kind = argument("-kind").flatMap(VehicleKind.init(rawValue:)) {
+            var vehicle = Vehicle.new(name: "NMax", kind: kind)
+            vehicle.isCurrent = true
+            try database.save(vehicle)
+            if ProcessInfo.processInfo.arguments.contains("-unassigned") == false {
+                for (index, location) in kind.locations.enumerated() {
+                    guard let reading = AdvertisingPacket(bytes: Data(hex: "0303A5270308425208FF401E2301E261E6")!).decode(timestamp: now - 30, rssi: -70, addressId: index + 1) else { continue }
+                    try database.bind(BoundSensor(id: reading.sensorId, brand: reading.brand, vehicleId: vehicle.id, location: location))
+                    try database.insert(reading, vehicleId: vehicle.id, location: location)
+                }
+            }
+            return []
+        }
         var nmax = Vehicle.new(name: "NMax", kind: .motorcycle)
         var car = Vehicle.new(name: "Car", kind: .car)
         if screen == "managecar" { car.isCurrent = true } else { nmax.isCurrent = true }

@@ -15,6 +15,16 @@ struct VehicleDrawing {
     /// sit against them
     let inset: CGFloat
     let tyres: [TyreLocation: CGPoint]
+    var middle = Middle.betweenAxles
+
+    /// Where what's over the vehicle centers on when it fits there, like Vehicle.kt's center
+    enum Middle {
+        case betweenAxles
+        /// As a fraction of the image's height: above a monowheel's wheel rather than over it
+        case at(CGFloat)
+        /// The screen's vertical middle: a trailer's axle isn't in the image's
+        case screen
+    }
 
     /// How far the readout of [location] sits from the middle: a car's front tyres are a little
     /// further in than its rear ones
@@ -67,7 +77,8 @@ struct VehicleDrawing {
             VehicleDrawing(
                 image: "schema_single_axle_trailer_top_view", ratio: ratio, tyreHeight: tyreHeight, tyreRatio: tyreRatio,
                 inset: outer(0.86, tyreHeight, ratio),
-                tyres: pair(track: 0.86, y: 0.686, .side(.left), .side(.right))
+                tyres: pair(track: 0.86, y: 0.686, .side(.left), .side(.right)),
+                middle: .screen
             )
         case .motorcycle:
             VehicleDrawing(
@@ -89,7 +100,8 @@ struct VehicleDrawing {
         case .monowheel:
             VehicleDrawing(
                 image: "schema_monowheel_top_view", ratio: ratio, tyreHeight: 0.377, tyreRatio: 11.2 / 52, inset: 1,
-                tyres: [.single: CGPoint(x: 0.5, y: 0.505)]
+                tyres: [.single: CGPoint(x: 0.5, y: 0.505)],
+                middle: .at(0.2)
             )
         }
     }
@@ -188,7 +200,7 @@ struct VehicleView: View {
                     }
                     ForEach(vehicle.kind.locations) { location in
                         if let outline = layout.outlines[location] {
-                            outlineView(location, in: outline, isFramed: location == .spare && layout.spareFrame != nil, date: context.date)
+                            outlineView(location, in: outline, isFramed: location == .spare && layout.spareFrame != nil, textSize: layout.textSize, date: context.date)
                         }
                     }
                     MoveArrows(moves: arrows, tyres: layout.tyres, outlines: layout.outlines)
@@ -240,7 +252,7 @@ struct VehicleView: View {
     }
 
     /// Covers the location's tyre and readout, tapping it anywhere, like the Android app's TyreTapArea
-    @ViewBuilder private func outlineView(_ location: TyreLocation, in rect: CGRect, isFramed: Bool, date: Date) -> some View {
+    @ViewBuilder private func outlineView(_ location: TyreLocation, in rect: CGRect, isFramed: Bool, textSize: CGFloat, date: Date) -> some View {
         let color = outlineColor(location, date: date)
         if color != nil || isFramed {
             RoundedRectangle(cornerRadius: Self.outlineRadius, style: .continuous)
@@ -252,7 +264,7 @@ struct VehicleView: View {
         if isFramed {
             // On the frame's top edge, cutting it
             Text("Spare")
-                .font(.system(size: VehicleLayout.frameTitleInset * 1.5, weight: .medium))
+                .font(.system(size: textSize * VehicleLayout.frameTitleScale, weight: .medium))
                 .foregroundStyle(color ?? Theme.onBackground)
                 .padding(.horizontal, 4)
                 .background(Theme.background)
@@ -429,7 +441,8 @@ struct TyreReadout: View {
     /// The readings' size, following the system's text size like Android's 16 sp
     @ScaledMetric(relativeTo: .body) private var baseSize: CGFloat = TyreReadout.baseSize
 
-    static let baseSize: CGFloat = 22
+    /// Android's 16 sp
+    static let baseSize: CGFloat = 16
 
     var body: some View {
         let reading = tyre?.latest

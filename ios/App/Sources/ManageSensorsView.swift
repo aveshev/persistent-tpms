@@ -38,6 +38,8 @@ struct ManageSensorsView: View {
     private static let movePrompt = "Tap the wheel to move to"
     /// The most the actions show: always this tall, so nothing moves when they change
     private static let actionsHeight: CGFloat = 104
+    private static let sideMaxShare: CGFloat = 0.35
+    private static let sideMaxWidth: CGFloat = 260
 
     struct VehicleMove: Identifiable, Hashable {
         let location: TyreLocation
@@ -57,12 +59,12 @@ struct ManageSensorsView: View {
     private func page(_ vehicle: Vehicle) -> some View {
         let all = vehicle.kind.locations
         let occupied = Set(monitor.sensors.filter { $0.vehicleId == vehicle.id }.map(\.location))
-        return VStack(spacing: 0) {
-            Text(vehicle.name)
-                .font(.title3)
-                .lineLimit(1)
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
+        let name = Text(vehicle.name)
+            .font(.title3)
+            .lineLimit(1)
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+        let vehicleView =
             VehicleView(
                 vehicle: vehicle,
                 monitor: monitor,
@@ -89,10 +91,29 @@ struct ManageSensorsView: View {
                         .transition(.opacity)
                 }
             }
-            Divider()
-            actions(vehicle)
-                .frame(height: Self.actionsHeight)
-                .padding(16)
+        return GeometryReader { geometry in
+            // The vehicle needs all the height when wider than tall: what's over and under it goes to
+            // its side, like Android's VehicleBeside
+            if geometry.size.width > geometry.size.height {
+                HStack(spacing: 0) {
+                    VStack(spacing: 0) {
+                        name
+                        actions(vehicle).padding(16)
+                    }
+                    .frame(width: min(geometry.size.width * Self.sideMaxShare, Self.sideMaxWidth))
+                    Divider()
+                    vehicleView
+                }
+            } else {
+                VStack(spacing: 0) {
+                    name
+                    vehicleView
+                    Divider()
+                    actions(vehicle)
+                        .frame(height: Self.actionsHeight)
+                        .padding(16)
+                }
+            }
         }
         .background(Theme.background)
         // Here, rather than on the message: its page is still coming back when it's set

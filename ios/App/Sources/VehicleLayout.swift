@@ -19,7 +19,8 @@ struct ReadoutLines {
     @MainActor init(tyre: Monitor.Tyre?, settings: Settings, isBasic: Bool) {
         let reading = tyre?.latest
         let levels = tyre?.alerts.levels ?? [:]
-        showsTime = reading != nil && settings.showTimeSinceUpdate
+        // Basic, it's always there, like TyreStat's default
+        showsTime = reading != nil && (isBasic || settings.showTimeSinceUpdate)
         showsLeak = isBasic == false && (levels[.pressureLoss] != nil || levels[.sensorAlarm] != nil)
         // A battery getting low shows whatever the setting
         battery = isBasic == false && (settings.showBatteryVoltage || levels[.battery] != nil)
@@ -33,12 +34,12 @@ struct ReadoutLines {
             : []
     }
 
-    private init() {
-        showsTime = true
-        showsLeak = false
-        battery = nil
-        sensorId = nil
-        flags = []
+    init(showsTime: Bool = true, showsLeak: Bool = false, battery: String? = nil, sensorId: String? = nil, flags: [UInt8] = []) {
+        self.showsTime = showsTime
+        self.showsLeak = showsLeak
+        self.battery = battery
+        self.sensorId = sensorId
+        self.flags = flags
     }
 
     /// The pressure, temperature and time since update
@@ -144,14 +145,25 @@ struct VehicleLayout {
                     : .lines(ReadoutLines(tyre: monitor.tyres[Monitor.TyreKey(vehicleId: vehicle.id, location: location)], settings: settings, isBasic: isManaging))
             }
             pressureUnit = settings.pressureUnit
-            textSize = baseSize * CGFloat(settings.readoutTextScale)
+            textSize = baseSize * CGFloat(settings.readoutTextScale) * Demo.textScale
+        }
+
+        init(kind: VehicleKind, kinds: [TyreLocation: ReadoutKind], outlined: Set<TyreLocation>, isManaging: Bool, pressureUnit: PressureUnit, textSize: CGFloat) {
+            drawing = .of(kind)
+            locations = kind.locations
+            self.isManaging = isManaging
+            self.outlined = outlined
+            isOutlined = outlined.isEmpty == false
+            self.kinds = kinds
+            self.pressureUnit = pressureUnit
+            self.textSize = textSize
         }
 
         var sides: Int { locations.contains { $0.readoutSide == .leading } ? 2 : 1 }
         var hasSpare: Bool { locations.contains(.spare) }
 
         func slotWidth(_ size: CGFloat) -> CGFloat {
-            VehicleLayout.widestReading(pressureUnit, isOutlined: isOutlined) * size + (isOutlined ? outlinePadding : 0)
+            VehicleLayout.widestReading(pressureUnit, isOutlined: isOutlined, size: size) + (isOutlined ? outlinePadding : 0)
         }
 
         /// The room a side's readouts take beside the image, without the image's overlap
@@ -180,16 +192,19 @@ struct VehicleLayout {
             }
             height = min(height, (maxImageArea * max(between, 0) / (drawing.ratio * room.height)).squareRoot())
             height = max(height, atLeast)
-            let spare = hasSpare ? drawing.spareBottom : 1
-            return min(height, (room.height - verticalMargin * 2 - (spareRoom(size, corners: corners) ?? 0)) / (room.height * spare))
+            // Down to the spare's readout rather than to the image's bottom, see VehicleLayout's spareOverflow
+            let most = spareRoom(size, corners: corners)
+                .map { (room.height - verticalMargin * 2 - $0) / (room.height * drawing.spareBottom) }
+                ?? (room.height - verticalMargin * 2) / room.height
+            return min(height, most)
         }
     }
 
     let textSize: CGFloat
     let slotWidth: CGFloat
     let image: CGRect
-    /// Between the axles, or the middle of a single axle
-    let middle: CGPoint
+    /// Where what's over the vehicle centers on, see VehicleDrawing.Middle, nil for the screen's middle
+    let middleY: CGFloat?
     let tyres: [TyreLocation: CGRect]
     let readouts: [TyreLocation: CGRect]
     /// Around a location's tyre and readout, of the locations outlined, and the spare when it's framed
@@ -198,6 +213,8 @@ struct VehicleLayout {
     let spareFrame: CGRect?
     let spareLine: [CGPoint]
     private let fits: Bool
+    /// Still overlapping at the smallest text it can go to
+    var isMisfit: Bool { fits == false }
 
     init(_ content: Content, room: CGSize, corners: Corners?) {
         var size = content.textSize
@@ -218,11 +235,14 @@ struct VehicleLayout {
         let basic = ReadoutLines.basic.height * size
         // The image and its readouts are centered together, in what's between the corners
         let hasLeft = content.sides == 2
-        let offsetX = ((hasLeft ? readoutWidth : 0) - readoutWidth + ((corners?.start ?? 0) - (corners?.end ?? 0))) / 2
+        let oneSided: CGFloat = (hasLeft ? readoutWidth : 0) - readoutWidth
+        let cornersShift: CGFloat = (corners?.start ?? 0) - (corners?.end ?? 0)
+        let offsetX: CGFloat = (oneSided + cornersShift) / 2
         let spareOverflow = max(0, (content.spareRoom(size, corners: corners) ?? 0) - height * (1 - drawing.spareBottom))
         let image = CGRect(x: (room.width - width) / 2 + offsetX, y: (room.height - height) / 2 - spareOverflow / 2, width: width, height: height)
-        let tyres = drawing.tyres.reduce(into: [TyreLocation: CGRect]()) { rects, tyre in
-            let long = drawing.tyreHeight * height, short = long * drawing.tyreRatio
+        let tyres: [TyreLocation: CGRect] = drawing.tyres.reduce(into: [:]) { rects, tyre in
+            let long: CGFloat = drawing.tyreHeight * height
+            let short: CGFloat = long * drawing.tyreRatio
             // The spare lies across the boot
             let tyreSize = tyre.key == .spare ? CGSize(width: long, height: short) : CGSize(width: short, height: long)
             rects[tyre.key] = CGRect(
@@ -269,10 +289,11 @@ struct VehicleLayout {
         if let spare = tyres[.spare] {
             let readoutHeight = content.kinds[.spare]?.height(size) ?? basic
             let isOutlined = content.outlined.contains(.spare)
-            if let lineY, let rear = readouts[.wheel(.rearRight)], let rearY = tyres[.wheel(.rearRight)]?.midY {
-                // Beside the rear right one, centered on the same height, in a frame titled as the spare
-                let frameHeight = max(readoutHeight, basic)
-                let center = max(min(rearY, image.maxY - frameHeight / 2), image.minY + frameHeight / 2)
+            let rearLocation = TyreLocation.wheel(.rearRight)
+            if let lineY, let rear = readouts[rearLocation], let rearTyre = tyres[rearLocation] {
+                // Beside the rear right one, placed like its outline would be, in a frame titled as the spare
+                let frameHeight: CGFloat = min(max(rearTyre.height, readoutHeight, basic), height)
+                let center: CGFloat = max(min(rearTyre.midY, rearTyre.maxY - frameHeight / 2, image.maxY - frameHeight / 2), image.minY + frameHeight / 2)
                 let readout = CGRect(x: rear.maxX + Self.spareBesideGap, y: center - readoutHeight / 2, width: slot, height: readoutHeight)
                 let frame = CGRect(x: readout.minX, y: center - frameHeight / 2, width: slot, height: frameHeight)
                     .insetBy(dx: -Self.outlineOutset, dy: -Self.outlineOutset)
@@ -282,8 +303,8 @@ struct VehicleLayout {
                 spareLine = [CGPoint(x: spare.maxX, y: lineY), CGPoint(x: readout.midX, y: lineY), CGPoint(x: readout.midX, y: frame.maxY)]
                 parts[.spare] = [
                     readout,
-                    CGRect(x: frame.minX, y: frame.minY - Self.frameTitleInset, width: frame.width, height: frame.height + Self.frameTitleInset),
-                    CGRect(x: spare.maxX, y: lineY - Self.spareLineClearance, width: readout.midX - spare.maxX, height: Self.spareLineClearance * 2),
+                    CGRect(x: frame.minX, y: frame.minY - Self.frameTitleInset(size), width: frame.width, height: frame.height + Self.frameTitleInset(size)),
+                    CGRect(x: spare.maxX, y: lineY - Self.spareLineClearance, width: readout.maxX - spare.maxX, height: Self.spareLineClearance * 2),
                 ]
             } else {
                 // Under its tyre, on the vehicle's middle
@@ -298,7 +319,7 @@ struct VehicleLayout {
         let tolerance: CGFloat = 0.5
         let allowed = CGRect(origin: .zero, size: room).insetBy(dx: -tolerance, dy: -tolerance)
         let bar = corners.map { CGRect(x: room.width - $0.end, y: 0, width: $0.end, height: $0.height) }
-        let all = parts.values.flatMap { $0 }
+        let all: [CGRect] = parts.values.flatMap { $0 }
         let pairs = parts.flatMap { location, rects in
             parts.filter { $0.key != location }.values.flatMap { others in
                 rects.flatMap { rect in others.map { (rect, $0) } }
@@ -306,6 +327,7 @@ struct VehicleLayout {
         }
         fits = height > 0
             && all.allSatisfy { allowed.contains($0) && (bar?.intersects($0) ?? false) == false }
+            && (bar?.intersects(image) ?? false) == false
             && pairs.allSatisfy { $0.0.insetBy(dx: tolerance, dy: tolerance).intersects($0.1) == false }
         textSize = size
         slotWidth = slot
@@ -315,11 +337,21 @@ struct VehicleLayout {
         self.outlines = outlines
         self.spareFrame = spareFrame
         self.spareLine = spareLine
-        let axles = content.locations.filter { $0 != .spare }.compactMap { drawing.tyres[$0]?.y }
-        middle = CGPoint(
-            x: image.midX,
-            y: image.minY + ((axles.min() ?? 0.5) + (axles.max() ?? 0.5)) / 2 * height
-        )
+        let axles: [CGFloat] = content.locations.filter { $0 != .spare }.compactMap { drawing.tyres[$0]?.y }
+        let axlesMiddle: CGFloat = ((axles.min() ?? 0.5) + (axles.max() ?? 0.5)) / 2
+        switch drawing.middle {
+        case .betweenAxles: middleY = image.minY + axlesMiddle * height
+        case .at(let share): middleY = image.minY + share * height
+        case .screen: middleY = nil
+        }
+    }
+
+    /// The top bar goes beside the vehicle when that leaves it the tallest image, like Android's
+    /// VehicleWithTopBar, once each has fit its text: too large for either, Android's would both be 0
+    /// and stay over the vehicle. This keeps what fits first, then the largest text.
+    static func isBesideBetter(_ beside: VehicleLayout, than over: VehicleLayout) -> Bool {
+        if beside.fits != over.fits { return beside.fits }
+        return beside.textSize != over.textSize ? beside.textSize > over.textSize : beside.image.height > over.image.height
     }
 
     /// A line in the room between two readouts one above the other, like FitsText's separators,
@@ -330,7 +362,7 @@ struct VehicleLayout {
             sorted
                 .first {
                     $0.key != upper.key
-                        && $0.value.minY >= upper.value.maxY - 2
+                        && $0.value.minY >= upper.value.maxY - 1
                         && $0.value.minX < upper.value.maxX && upper.value.minX < $0.value.maxX
                 }
                 .flatMap { lower -> (y: CGFloat, from: CGFloat, to: CGFloat)? in
@@ -353,51 +385,55 @@ struct VehicleLayout {
             readouts: readouts.mapValues(moved),
             frames: outlines.map { location, frame in
                 moved(location == .spare && spareFrame != nil
-                    ? CGRect(x: frame.minX, y: frame.minY - Self.frameTitleInset, width: frame.width, height: frame.height + Self.frameTitleInset)
+                    ? CGRect(x: frame.minX, y: frame.minY - Self.frameTitleInset(textSize), width: frame.width, height: frame.height + Self.frameTitleInset(textSize))
                     : frame)
             },
             image: moved(image),
-            middle: CGPoint(x: middle.x + origin.x, y: middle.y + origin.y)
+            middleY: middleY.map { $0 + origin.y }
         )
     }
 
-    /// The widest a reading's lines get at a text size of 1
-    static func widestReading(_ unit: PressureUnit, isOutlined: Bool) -> CGFloat {
-        max(widestLines[unit] ?? 0, isOutlined ? widestTapToAssign : 0)
+    /// How wide the widest line a reading can show is at this text size, like Android's
+    /// rememberWidestReadoutWidth: each line's found once, then measured again at each size tried, as
+    /// the system font's tracking changes with its size
+    static func widestReading(_ unit: PressureUnit, isOutlined: Bool, size: CGFloat) -> CGFloat {
+        let font = UIFont.systemFont(ofSize: size, weight: .semibold)
+        let lines = max(
+            ((widestPressure[unit] ?? "") as NSString).size(withAttributes: [.font: font]).width,
+            (widestDetail as NSString).size(withAttributes: [.font: font]).width
+        )
+        return isOutlined
+            ? max(lines, ("Tap to" as NSString).size(withAttributes: [.font: UIFont.systemFont(ofSize: size * ReadoutKind.tapToAssignScale, weight: .semibold)]).width)
+            : lines
     }
 
-    /// Reference for the widths: they're close enough to proportional to the size, the system font's
-    /// tracking narrowing them a little as it grows, so measuring small is on the safe side
-    private static let referenceSize: CGFloat = 17
-    private static let readingFont = UIFont.systemFont(ofSize: referenceSize, weight: .semibold)
+    private static let referenceFont = UIFont.systemFont(ofSize: 17, weight: .semibold)
 
-    private static let widestTapToAssign =
-        ("Tap to" as NSString).size(withAttributes: [.font: UIFont.systemFont(ofSize: referenceSize, weight: .semibold)]).width / referenceSize * ReadoutKind.tapToAssignScale
+    private static func widest(_ lines: [String]) -> String {
+        lines
+            .flatMap { line in
+                (0...9).map { digit in line.map { $0.isNumber ? String(digit) : String($0) }.joined() }
+            }
+            .max { ($0 as NSString).size(withAttributes: [.font: referenceFont]).width < ($1 as NSString).size(withAttributes: [.font: referenceFont]).width }
+            ?? ""
+    }
 
-    /// Android's rememberWidestReadoutWidth: the widest pressure of that unit, or else temperature or
-    /// time since update, with each digit
-    private static let widestLines: [PressureUnit: CGFloat] = [
+    private static let widestPressure: [PressureUnit: String] = [
         PressureUnit.kiloPascal: "1034 kPa*", .bar: "8.88 bar*", .psi: "88.8 psi*",
     ]
-    .mapValues { pressure in
-        ([pressure, "188°F", "188°C", "88 hours", "99+ days"] as [String])
-            .flatMap { line in
-                (0...9).map { digit in
-                    line.map { $0.isNumber ? String(digit) : String($0) }.joined()
-                }
-            }
-            .map { ($0 as NSString).size(withAttributes: [.font: readingFont]).width }
-            .max()
-            .map { $0 / referenceSize } ?? 0
-    }
+    .mapValues { widest([$0]) }
+
+    private static let widestDetail = widest(["188°F", "188°C", "88 hours", "99+ days"])
 
     private static let textStep: CGFloat = 0.97
     private static let minTextSize: CGFloat = 6
     /// How close two readouts get with a separator between them, in lines
     private static let separatedLines: CGFloat = 2
 
-    /// Half of the "Spare" title, which is drawn on the frame's top edge
-    static let frameTitleInset: CGFloat = 8
+    /// The "Spare" title, Android's labelMedium's 12 sp over the readings' 16, and half its 16 sp line
+    /// height, which is drawn on the frame's top edge
+    static let frameTitleScale: CGFloat = 12 / 16
+    static func frameTitleInset(_ size: CGFloat) -> CGFloat { size / 2 }
     static let outlineOutset: CGFloat = 6
     /// Between an outline's outer edge and what's centered in it
     static let outlinePadding: CGFloat = 4
@@ -431,7 +467,8 @@ struct VehicleBounds: Equatable {
     let readouts: [TyreLocation: CGRect]
     let frames: [CGRect]
     let image: CGRect
-    let middle: CGPoint
+    /// Nil for the screen's middle
+    let middleY: CGFloat?
 
     struct Key: PreferenceKey {
         static let defaultValue: VehicleBounds? = nil
@@ -474,7 +511,8 @@ struct ClearOfReadouts: Layout {
         let obstacles = readouts + bounds.frames + bar
         let isClear = { (rect: CGRect) in obstacles.contains { $0.intersects(rect) } == false }
         let height = subview.sizeThatFits(ProposedViewSize(width: vehicle.width, height: nil)).height
-        let between = CGRect(x: vehicle.minX, y: bounds.middle.y - height / 2, width: vehicle.width, height: height)
+        let middleY = bounds.middleY ?? box.height / 2
+        let between = CGRect(x: vehicle.minX, y: middleY - height / 2, width: vehicle.width, height: height)
         let isBarOver = bar.contains { $0.width >= box.width - 1 }
         let beside = CGRect(
             x: vehicle.maxX + clearance,
@@ -514,7 +552,7 @@ struct ClearOfReadouts: Layout {
             .first
         // Raised over the front's lower lines, its bottom off the rear's readouts
         let raised = readouts
-            .filter { $0.minY > bounds.middle.y }
+            .filter { $0.minY > middleY }
             .map(\.minY)
             .min()
             .map { between.offsetBy(dx: 0, dy: min($0 - clearance - between.maxY, 0)) }

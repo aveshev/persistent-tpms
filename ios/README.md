@@ -105,6 +105,13 @@ The settings and menus follow Android's, screen by screen:
 - **Shared Pecham and Bekubee KY sensors are left out of the QR code**: their IDs are this phone's own,
   they're assigned by Bluetooth.
 
+- **The main screen's layout follows Android's `VehicleSizing`, `FitsText` and `ClearOfReadouts`**, with
+  these differences: its top bar is iOS's 44 pt, taller as its title grows, rather than 64 dp. The text fits
+  before anything is drawn, from what's shown right now, so it grows back when an extra line goes (Android
+  only shrinks until restarted), and goes as low as it takes rather than stopping at half. The top bar's
+  placement compares what fits, then the text, then the image, once each has fit its text, and no readout
+  or outline goes under the bar.
+
 ### Left out
 
 - **Android Auto, shortcuts**: CarPlay needs Apple's approval for this category.
@@ -132,3 +139,10 @@ the device's ID. A free Apple account's signing lasts 7 days, then the app needs
 
 `./run-demo.sh <simulator id> <dir> main tyre empty assign bluetooth qr manage managecar vehicle
 vehicles settings persistent` screenshots the demo in the Simulator, see `Demo.swift`.
+
+The main screen's layout can be checked without a Simulator or a phone, as Mac Catalyst: generate a
+copy of `project.yml` with `SUPPORTS_MACCATALYST: YES` under another name, build it for
+`platform=macOS,variant=Mac Catalyst`, and run the app's binary with `-demo` and either `-layoutcheck`
+(prints each vehicle kind's text and image sizes, `MISFIT` where something overlaps) or
+`-kind CAR -textscale 3.1176 -render out.png` (`-landscape`, `-unassigned`, `-screen manage`). Catalyst ignores
+Dynamic Type, so `-textscale` stands for it, 0.8235 for its smallest size and 3.1176 for its largest.

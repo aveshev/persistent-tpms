@@ -15,6 +15,9 @@ struct MainView: View {
     @State private var isDimmed = false
     @Environment(\.scenePhase) private var scenePhase
     @ScaledMetric(relativeTo: .body) private var baseSize: CGFloat = TyreReadout.baseSize
+    /// The bar's text, as large as a .headline
+    @ScaledMetric(relativeTo: .headline) private var headlineSize: CGFloat = 17
+    private var barTitleSize: CGFloat { headlineSize * Demo.textScale }
 
     enum Sheet: String, Identifiable {
         case vehicle, addVehicle, settings, manage, persistent, simulate
@@ -52,6 +55,8 @@ struct MainView: View {
                 case "settings": sheet = .settings
                 default: break
                 }
+                Demo.renderScreen(monitor: monitor, settings: settings)
+                Demo.checkLayouts()
                 #endif
             }
             .sheet(item: $selected) { location in
@@ -98,7 +103,8 @@ struct MainView: View {
                 let maxWidth = screen.size.width - padding, maxHeight = screen.size.height - padding
                 let titleSize = magnifierTitleSize(vehicle, width: screen.size.width, height: maxHeight)
                 let titleHeight = max(Self.magnifierCloseSize, titleSize * Self.magnifierTitleLineHeight)
-                let widest = VehicleLayout.widestReading(settings.pressureUnit, isOutlined: false)
+                // At a size of 1000, for how wide it is per point of text size: the system font's tracking settles at large sizes
+                let widest = VehicleLayout.widestReading(settings.pressureUnit, isOutlined: false, size: 1000) / 1000
                 // As large as fits, its width the same from one location and reading to another
                 let size = max(1, min(maxWidth / widest, (maxHeight - titleHeight) / ReadoutLines(tyre: tyre, settings: settings, isBasic: false).height))
                 VStack(spacing: 0) {
@@ -166,11 +172,15 @@ struct MainView: View {
         GeometryReader { geometry in
             let size = geometry.size
             let content = VehicleLayout.Content(vehicle: vehicle, monitor: monitor, settings: settings, baseSize: baseSize, isManaging: false, isMoving: false, date: Date())
-            let end = min(barTitleWidth + Self.barHeight, size.width * Self.barMaxEndShare)
-            let corners = VehicleLayout.Corners(start: 0, end: end, height: Self.barHeight)
-            let over = CGSize(width: size.width, height: size.height - Self.barHeight)
-            let isBeside = content.imageHeight(size, corners: corners, size: content.textSize, atLeast: 0) * size.height
-                > content.imageHeight(over, corners: nil, size: content.textSize, atLeast: 0) * over.height
+            let barHeight = barHeight
+            let barGaps = Self.besideTitleStart + Self.besideTitleEnd + Self.barPadding + barHeight
+            let end = min(barTitleWidth, size.width * Self.barMaxEndShare - barGaps) + barGaps
+            let corners = VehicleLayout.Corners(start: 0, end: end, height: barHeight)
+            let over = CGSize(width: size.width, height: size.height - barHeight)
+            let isBeside = VehicleLayout.isBesideBetter(
+                VehicleLayout(content, room: size, corners: corners),
+                than: VehicleLayout(content, room: over, corners: nil)
+            )
             let vehicleView = VehicleView(
                 vehicle: vehicle, monitor: monitor, settings: settings,
                 onSensor: { assigning = $0 },
@@ -182,16 +192,16 @@ struct MainView: View {
                 corners: isBeside ? corners : nil
             )
             let bar = isBeside
-                ? CGRect(x: size.width - end, y: 0, width: end, height: Self.barHeight)
-                : CGRect(x: 0, y: 0, width: size.width, height: Self.barHeight)
+                ? CGRect(x: size.width - end, y: 0, width: end, height: barHeight)
+                : CGRect(x: 0, y: 0, width: size.width, height: barHeight)
             ZStack(alignment: .topTrailing) {
                 VStack(spacing: 0) {
                     if isBeside == false {
                         ZStack {
-                            vehicleMenu.padding(.horizontal, Self.barHeight)
+                            vehicleMenu.padding(.horizontal, barHeight)
                             settingsMenu.frame(maxWidth: .infinity, alignment: .trailing)
                         }
-                        .frame(height: Self.barHeight)
+                        .frame(height: barHeight)
                     }
                     // Why nothing comes in, under the bar's corner
                     status
@@ -200,11 +210,13 @@ struct MainView: View {
                     vehicleView
                 }
                 if isBeside {
-                    HStack(spacing: 0) {
+                    HStack(spacing: Self.besideTitleEnd) {
                         vehicleMenu
                         settingsMenu
                     }
-                    .frame(width: end, height: Self.barHeight, alignment: .trailing)
+                    .padding(.leading, Self.besideTitleStart)
+                    .padding(.trailing, Self.barPadding)
+                    .frame(width: end, height: barHeight, alignment: .trailing)
                 }
             }
             .coordinateSpace(.named(VehicleBounds.space))
@@ -218,13 +230,23 @@ struct MainView: View {
         }
     }
 
-    private static let barHeight: CGFloat = 44
+    /// iOS's own bar's height, Android's is 64, taller as much as its title needs
+    private var barHeight: CGFloat {
+        max(Self.minBarHeight, barTitleSize * 1.3 + 8)
+    }
+
+    private static let minBarHeight: CGFloat = 44
     private static let barMaxEndShare: CGFloat = 0.5
+    // VehicleWithTopBar.kt's
+    private static let barPadding: CGFloat = 4
+    private static let besideTitleStart: CGFloat = 16
+    private static let besideTitleEnd: CGFloat = 8
 
     /// The vehicle's name and its chevron
     private var barTitleWidth: CGFloat {
         ((monitor.current?.name ?? "") as NSString)
-            .size(withAttributes: [.font: UIFont.preferredFont(forTextStyle: .headline)]).width + 20
+            .size(withAttributes: [.font: UIFont.systemFont(ofSize: barTitleSize, weight: .semibold)]).width
+            + 4 + barTitleSize
     }
 
     private var settingsMenu: some View {
@@ -243,8 +265,8 @@ struct MainView: View {
             #endif
         } label: {
             Image(systemName: "gearshape")
-                .font(.title3)
-                .frame(width: Self.barHeight, height: Self.barHeight)
+                .font(.system(size: barTitleSize * 20 / 17))
+                .frame(width: barHeight, height: barHeight)
         }
         .accessibilityLabel("Settings")
     }
@@ -269,8 +291,8 @@ struct MainView: View {
             Button("Add a vehicle", systemImage: "plus") { sheet = .addVehicle }
         } label: {
             HStack(spacing: 4) {
-                Text(monitor.current?.name ?? "Persistent TPMS").font(.headline).lineLimit(1)
-                Image(systemName: "chevron.down").font(.caption.weight(.semibold))
+                Text(monitor.current?.name ?? "Persistent TPMS").font(.system(size: barTitleSize, weight: .semibold)).lineLimit(1)
+                Image(systemName: "chevron.down").font(.system(size: barTitleSize * 12 / 17, weight: .semibold))
             }
             .foregroundStyle(Theme.onBackground)
         }
