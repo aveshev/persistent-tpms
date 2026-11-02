@@ -15,7 +15,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.masselis.tpmsadvanced.core.ui.OnLeaveEffect
 import com.masselis.tpmsadvanced.core.ui.SettingsGroup
 import com.masselis.tpmsadvanced.core.ui.SettingsIntro
 import com.masselis.tpmsadvanced.core.ui.SettingsSectionHeader
@@ -42,8 +41,6 @@ internal fun DebugSettings(
     additionalItems: @Composable ColumnScope.() -> Unit = {},
     viewModel: DebugSettingsViewModel = viewModel { DebugSettingsViewModel() },
 ) {
-    // With nothing selected there is nothing to show: same as turning the switch off
-    OnLeaveEffect(viewModel::disableIfNoneSelected)
     val showSensorId by viewModel.showSensorId.collectAsState()
     val showSensorFlags by viewModel.showSensorFlags.collectAsState()
     val balancedAfterFirstReading by viewModel.balancedAfterFirstReading.collectAsState()
