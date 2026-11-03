@@ -280,13 +280,13 @@
     <string name="lowers_the_screen_s_brightness_on_the">Lowers the screen\'s brightness on the main screen once there\'s been no new alert for a while. A warning or critical alert going on keeps it bright, a new alert brings it back up. When dimmed, a first touch only brightens the screen, lift your finger and touch again to use the app.</string>
     <string name="ltpms_icon_app">LTPMS Icon app</string>
     <string name="manage_sensors">Manage sensors</string>
-    <string name="maximum">maximum %1$s</string>
+    <string name="maximum">max %1$s</string>
     <string name="maximum_2">Maximum</string>
     <string name="maximum_pressure">Maximum pressure</string>
     <string name="may_be_leaking">May be leaking</string>
     <string name="min">%1$s min</string>
     <string name="min_left_tap_to_unmute">%1$s min left, tap to unmute</string>
-    <string name="minimum">minimum %1$s</string>
+    <string name="minimum">min %1$s</string>
     <string name="minimum_2">Minimum</string>
     <string name="minimum_drop_in">Minimum drop, in %1$s</string>
     <string name="minimum_pressure">Minimum pressure</string>

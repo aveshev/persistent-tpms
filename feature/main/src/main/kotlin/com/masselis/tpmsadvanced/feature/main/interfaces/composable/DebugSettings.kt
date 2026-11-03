@@ -22,7 +22,6 @@ import com.masselis.tpmsadvanced.core.common.AppLanguage.RUSSIAN
 import com.masselis.tpmsadvanced.core.common.AppLanguage.SYSTEM
 import com.masselis.tpmsadvanced.core.common.R as CommonR
 import com.masselis.tpmsadvanced.core.common.localized
-import com.masselis.tpmsadvanced.core.ui.OnLeaveEffect
 import com.masselis.tpmsadvanced.core.ui.SegmentedSettingsItem
 import com.masselis.tpmsadvanced.core.ui.SettingsGroup
 import com.masselis.tpmsadvanced.core.ui.SettingsIntro
@@ -50,8 +49,6 @@ internal fun DebugSettings(
     additionalItems: @Composable ColumnScope.() -> Unit = {},
     viewModel: DebugSettingsViewModel = viewModel { DebugSettingsViewModel() },
 ) {
-    // With nothing selected there is nothing to show: same as turning the switch off
-    OnLeaveEffect(viewModel::disableIfNoneSelected)
     val showSensorId by viewModel.showSensorId.collectAsState()
     val showSensorFlags by viewModel.showSensorFlags.collectAsState()
     val balancedAfterFirstReading by viewModel.balancedAfterFirstReading.collectAsState()

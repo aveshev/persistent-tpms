@@ -1,8 +1,6 @@
 package com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel
 
 import androidx.lifecycle.ViewModel
-import com.masselis.tpmsadvanced.core.common.AppLanguage
-import com.masselis.tpmsadvanced.core.common.AppLanguage.SYSTEM
 import com.masselis.tpmsadvanced.core.common.appContext
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
 import com.masselis.tpmsadvanced.data.app.interfaces.AppTier
@@ -59,13 +57,6 @@ internal class DebugSettingsViewModel(
 
             else -> null
         }
-    }
-
-    fun disableIfNoneSelected() {
-        listOf(showSensorId, showSensorFlags, showDetectedActivities, announceScanStatus, balancedAfterFirstReading)
-            .none { it.value }
-            .and(AppLanguage.current.value == SYSTEM)
-            .also { if (it) debugOptions.value = false }
     }
 
     internal companion object {

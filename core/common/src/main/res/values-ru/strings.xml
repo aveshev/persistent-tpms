@@ -279,13 +279,13 @@
     <string name="lowers_the_screen_s_brightness_on_the">Снижает яркость главного экрана, если какое-то время не было новых оповещений. При активном тревожном или критическом оповещении яркость сохраняется, новое оповещение возвращает её. На затемнённом экране первое касание только повышает яркость: уберите палец и коснитесь снова, чтобы пользоваться приложением.</string>
     <string name="ltpms_icon_app">Значок приложения LYTPMS</string>
     <string name="manage_sensors">Управление датчиками</string>
-    <string name="maximum">максимум %1$s</string>
+    <string name="maximum">макс. %1$s</string>
     <string name="maximum_2">Максимум</string>
     <string name="maximum_pressure">Максимальное давление</string>
     <string name="may_be_leaking">Возможна утечка</string>
     <string name="min">%1$s мин</string>
     <string name="min_left_tap_to_unmute">Осталось %1$s мин, нажмите, чтобы включить звук</string>
-    <string name="minimum">минимум %1$s</string>
+    <string name="minimum">мин. %1$s</string>
     <string name="minimum_2">Минимум</string>
     <string name="minimum_drop_in">Минимальное падение, %1$s</string>
     <string name="minimum_pressure">Минимальное давление</string>

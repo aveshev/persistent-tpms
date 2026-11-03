@@ -462,18 +462,24 @@ internal class AlertSpeaker(
                 continuation.resume(Unit)
         }
 
-    /** Russian when that's the app's language and the engine has it, English otherwise */
-    private fun TextToSpeech.speaksRussian(): Boolean = (
+    /** Russian when that's the app's language and the engine has it, staying in English otherwise */
+    private fun TextToSpeech.speaksRussian(): Boolean =
         AppLanguage.current.value.locale.language == RUSSIAN.language &&
             setLanguage(RUSSIAN) >= TextToSpeech.LANG_AVAILABLE
-        ).also { if (it.not()) setLanguage(Locale.US) }
 
     /** The default engine once it is ready, shut down when the collection ends */
     private fun textToSpeech(): Flow<TextToSpeech> = callbackFlow {
         val status = CompletableDeferred<Int>()
         val tts = TextToSpeech(appContext) { status.complete(it) }
         launch {
-            if (status.await() == TextToSpeech.SUCCESS) send(tts)
+            if (status.await() == TextToSpeech.SUCCESS) tts
+                .apply {
+                    // English until speaksRussian says otherwise, while the engine follows the phone's language
+                    setLanguage(Locale.US)
+                        .takeIf { it < TextToSpeech.LANG_AVAILABLE }
+                        ?.also { logger.w { "English is not available ($it), spoken in the default language" } }
+                }
+                .also { send(it) }
             else logger.w { "Text-to-speech failed to initialize, alerts won't be spoken" }
         }
         awaitClose { tts.shutdown() }

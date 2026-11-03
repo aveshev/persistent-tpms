@@ -357,7 +357,7 @@ internal class AlertNotifier(
     }
 
     private fun Update.text(alertClass: AlertClass, now: TyreAtmosphere?): String = buildString {
-        appendLoc(location, capitalized = true)
+        appendLoc(location, withType = false, capitalized = true)
         append(": ")
         append(details(alertClass, now))
     }
