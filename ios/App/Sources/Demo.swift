@@ -56,7 +56,7 @@ enum Demo {
                 } else {
                     MainView(monitor: monitor, settings: settings)
                 }
-            }.tint(Theme.primary))
+            }.tint(Theme.primary).environment(\.locale, settings.language.locale))
             host.view.frame = CGRect(origin: .zero, size: room)
             window.addSubview(host.view)
             try? await Task.sleep(for: .seconds(1.5))

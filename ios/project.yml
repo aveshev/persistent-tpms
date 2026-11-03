@@ -3,6 +3,7 @@
 name: PersistentTPMS
 options:
   bundleIdPrefix: com.aveshev
+  developmentLanguage: en
   deploymentTarget:
     iOS: "17.0"
 packages:
@@ -12,13 +13,14 @@ targets:
   PersistentTPMS:
     type: application
     platform: iOS
-    sources: [App/Sources, App/Assets.xcassets]
+    sources: [App/Sources, App/Assets.xcassets, App/Resources]
     dependencies:
       - package: TPMSCore
     info:
       path: App/Info.plist
       properties:
         CFBundleDisplayName: Persistent TPMS
+        CFBundleLocalizations: [en, ru]
         CFBundleShortVersionString: "0.1.0"
         CFBundleVersion: "1"
         UILaunchScreen: {}

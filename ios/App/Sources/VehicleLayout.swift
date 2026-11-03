@@ -27,7 +27,7 @@ struct ReadoutLines {
             ? reading?.batteryVoltage?.string ?? reading?.batteryPercent.map { "\($0)%" }
             : nil
         sensorId = isBasic == false && settings.showsSensorId
-            ? reading.map { $0.brand.isIdentifiedByAddress ? "No ID" : $0.sensorId.asSensorId($0.brand) }
+            ? reading.map { $0.brand.isIdentifiedByAddress ? tr("No ID") : $0.sensorId.asSensorId($0.brand) }
             : nil
         flags = isBasic == false && settings.showsSensorFlags
             ? reading.flatMap { AdvertisingPacket(bytes: $0.raw).statusBytes.map(Array.init) } ?? []
@@ -403,7 +403,7 @@ struct VehicleLayout {
             (widestDetail as NSString).size(withAttributes: [.font: font]).width
         )
         return isOutlined
-            ? max(lines, ("Tap to" as NSString).size(withAttributes: [.font: UIFont.systemFont(ofSize: size * ReadoutKind.tapToAssignScale, weight: .semibold)]).width)
+            ? max(lines, (tr("Tap to") as NSString).size(withAttributes: [.font: UIFont.systemFont(ofSize: size * ReadoutKind.tapToAssignScale, weight: .semibold)]).width)
             : lines
     }
 

@@ -26,7 +26,7 @@ final class Settings: ObservableObject {
     enum Theme: String, CaseIterable, Identifiable {
         case system, light, dark
         var id: String { rawValue }
-        var name: String { rawValue.capitalized }
+        var name: String { tr(String.LocalizationValue(rawValue.capitalized)) }
         var systemImage: String {
             switch self {
             case .system: "circle.lefthalf.filled"
@@ -37,6 +37,10 @@ final class Settings: ObservableObject {
     }
 
     // MARK: Display, like the Android app's AppPreferences
+
+    @Published var language: AppLanguage = .current {
+        didSet { AppLanguage.current = language }
+    }
 
     @Published var theme: Theme {
         didSet { defaults.set(theme.rawValue, forKey: "theme") }

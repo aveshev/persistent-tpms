@@ -34,8 +34,8 @@ struct ManageSensorsView: View {
     @State private var message: String?
     @Environment(\.dismiss) private var dismiss
 
-    private static let managePrompt = "Tap the wheel/sensor to manage"
-    private static let movePrompt = "Tap the wheel to move to"
+    private static let managePrompt = tr("Tap the wheel/sensor to manage")
+    private static let movePrompt = tr("Tap the wheel to move to")
     /// The most the actions show: always this tall, so nothing moves when they change
     private static let actionsHeight: CGFloat = 104
     private static let sideMaxShare: CGFloat = 0.35
@@ -51,7 +51,7 @@ struct ManageSensorsView: View {
         Group {
             if let vehicle = monitor.vehicles.first(where: { $0.id == vehicleId }) { page(vehicle) }
         }
-        .navigationTitle(incoming != nil ? "Move to" : "Manage sensors")
+        .navigationTitle(incoming != nil ? tr("Move to") : tr("Manage sensors"))
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(moving != nil || confirming != nil)
     }
@@ -176,7 +176,7 @@ struct ManageSensorsView: View {
             )
         }
         .confirmationDialog(
-            asking.map { "\($0.last.name) already has a sensor" } ?? "",
+            asking.map { tr("\($0.last.name) already has a sensor") } ?? "",
             isPresented: Binding(get: { asking != nil }, set: { if $0 == false { asking = nil } }),
             titleVisibility: .visible,
             presenting: asking
@@ -195,7 +195,7 @@ struct ManageSensorsView: View {
             Text("Swap \(chain.start.name) ⇄ \(chain.last.name), or move more sensors around for a tyre rotation.")
         }
         .confirmationDialog(
-            askingIncoming.map { "\(vehicle.name)'s \($0.phrase) already has a sensor" } ?? "",
+            askingIncoming.map { tr("\(vehicle.name)'s \($0.phrase) already has a sensor") } ?? "",
             isPresented: Binding(get: { askingIncoming != nil }, set: { if $0 == false { askingIncoming = nil } }),
             titleVisibility: .visible,
             presenting: askingIncoming
@@ -207,7 +207,7 @@ struct ManageSensorsView: View {
             Text("Swapping sends its sensor to the other vehicle's \(incoming?.location.phrase ?? "wheel"). Replacing removes it from \(vehicle.name).")
         }
         .confirmationDialog(
-            askingMonowheel.map { "\($0.vehicle.name)'s wheel already has a sensor" } ?? "",
+            askingMonowheel.map { tr("\($0.vehicle.name)'s wheel already has a sensor") } ?? "",
             isPresented: Binding(get: { askingMonowheel != nil }, set: { if $0 == false { askingMonowheel = nil } }),
             titleVisibility: .visible,
             presenting: askingMonowheel
@@ -222,7 +222,7 @@ struct ManageSensorsView: View {
 
     private func moved(_ vehicle: Vehicle, _ move: VehicleMove, to target: TyreLocation, swap: Bool) {
         monitor.move(from: vehicle, move.location, to: move.vehicle, target, swap: swap)
-        withAnimation { message = "\(swap ? "Swapped with" : "Moved to") \(move.vehicle.name)'s \(target.phrase)" }
+        withAnimation { message = swap ? tr("Swapped with \(move.vehicle.name)'s \(target.phrase)") : tr("Moved to \(move.vehicle.name)'s \(target.phrase)") }
     }
 
     private func apply(_ step: MoveChain.Step) {
@@ -315,24 +315,24 @@ struct ManageSensorSheet: View {
         NavigationStack {
             List {
                 Section {
-                    SensorOption(title: "Move/swap", subtitle: "Assign this sensor to another wheel") {
+                    SensorOption(title: tr("Move/swap"), subtitle: tr("Assign this sensor to another wheel")) {
                         Image(systemName: "arrow.left.arrow.right")
                     } action: {
                         move?()
                     }
                     .disabled(move == nil)
-                    SensorOption(title: "Move to another vehicle", subtitle: "Assign this sensor to a wheel of another vehicle") {
+                    SensorOption(title: tr("Move to another vehicle"), subtitle: tr("Assign this sensor to a wheel of another vehicle")) {
                         Image(systemName: "car")
                     } action: {
                         isPickingVehicle = true
                     }
                     .disabled(otherVehicles.isEmpty)
-                    SensorOption(title: "Calibrate", subtitle: "Correct this sensor's pressure readings") {
+                    SensorOption(title: tr("Calibrate"), subtitle: tr("Correct this sensor's pressure readings")) {
                         Image(systemName: "slider.horizontal.3")
                     } action: {
                         calibrate()
                     }
-                    SensorOption(title: "Delete", subtitle: "Remove this sensor from the \(location.phrase)", color: Theme.error) {
+                    SensorOption(title: tr("Delete"), subtitle: tr("Remove this sensor from the \(location.phrase)"), color: Theme.error) {
                         Image(systemName: "trash")
                     } action: {
                         confirmDelete = true
@@ -341,7 +341,7 @@ struct ManageSensorSheet: View {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Type: \(sensor.brand.name)")
                         // A sensor without an ID has nothing to show, see isIdentifiedByAddress
-                        Text(sensor.brand.isIdentifiedByAddress ? "No ID, told apart by this iPhone" : "ID: \(sensor.id.asSensorId(sensor.brand))")
+                        Text(sensor.brand.isIdentifiedByAddress ? tr("No ID, told apart by this iPhone") : "ID: \(sensor.id.asSensorId(sensor.brand))")
                     }
                     .textCase(nil)
                 }
@@ -381,9 +381,9 @@ struct ManageSensorSheet: View {
 
     private func count(_ vehicle: Vehicle) -> String {
         switch monitor.sensors.filter({ $0.vehicleId == vehicle.id }).count {
-        case 0: "No sensors yet"
-        case 1: "1 sensor"
-        case let count: "\(count) sensors"
+        case 0: tr("No sensors yet")
+        case 1: tr("1 sensor")
+        case let count: tr("\(count) sensors")
         }
     }
 }

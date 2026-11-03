@@ -1,0 +1,2 @@
+"NSBluetoothAlwaysUsageDescription" = "Persistent TPMS слушает датчики давления в шинах по Bluetooth.";
+"NSCameraUsageDescription" = "Persistent TPMS сканирует QR-код датчиков давления в шинах, чтобы назначить их.";
