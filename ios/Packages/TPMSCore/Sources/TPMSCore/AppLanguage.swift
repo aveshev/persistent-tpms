@@ -1,6 +1,6 @@
 import Foundation
 
-/// The language the app's texts are shown in, chosen in the app settings. `system` follows the phone.
+/// The language the app's texts are shown in, chosen on the debug page. `system`, the default, follows the phone, and is what turning the debug options off goes back to.
 public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
     case system
     case english

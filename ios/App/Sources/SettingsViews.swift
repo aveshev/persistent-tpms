@@ -18,24 +18,6 @@ struct AppSettingsView: View {
         NavigationStack {
             Form {
                 Section("Display") {
-                    Picker("Language", selection: $settings.language) {
-                        // Each language in its own, so that it can be found from any of them
-                        ForEach(AppLanguage.allCases) { language in
-                            Text(verbatim: language.label).tag(language)
-                        }
-                    }
-                    Picker("Language", selection: $settings.language) {
-                        // Each language in its own, so that it can be found from any of them
-                        ForEach(AppLanguage.allCases) { language in
-                            Text(verbatim: language.label).tag(language)
-                        }
-                    }
-                    Picker("Language", selection: $settings.language) {
-                        // Each language in its own, so that it can be found from any of them
-                        ForEach(AppLanguage.allCases) { language in
-                            Text(verbatim: language.label).tag(language)
-                        }
-                    }
                     LabeledContent("Theme") {
                         Picker("Theme", selection: $settings.theme) {
                             ForEach(Settings.Theme.allCases) { theme in
@@ -152,7 +134,7 @@ struct AppSettingsView: View {
 
     private var debugSummary: String {
         guard settings.debugOptions else { return tr("Off") }
-        let shown = [settings.showSensorId ? tr("Sensor ID") : nil, settings.showSensorFlags ? tr("Sensor flags") : nil]
+        let shown = [settings.showSensorId ? tr("Sensor ID") : nil, settings.showSensorFlags ? tr("Sensor flags") : nil, settings.language != .system ? tr("Language") : nil]
             .compactMap { $0 }
             .joined(separator: ", ")
         return shown.isEmpty ? tr("On") : shown
@@ -307,12 +289,21 @@ struct DebugSettingsView: View {
             Section {
                 Toggle("Debug", isOn: $settings.debugOptions)
             } footer: {
-                Text("What the sensors and the phone report, to help investigate them. Turning Debug off hides all of it, and keeps what is selected here.")
+                Text("What the sensors and the phone report, to help investigate them. Turning Debug off hides all of it, and keeps what is selected here, except the language, which goes back to the phone's.")
             }
             Section {
                 Toggle("Sensor ID", isOn: $settings.showSensorId)
                 Toggle(isOn: $settings.showSensorFlags) {
                     SettingsRow(tr("Sensor flags"), tr("Bits 7 to 0 of the last packet's status bytes, the unset ones greyed out"))
+                }
+            }
+            .disabled(settings.debugOptions == false)
+            Section("Display") {
+                Picker("Language", selection: $settings.language) {
+                    // Each language in its own, so that it can be found from any of them
+                    ForEach(AppLanguage.allCases) { language in
+                        Text(verbatim: language.label).tag(language)
+                    }
                 }
             }
             .disabled(settings.debugOptions == false)
@@ -335,7 +326,7 @@ struct DebugSettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
         // With nothing selected there is nothing to show: same as turning the switch off
         .onDisappear {
-            if settings.showSensorId == false, settings.showSensorFlags == false { settings.debugOptions = false }
+            if settings.showSensorId == false, settings.showSensorFlags == false, settings.language == .system { settings.debugOptions = false }
         }
         .sheet(item: $exported) { ShareSheet(url: $0.url).ignoresSafeArea() }
     }
