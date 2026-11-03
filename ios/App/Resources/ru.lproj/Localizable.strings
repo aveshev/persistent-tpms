@@ -553,7 +553,7 @@
 "Pressure high" = "Высокое давление";
 "Pressure in" = "Давление в";
 "Pressure loss" = "Потеря давления";
-"Pressure loss warning" = "Предупреждение о потере давления";
+"Pressure loss alert" = "Оповещение о потере давления";
 "Pressure low" = "Низкое давление";
 "Printed on the sensors' box, card or cap, or shared by another phone" = "Напечатан на коробке, карточке или колпачке датчиков либо показан на другом телефоне";
 "Privacy policy" = "Политика конфиденциальности";

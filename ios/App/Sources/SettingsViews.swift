@@ -540,7 +540,7 @@ struct PressureLossSettingsView: View {
                     .listRowInsets(EdgeInsets())
             }
             Section {
-                Toggle("Pressure loss warning", isOn: $settings.pressureLoss)
+                Toggle("Pressure loss alert", isOn: $settings.pressureLoss)
             }
             Section("Minimum drop, in \(settings.pressureUnit.symbol)") {
                 Picker("Minimum drop", selection: $settings.pressureLossMinDrop) {
