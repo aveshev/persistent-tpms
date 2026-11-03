@@ -277,7 +277,7 @@
     <string name="low_pressure_tyre">Low pressure tyre?</string>
     <string name="low_voltage_alarm">Low voltage alarm</string>
     <string name="low_voltage_alarm_2">Low voltage alarm %1$s</string>
-    <string name="lowers_the_screen_s_brightness_on_the">Lowers the screen\'s brightness on the main screen once nothing new was alerted or warned about for a while. A warning or critical alert going on keeps it bright, a new alert or warning brings it back up. When dimmed, a first touch only brightens the screen, lift your finger and touch again to use the app.</string>
+    <string name="lowers_the_screen_s_brightness_on_the">Lowers the screen\'s brightness on the main screen once there\'s been no new alert or caution for a while. A warning or critical alert going on keeps it bright, a new alert or caution brings it back up. When dimmed, a first touch only brightens the screen, lift your finger and touch again to use the app.</string>
     <string name="ltpms_icon_app">LTPMS Icon app</string>
     <string name="manage_sensors">Manage sensors</string>
     <string name="maximum">maximum %1$s</string>
@@ -558,7 +558,7 @@
     <string name="tyre_hot">Tyre hot</string>
     <string name="tyre_monitoring_was_stopped">Tyre monitoring was stopped</string>
     <string name="tyre_rotation_etc">Tyre rotation, etc</string>
-    <string name="tyre_warnings">Tyre warnings</string>
+    <string name="tyre_warnings">Tyre cautions</string>
     <string name="tyres_can_still_be_monitored_without_it">Tyres can still be monitored without it: the app scans whenever it is open, and tapping the minimize button at the top of the main screen keeps scanning in the background, whatever the conditions, until stopped from its notification or the phone restarts</string>
     <string name="undo">Undo</string>
     <string name="update_this_app_first">Update this app first</string>
@@ -576,7 +576,7 @@
     <string name="website">Website</string>
     <string name="wheel_on">" on "</string>
     <string name="wheel_on_the">"the "</string>
-    <string name="when_a_sensor_reports_pressure_outside_of" formatted="false">When a sensor reports pressure outside of the range set here, it will raise an alert and blink the affected tyre indicator in red. If it\'s more than 20% above the maximum, or more than 25% below the minimum, it will be a critical alert. Getting within 3% of the minimum or maximum will raise a warning.</string>
+    <string name="when_a_sensor_reports_pressure_outside_of" formatted="false">When a sensor reports pressure outside of the range set here, it will raise an alert and blink the affected tyre indicator in red. If it\'s more than 20% above the maximum, or more than 25% below the minimum, it will be a critical alert. Getting within 3% of the minimum or maximum will raise a caution.</string>
     <string name="when_no_bluetooth_connections_or_beacons_are">When no Bluetooth connections or beacons are configured to activate persistent scanning, it will run background scanning all or nearly all the time, which increases battery drain.\n\nConsider figuring out which Bluetooth device or beacon can be used for that purpose in your vehicle, or use manual (non-persistent) mode if you want to avoid that.</string>
     <string name="when_on_keeps_monitoring_your_tyres_in">When on, keeps monitoring your tyres in the background, even after the phone restarts, starting and suspending scanning based on the options below. That way you don\'t have to open the app manually each ride.</string>
     <string name="when_updates_seem_to_be_missing">When updates seem to be missing</string>
