@@ -4,7 +4,6 @@ import app.cash.turbine.test
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -84,10 +83,6 @@ internal class ObservableStateFlowTest {
         }
     }
 
-    // Both read the old value once the new one is set, so they tell the new value twice. Nothing
-    // suffers from it today: the only observer reading the old value is AppPreferences.alertSound's,
-    // which the app only ever sets through value
-    @Ignore("ObservableStateFlow.emit and tryEmit tell the new value as the old one")
     @Test
     fun `emit and tryEmit tell the old and the new value`() = runTest {
         test().apply {

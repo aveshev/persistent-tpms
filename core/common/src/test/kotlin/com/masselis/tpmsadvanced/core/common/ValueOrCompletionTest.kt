@@ -8,7 +8,6 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
-import org.junit.Ignore
 import org.junit.Test
 import java.io.IOException
 import kotlin.test.assertEquals
@@ -79,21 +78,31 @@ internal class ValueOrCompletionTest {
         )
     }
 
-    // runCatching in materializeCompletion also catches the collector stopping the flow, which is an
-    // exception too, then emits after it. Nothing in the app does so today: BluetoothLeScannerImpl and
-    // ListenTyreWithDatabaseUseCase both go through shareIn in between, which only ever cancels
-    @Ignore("materializeCompletion emits again once its collector has stopped it, which Flow refuses")
     @Test
     fun `a collector taking the first value only stops the flow`() = runTest {
         assertEquals(Value(1), flowOf(1, 2).materializeCompletion().first())
     }
 
-    @Ignore("materializeCompletion emits again once its collector has stopped it, which Flow refuses")
     @Test
     fun `a collector taking some values only stops the flow`() = runTest {
         assertEquals(
             listOf(1),
             flowOf(1, 2).materializeCompletion().dematerializeCompletion().take(1).toList(),
         )
+    }
+
+    @Test
+    fun `a collector failing isn't the flow completing`() = runTest {
+        val seen = mutableListOf<ValueOrCompletion<Int>>()
+        assertEquals(
+            failure,
+            assertFailsWith<IOException> {
+                flowOf(1, 2).materializeCompletion().collect {
+                    seen += it
+                    throw failure
+                }
+            },
+        )
+        assertEquals(listOf<ValueOrCompletion<Int>>(Value(1)), seen)
     }
 }
