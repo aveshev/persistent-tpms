@@ -598,7 +598,7 @@
 "Scan via Bluetooth" = "Найти через Bluetooth";
 "Scan when" = "Сканировать, когда";
 "Scanning" = "Сканирование";
-"Screen dimmed" = "Экран затемнён";
+"Screen dimmed" = "Экран затемнен";
 "Screen off or locked, not charging, no movement" = "Экран выключен или заблокирован, нет зарядки, нет движения";
 "Screen was turned off by\n\"Block touches in a pocket\"" = "Экран выключила функция\n«Блокировать касания в кармане»";
 "Send" = "Отправить";
@@ -679,7 +679,7 @@
 "Sysgration sensors report their battery state as a percentage rather than a voltage.\n\nAt or below the setting, it will blink red. After 10 minutes of consistently low readings it will raise a warning alert." = "Датчики Sysgration сообщают заряд батареи в процентах, а не напряжением.\n\nНа пороге и ниже значение мигает красным. После 10 минут стабильно низких показаний появится тревожное оповещение.";
 "System" = "Системная";
 "Tadpole three-wheeler" = "Трицикл, 2 колеса спереди";
-"Tap anywhere to un-dim" = "Коснитесь, чтобы вернуть яркость";
+"Tap anywhere to un-dim" = "Коснитесь для отмены";
 "Tap near a tyre on the main screen to temporarily show its readings in a large font size, easy to read even on a rough road." = "Коснитесь рядом с шиной на главном экране, чтобы ненадолго показать её показания крупным шрифтом. Их легко прочитать даже на неровной дороге.";
 "Tap near a tyre on the main screen to temporarily show its readings in a large font size, easy to read even on a rough road. A long press on a tyre opens its sensor and readings." = "Коснитесь рядом с шиной на главном экране, чтобы ненадолго показать её показания крупным шрифтом. Их легко прочитать даже на неровной дороге. Долгое нажатие на шину открывает её датчик и показания.";
 "Tap the wheel to move to" = "Нажмите на колесо, куда переместить";
