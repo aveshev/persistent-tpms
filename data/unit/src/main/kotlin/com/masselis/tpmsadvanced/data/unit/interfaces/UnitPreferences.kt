@@ -21,10 +21,8 @@ public class UnitPreferences internal constructor(
         sharedPreferences
             .getString("PRESSURE", null)
             ?.let { name -> PressureUnit.entries.first { it.name == name } }
-            ?: when (Locale.getDefault().isO3Country) {
-                @Suppress("MaxLineLength")
-                "USA", "GBR", "CAN", "AUS" -> PressureUnit.PSI
-
+            ?: when (Locale.getDefault().country) {
+                "US", "GB", "CA", "AU" -> PressureUnit.PSI
                 else -> PressureUnit.BAR
             }
     ) { _, newValue ->
@@ -35,8 +33,8 @@ public class UnitPreferences internal constructor(
         sharedPreferences
             .getString("TEMPERATURE", null)
             ?.let { name -> TemperatureUnit.entries.first { it.name == name } }
-            ?: when (Locale.getDefault().isO3Country) {
-                "USA" -> TemperatureUnit.FAHRENHEIT
+            ?: when (Locale.getDefault().country) {
+                "US" -> TemperatureUnit.FAHRENHEIT
                 else -> TemperatureUnit.CELSIUS
             }
     ) { _, newValue ->
