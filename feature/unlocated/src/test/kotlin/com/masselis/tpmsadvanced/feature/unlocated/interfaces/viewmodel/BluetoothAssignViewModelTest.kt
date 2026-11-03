@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.currentTime
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
@@ -43,8 +44,6 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit.SECONDS
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
-import kotlin.test.assertTrue
-import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 @Suppress("LargeClass")
@@ -132,6 +131,12 @@ internal class BluetoothAssignViewModelTest {
     }
 
     private suspend fun BluetoothAssignViewModel.assigned() = stateFlow.first { it.isAssigned }
+
+    /**
+     * Waits rather than advances the clock: the view model resumes from its database read on the IO thread, under
+     * the unconfined main dispatcher, so its step collector may start the wait after the clock has moved
+     */
+    private suspend fun BluetoothAssignViewModel.offersLowPressure() = stateFlow.first { it.offersLowPressure }
 
     private val BluetoothAssignViewModel.step get() = stateFlow.value.step
 
@@ -368,10 +373,8 @@ internal class BluetoothAssignViewModelTest {
     fun `nothing on a wheel for 10 seconds offers the low pressure sensors`() = runTest {
         test().apply {
             answer(isOnWheel = false)
-            advanceBy(10.seconds - 1.milliseconds)
-            assertFalse(stateFlow.value.offersLowPressure)
-            advanceBy(1.milliseconds)
-            assertTrue(stateFlow.value.offersLowPressure)
+            offersLowPressure()
+            assertEquals(10.seconds.inWholeMilliseconds, currentTime)
         }
     }
 
@@ -391,11 +394,9 @@ internal class BluetoothAssignViewModelTest {
     fun `leaving the step drops the low pressure offer`() = runTest {
         test().apply {
             answer(isOnWheel = false)
-            advanceBy(10.seconds)
-            assertTrue(stateFlow.value.offersLowPressure)
+            offersLowPressure()
             lowPressure()
-            runCurrent()
-            assertFalse(stateFlow.value.offersLowPressure)
+            stateFlow.first { it.offersLowPressure.not() }
         }
     }
 
