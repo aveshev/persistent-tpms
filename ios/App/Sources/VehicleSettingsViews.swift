@@ -331,7 +331,7 @@ struct VehiclePressureSettingsView: View {
         return Form {
             Section {
                 TyreLegend(
-                    text: tr("When a sensor reports pressure outside of the range set here, it will raise an alert and blink the affected tyre indicator in red. If it's more than 20% above the maximum, or more than 25% below the minimum, it will be a critical alert. Getting within 3% of the minimum or maximum will raise a caution alert."),
+                    text: tr("When a sensor reports pressure outside of the range set here, it will raise a warning alert and blink the affected tyre indicator in red. If it's more than 20% above the maximum, or more than 25% below the minimum, it will be a critical alert. Getting within 3% of the minimum or maximum will raise a caution alert."),
                     entries: [(.fill(Theme.primary), tr("In range")), (.alerting, tr("Out of range")), (.critical, tr("Critical"))]
                 )
                 .listRowBackground(Color.clear)
@@ -473,7 +473,7 @@ struct VehicleTemperatureSettingsView: View {
         return Form {
             Section {
                 TyreLegend(
-                    text: tr("A tyre indicator is blue up to the cold temperature, where the rubber gets too stiff, and turns green over the next \(degrees(Self.warmUp)). It stays green until \(degrees(AlertThresholds.amberTemperatureBelow)) below hot, then turns towards red. Going above hot will raise an alert and blink the affected tyre indicator in red. Going \(degrees(AlertThresholds.crimsonTemperatureAbove)) above hot will raise a critical alert."),
+                    text: tr("A tyre indicator is blue up to the cold temperature, where the rubber gets too stiff, and turns green over the next \(degrees(Self.warmUp)). It stays green until \(degrees(AlertThresholds.amberTemperatureBelow)) below hot, then turns towards red. Going above hot will raise a warning alert and blink the affected tyre indicator in red. Going \(degrees(AlertThresholds.crimsonTemperatureAbove)) above hot will raise a critical alert."),
                     entries: [
                         (.fill(Theme.tertiary), tr("Cold\n\(low.numberString(unit)) \(unit.symbol)")),
                         (.fill(Theme.primary), tr("OK\n\(fineStart.numberString(unit)) – \(fineEnd.numberString(unit)) \(unit.symbol)")),
@@ -562,7 +562,7 @@ struct VehicleBatterySettingsView: View {
                 } header: {
                     Text("Voltage alarm")
                 } footer: {
-                    Text("If the sensor reports battery voltage, you can set when to report it as low. Within 0.1 V of the setting, it's shown in orange. After 10 minutes of consistently low readings it will raise an alert. The app will use a slightly reduced value when temperatures are low, to account for the voltage drop.")
+                    Text("If the sensor reports battery voltage, you can set when to report it as low. Within 0.1 V of the setting, it's shown in orange. After 10 minutes of consistently low readings it will raise a warning alert. The app will use a slightly reduced value when temperatures are low, to account for the voltage drop.")
                 }
             }
             if kinds.showsPercent {
@@ -585,7 +585,7 @@ struct VehicleBatterySettingsView: View {
                 } header: {
                     Text("Percentage alarm")
                 } footer: {
-                    Text("Sysgration sensors report their battery state as a percentage rather than a voltage.\n\nAt or below the setting, it will blink red. After 10 minutes of consistently low readings it will raise an alarm.")
+                    Text("Sysgration sensors report their battery state as a percentage rather than a voltage.\n\nAt or below the setting, it will blink red. After 10 minutes of consistently low readings it will raise a warning alert.")
                 }
             }
         }
