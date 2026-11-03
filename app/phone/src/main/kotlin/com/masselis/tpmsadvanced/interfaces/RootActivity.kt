@@ -23,6 +23,7 @@ import com.masselis.tpmsadvanced.ioc.Bindings
 import com.masselis.tpmsadvanced.core.common.AppLanguage
 import com.masselis.tpmsadvanced.core.common.applyAppLanguage
 import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import java.util.UUID
@@ -54,6 +55,14 @@ public class RootActivity : AppCompatActivity() {
             .current
             .drop(1)
             .onEach { recreate() }
+            .launchIn(lifecycleScope)
+        // The language is a debug option: with them off, the app follows the phone. After the
+        // above, which would miss a change from the first value
+        Bindings
+            .appPreferences
+            .debugOptionsInUse
+            .filter { it.not() }
+            .onEach { AppLanguage.current.value = AppLanguage.SYSTEM }
             .launchIn(lifecycleScope)
 
         val expectedVehicle = intent

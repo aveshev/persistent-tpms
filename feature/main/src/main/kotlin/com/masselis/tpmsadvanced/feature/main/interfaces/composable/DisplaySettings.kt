@@ -23,10 +23,6 @@ import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.Theme.SYSTEM
 import com.masselis.tpmsadvanced.feature.main.R
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.TyreDisplaySettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.TyreDisplaySettingsViewModel
-import com.masselis.tpmsadvanced.core.common.AppLanguage
-import com.masselis.tpmsadvanced.core.common.AppLanguage.ENGLISH
-import com.masselis.tpmsadvanced.core.common.AppLanguage.RUSSIAN
-import com.masselis.tpmsadvanced.core.common.AppLanguage.SYSTEM as SYSTEM_LANGUAGE
 import com.masselis.tpmsadvanced.core.common.R as CommonR
 import com.masselis.tpmsadvanced.core.common.localized
 import androidx.compose.ui.res.stringResource
@@ -61,7 +57,6 @@ internal fun DisplaySettings(
     modifier: Modifier = Modifier,
     viewModel: TyreDisplaySettingsViewModel = viewModel { TyreDisplaySettingsViewModel() },
 ) {
-    val language by AppLanguage.current.collectAsState()
     val theme by viewModel.theme.collectAsState()
     val readoutTextScale by viewModel.readoutTextScale.collectAsState()
     val magnifier by viewModel.magnifier.collectAsState()
@@ -69,8 +64,6 @@ internal fun DisplaySettings(
     val dimDisplay by viewModel.dimDisplay.collectAsState()
     val dimDisplaySeconds by viewModel.dimDisplaySeconds.collectAsState()
     DisplaySettings(
-        language = language,
-        onLanguage = { AppLanguage.current.value = it },
         theme = theme,
         onTheme = { viewModel.theme.value = it },
         readoutTextScale = readoutTextScale,
@@ -89,8 +82,6 @@ internal fun DisplaySettings(
 
 @Composable
 private fun DisplaySettings(
-    language: AppLanguage,
-    onLanguage: (AppLanguage) -> Unit,
     theme: Theme,
     onTheme: (Theme) -> Unit,
     readoutTextScale: Float,
@@ -105,21 +96,6 @@ private fun DisplaySettings(
     openDimDisplay: () -> Unit,
     modifier: Modifier = Modifier,
 ) = SettingsGroup(modifier) {
-    SegmentedSettingsItem(
-        headline = stringResource(CommonR.string.language),
-        options = AppLanguage.entries,
-        selected = language,
-        onSelect = onLanguage,
-        label = {
-            // Each language in its own, so that it can be found from any of them
-            when (it) {
-                SYSTEM_LANGUAGE -> localized(CommonR.string.language_system)
-                ENGLISH -> "English"
-                RUSSIAN -> "Русский"
-            }
-        },
-        modifier = Modifier.testTag(TyreDisplaySettingsTags.language),
-    )
     SegmentedSettingsItem(
         headline = stringResource(CommonR.string.theme),
         options = Theme.entries,
@@ -169,8 +145,6 @@ private fun DisplaySettings(
 @Composable
 internal fun DisplaySettingsPreview() {
     DisplaySettings(
-        language = SYSTEM_LANGUAGE,
-        onLanguage = {},
         theme = SYSTEM,
         onTheme = {},
         readoutTextScale = 1f,
@@ -193,7 +167,6 @@ internal object TyreDisplaySettingsTags {
     const val showBatteryVoltage = "TyreDisplaySettingsTags_showBatteryVoltage"
     const val magnifier = "TyreDisplaySettingsTags_magnifier"
     const val magnifierDuration = "TyreDisplaySettingsTags_magnifierDuration"
-    const val language = "TyreDisplaySettingsTags_language"
     const val theme = "TyreDisplaySettingsTags_theme"
     const val dimDisplay = "TyreDisplaySettingsTags_dimDisplay"
     const val dimDisplayDelay = "TyreDisplaySettingsTags_dimDisplayDelay"

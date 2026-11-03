@@ -12,7 +12,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import java.util.Locale
 
 /**
- * The language the app's texts are shown in, chosen in the app settings. [SYSTEM] follows the phone.
+ * The language the app's texts are shown in, chosen on the debug page. [SYSTEM], the default,
+ * follows the phone, and is what turning the debug options off goes back to.
  *
  * It's the app's own setting rather than `AppCompatDelegate.setApplicationLocales`: before Android
  * 13 the latter only reaches the activities, while the service's notifications, the alerts and

@@ -14,6 +14,7 @@ import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.DebugSettings
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.PressureLossSettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.DebugSettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.PressureLossSettingsViewModel
+import com.masselis.tpmsadvanced.core.common.AppLanguage
 import com.masselis.tpmsadvanced.core.common.R as CommonR
 import androidx.compose.ui.res.stringResource
 
@@ -50,6 +51,7 @@ internal fun MiscSettings(
     val sensorFlags by viewModel.showSensorFlags.collectAsState()
     val activities by viewModel.showDetectedActivities.collectAsState()
     val announcements by viewModel.announceScanStatus.collectAsState()
+    val language by AppLanguage.current.collectAsState()
     val balanced by viewModel.balancedAfterFirstReading.collectAsState()
     val selected = listOfNotNull(
         // Same order as their page
@@ -57,6 +59,7 @@ internal fun MiscSettings(
         "Sensor flags".takeIf { sensorFlags },
         stringResource(CommonR.string.detected_activities).takeIf { activities },
         stringResource(CommonR.string.status_announcements).takeIf { announcements },
+        stringResource(CommonR.string.language).takeIf { language != AppLanguage.SYSTEM },
         stringResource(CommonR.string.balanced_scanning).takeIf { balanced },
     )
     SettingsGroup(modifier) {

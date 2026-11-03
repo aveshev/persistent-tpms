@@ -11,11 +11,19 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.masselis.tpmsadvanced.core.common.AppLanguage
+import com.masselis.tpmsadvanced.core.common.AppLanguage.ENGLISH
+import com.masselis.tpmsadvanced.core.common.AppLanguage.RUSSIAN
+import com.masselis.tpmsadvanced.core.common.AppLanguage.SYSTEM
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import com.masselis.tpmsadvanced.core.common.localized
 import com.masselis.tpmsadvanced.core.ui.OnLeaveEffect
+import com.masselis.tpmsadvanced.core.ui.SegmentedSettingsItem
 import com.masselis.tpmsadvanced.core.ui.SettingsGroup
 import com.masselis.tpmsadvanced.core.ui.SettingsIntro
 import com.masselis.tpmsadvanced.core.ui.SettingsSectionHeader
@@ -47,6 +55,7 @@ internal fun DebugSettings(
     val showSensorId by viewModel.showSensorId.collectAsState()
     val showSensorFlags by viewModel.showSensorFlags.collectAsState()
     val balancedAfterFirstReading by viewModel.balancedAfterFirstReading.collectAsState()
+    val language by AppLanguage.current.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     DebugSettings(
@@ -56,6 +65,8 @@ internal fun DebugSettings(
         onShowSensorFlags = { viewModel.showSensorFlags.value = it },
         balancedAfterFirstReading = balancedAfterFirstReading,
         onBalancedAfterFirstReading = { viewModel.balancedAfterFirstReading.value = it },
+        language = language,
+        onLanguage = { AppLanguage.current.value = it },
         onExportDatabase = {
             scope.launch {
                 viewModel
@@ -84,13 +95,15 @@ private fun DebugSettings(
     onShowSensorFlags: (Boolean) -> Unit,
     balancedAfterFirstReading: Boolean,
     onBalancedAfterFirstReading: (Boolean) -> Unit,
+    language: AppLanguage,
+    onLanguage: (AppLanguage) -> Unit,
     onExportDatabase: () -> Unit,
     modifier: Modifier = Modifier,
     additionalItems: @Composable ColumnScope.() -> Unit = {},
 ) = Column(modifier) {
     @Suppress("MaxLineLength")
     SettingsIntro(
-        "What the sensors and the phone report, to help investigate them. Turning Debug off in the app settings hides, turns off or puts back to its default all of it, and keeps what is selected here."
+        "What the sensors and the phone report, to help investigate them. Turning Debug off in the app settings hides, turns off or puts back to its default all of it, and keeps what is selected here, except the language, which goes back to the phone's."
     )
     SettingsGroup(Modifier.padding(top = 24.dp)) {
         SwitchSettingsItem(
@@ -107,6 +120,24 @@ private fun DebugSettings(
             modifier = Modifier.testTag(DebugSettingsTags.showSensorFlags),
         )
         additionalItems()
+    }
+    SettingsSectionHeader("Display")
+    SettingsGroup {
+        SegmentedSettingsItem(
+            headline = stringResource(CommonR.string.language),
+            options = AppLanguage.entries,
+            selected = language,
+            onSelect = onLanguage,
+            label = {
+                // Each language in its own, so that it can be found from any of them
+                when (it) {
+                    SYSTEM -> localized(CommonR.string.language_system)
+                    ENGLISH -> "English"
+                    RUSSIAN -> "Русский"
+                }
+            },
+            modifier = Modifier.testTag(DebugSettingsTags.language),
+        )
     }
     SettingsSectionHeader("Scanning")
     SettingsGroup {
@@ -139,6 +170,8 @@ internal fun DebugSettingsPreview() {
         onShowSensorFlags = {},
         balancedAfterFirstReading = false,
         onBalancedAfterFirstReading = {},
+        language = SYSTEM,
+        onLanguage = {},
         onExportDatabase = {},
     )
 }
@@ -148,5 +181,6 @@ internal object DebugSettingsTags {
     const val showSensorId = "DebugSettingsTags_showSensorId"
     const val showSensorFlags = "DebugSettingsTags_showSensorFlags"
     const val balancedAfterFirstReading = "DebugSettingsTags_balancedAfterFirstReading"
+    const val language = "DebugSettingsTags_language"
     const val exportDatabase = "DebugSettingsTags_exportDatabase"
 }
