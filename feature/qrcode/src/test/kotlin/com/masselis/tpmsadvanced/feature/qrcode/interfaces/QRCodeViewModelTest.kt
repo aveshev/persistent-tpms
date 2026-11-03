@@ -20,7 +20,6 @@ import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import kotlin.test.assertEquals
@@ -154,9 +153,6 @@ internal class QRCodeViewModelTest {
         }
     }
 
-    // QrCodeSensors' set keeps one of 2 identical sensors, so the exception holds a single wheel, which
-    // isn't repeated anymore: the dialog says "duplications:" over an empty list. iOS tells the wheel
-    @Ignore("A code with the same sensor twice, its ID telling the wheel, tells no wheel")
     @Test
     fun `a code with one sensor twice on a wheel tells which one`() = runTest {
         val sensor = QrCodeSensor(1, Wheel(FRONT_LEFT))
