@@ -21,6 +21,11 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// Whether the texts are shown in Russian, also when that's the phone's language
+    public var isRussian: Bool {
+        code.map { $0 == "ru" } ?? (Bundle.main.preferredLocalizations.first == "ru")
+    }
+
     private var code: String? {
         switch self {
         case .system: nil

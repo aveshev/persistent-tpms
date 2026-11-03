@@ -17,7 +17,7 @@ final class AlertSpeaker: ObservableObject {
 
         var isCrimson: Bool { crimsonUntil != nil }
         func isCrimsonLoop(_ now: Date) -> Bool { crimsonUntil.map { $0 > now } ?? false }
-        var phrase: String { (isCrimson ? "\(alertClass.phrase) critical" : alertClass.phrase) }
+        var phrase: String { alertClass.phrase(isCrimson: isCrimson) }
     }
 
     private struct Announcement {
@@ -67,7 +67,7 @@ final class AlertSpeaker: ObservableObject {
 
     private func red(_ tag: String, _ alertClass: AlertClass) {
         guard isOn else { return }
-        announcements.append(Announcement(tag: tag, phrase: alertClass.phrase, isCrimson: false))
+        announcements.append(Announcement(tag: tag, phrase: alertClass.phrase(isCrimson: false), isCrimson: false))
         repeated[tag] = Repeated(alertClass: alertClass, crimsonUntil: nil)
         scheduled()
     }
@@ -195,13 +195,22 @@ final class AlertSpeaker: ObservableObject {
 }
 
 private extension AlertClass {
-    var phrase: String {
-        switch self {
+    func phrase(isCrimson: Bool) -> String {
+        if Voice.speaksRussian {
+            return switch self {
+            case .pressure: isCrimson ? "Критическое давление в шине" : "Давление в шине"
+            case .temperature: isCrimson ? "Критический перегрев шины" : "Перегрев шины"
+            case .battery: isCrimson ? "Критический заряд батареи в сенсоре" : "Батарея в сенсоре"
+            case .pressureLoss, .sensorAlarm: ""
+            }
+        }
+        let phrase = switch self {
         case .pressure: "Tyre pressure"
         case .temperature: "Tyre hot"
         case .battery: "Sensor battery"
         case .pressureLoss, .sensorAlarm: ""
         }
+        return isCrimson ? "\(phrase) critical" : phrase
     }
 }
 
@@ -209,6 +218,11 @@ private extension AlertClass {
 private final class Voice: NSObject, AVSpeechSynthesizerDelegate {
     private let synthesizer = AVSpeechSynthesizer()
     private var finished: CheckedContinuation<Void, Never>?
+
+    /// In Russian when that's the app's language and the phone has a Russian voice, in English otherwise
+    static var speaksRussian: Bool {
+        AppLanguage.current.isRussian && AVSpeechSynthesisVoice(language: "ru-RU") != nil
+    }
 
     override init() {
         super.init()
@@ -219,7 +233,9 @@ private final class Voice: NSObject, AVSpeechSynthesizerDelegate {
         activate()
         await withCheckedContinuation { continuation in
             finished = continuation
-            synthesizer.speak(AVSpeechUtterance(string: text))
+            let utterance = AVSpeechUtterance(string: text)
+            utterance.voice = AVSpeechSynthesisVoice(language: Self.speaksRussian ? "ru-RU" : "en-US")
+            synthesizer.speak(utterance)
         }
         deactivate()
     }

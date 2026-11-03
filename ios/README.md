@@ -89,7 +89,6 @@ The settings and menus follow Android's, screen by screen:
   - Alerts: notifications, alert sound (speech or tones), vibration. Pressure, temperature, battery
     (red once it stays so 10 minutes), the sensor's own alarm.
   - Background monitoring: Persistent mode.
-  - Import a database, exported by Android or iOS.
   - About, with Android's 10 taps on the version for the Debug page: sensor ID, sensor flags, export
     database.
   - Misc: demo mode, pressure loss while riding (experimental, like on Android).

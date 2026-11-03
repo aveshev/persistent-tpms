@@ -67,7 +67,7 @@
 "Add %lld" = "Добавить %1$lld";
 "Added" = "Добавлен";
 "Afterwards" = "После этого";
-"Alert notifications" = "Уведомления об оповещениях";
+"Alert notifications" = "Системные уведомления";
 "Alert sound" = "Звук оповещений";
 "Alert speech" = "Голосовые оповещения";
 "Alert thresholds" = "Пороги оповещений";
@@ -419,7 +419,7 @@
 "Low voltage alarm" = "Порог низкого напряжения";
 "Low voltage alarm %@" = "Порог низкого напряжения %1$@";
 "Low voltage alarm %lld" = "Порог низкого напряжения %1$lld";
-"Lowers the screen's brightness on the main screen once nothing new was alerted or warned about for a while. A red or critical alert going on keeps it bright, a new alert or warning brings it back up. When dimmed, a first touch only brightens the screen, lift your finger and touch again to use the app." = "Снижает яркость главного экрана, если какое-то время не было новых оповещений и предупреждений. При активном красном или критическом оповещении яркость сохраняется, новое оповещение или предупреждение возвращает её. На затемнённом экране первое касание только повышает яркость: уберите палец и коснитесь снова, чтобы пользоваться приложением.";
+"Lowers the screen's brightness on the main screen once nothing new was alerted or warned about for a while. A warning or critical alert going on keeps it bright, a new alert or warning brings it back up. When dimmed, a first touch only brightens the screen, lift your finger and touch again to use the app." = "Снижает яркость главного экрана, если какое-то время не было новых оповещений и предупреждений. При активном тревожном или критическом оповещении яркость сохраняется, новое оповещение или предупреждение возвращает её. На затемнённом экране первое касание только повышает яркость: уберите палец и коснитесь снова, чтобы пользоваться приложением.";
 "Made-up vehicles and sensors, your own come back when it's turned off" = "Вымышленный транспорт и датчики, ваши вернутся после выключения";
 "Manage sensors" = "Управление датчиками";
 "Maximum" = "Максимум";
@@ -503,7 +503,6 @@
 "On the other phone, tap a wheel without a sensor, choose “Scan QR code” and point the camera at this code: every sensor is assigned at once" = "На другом телефоне нажмите на колесо без датчика, выберите «Сканировать QR-код» и наведите камеру на этот код: все датчики будут назначены сразу";
 "Once every activate condition has ended, for example when the Bluetooth device disconnects, keep scanning for a while longer." = "Когда все условия запуска закончатся, например устройство Bluetooth отключится, сканирование ещё какое-то время продолжится.";
 "Once every activate condition has ended, for example when the phone is unplugged, keep scanning for a while longer. Only applies if no suspend scan conditions were active at that moment." = "Когда все условия запуска закончатся, например телефон отключат от зарядки, сканирование ещё какое-то время продолжится. Действует, только если в этот момент не было активных условий приостановки.";
-"One for each tyre and alert. Turning it on asks for permission to notify" = "По одному на каждую шину и оповещение. При включении будет запрошено разрешение на уведомления";
 "One of these sensors is" = "Один из этих датчиков";
 "One of these sensors is already assigned to %@, it will be reassigned." = "Один из этих датчиков уже назначен: %1$@, он будет переназначен.";
 "One of these sensors is already assigned to %lld, it will be reassigned." = "Один из этих датчиков уже назначен: %1$lld, он будет переназначен.";
@@ -536,8 +535,8 @@
 "Persistent scanning and its scan conditions" = "Постоянное сканирование и его условия";
 "Persistent scanning needs permissions, tap to grant them" = "Постоянному сканированию нужны разрешения, нажмите, чтобы их предоставить";
 "Phone idle" = "Бездействие телефона";
-"Plays in addition to the red and critical alerts' notifications, and repeats while those alerts stay active: every 10 minutes for red, every 20 seconds at first for critical, then every 10 minutes.\n\nIn the background iOS only runs the app when a sensor is heard, so it may play late or not at all. Closing the app stops the repeats too, until a new alerting sensor update is received." = "Звучит вместе с уведомлениями красных и критических оповещений и повторяется, пока они активны: каждые 10 минут для красных, для критических сначала каждые 20 секунд, затем каждые 10 минут.\n\nВ фоне iOS запускает приложение, только когда слышен датчик, поэтому звук может прозвучать с задержкой или не прозвучать совсем. Закрытие приложения также прекращает повторы, пока не придёт новое тревожное показание датчика.";
-"Plays in addition to the red and critical alerts' notifications, and repeats while those alerts stay active: every 10 minutes for red, every 20 seconds at first for critical, then every 10 minutes.\n\nStopping or pausing monitoring stops the repeats too, until a new alerting sensor update is received." = "Звучит вместе с уведомлениями красных и критических оповещений и повторяется, пока они активны: каждые 10 минут для красных, для критических сначала каждые 20 секунд, затем каждые 10 минут.\n\nОстановка или пауза мониторинга также прекращает повторы, пока не придёт новое тревожное показание датчика.";
+"Plays in addition to the warning and critical alerts' notifications, and repeats while those alerts stay active: every 10 minutes for warnings, every 20 seconds at first for critical, then every 10 minutes.\n\nIn the background iOS only runs the app when a sensor is heard, so it may play late or not at all. Closing the app stops the repeats too, until a new alerting sensor update is received." = "Звучит вместе с уведомлениями тревожных и критических оповещений и повторяется, пока они активны: каждые 10 минут для тревожных, для критических сначала каждые 20 секунд, затем каждые 10 минут.\n\nВ фоне iOS запускает приложение, только когда слышен датчик, поэтому звук может прозвучать с задержкой или не прозвучать совсем. Закрытие приложения также прекращает повторы, пока не придёт новое тревожное показание датчика.";
+"Plays in addition to the warning and critical alerts' notifications, and repeats while those alerts stay active: every 10 minutes for warnings, every 20 seconds at first for critical, then every 10 minutes.\n\nStopping or pausing monitoring stops the repeats too, until a new alerting sensor update is received." = "Звучит вместе с уведомлениями тревожных и критических оповещений и повторяется, пока они активны: каждые 10 минут для тревожных, для критических сначала каждые 20 секунд, затем каждые 10 минут.\n\nОстановка или пауза мониторинга также прекращает повторы, пока не придёт новое тревожное показание датчика.";
 "Point the camera at the sensors' QR code" = "Наведите камеру на QR-код датчиков";
 "Pressure" = "Давление";
 "Pressure (%@)" = "Давление (%1$@)";
@@ -594,7 +593,7 @@
 "Restart the app" = "Перезапустить приложение";
 "Right" = "Правое";
 "Save" = "Сохранить";
-"Says \"Tyre pressure\", \"Tyre hot\" or \"Sensor battery\" out loud" = "Произносит вслух «Tyre pressure», «Tyre hot» или «Sensor battery»";
+"Says \"Tyre pressure\", \"Tyre hot\" or \"Sensor battery\" out loud" = "Произносит вслух «Давление в шине», «Перегрев шины» или «Батарея в сенсоре»";
 "Scan QR code" = "Сканировать QR-код";
 "Scan via Bluetooth" = "Найти через Bluetooth";
 "Scan when" = "Сканировать, когда";

@@ -6,8 +6,6 @@ struct AppSettingsView: View {
     @ObservedObject var monitor: Monitor
     @ObservedObject var settings: Settings
     @Environment(\.dismiss) private var dismiss
-    @State private var importing = false
-    @State private var importError: String?
     @State private var versionTaps = 0
     @State private var versionMessage: String?
 
@@ -69,7 +67,7 @@ struct AppSettingsView: View {
                 }
                 Section {
                     Toggle(isOn: Binding(get: { settings.alerts }, set: { monitor.setAlerts($0) })) {
-                        SettingsRow(tr("Alert notifications"), tr("One for each tyre and alert. Turning it on asks for permission to notify"))
+                        SettingsRow(tr("Alert notifications"))
                     }
                     NavigationLink {
                         AlertSoundSettingsView(monitor: monitor, settings: settings)
@@ -89,16 +87,6 @@ struct AppSettingsView: View {
                         SettingsRow(tr("Persistent mode"), tr("Persistent scanning"))
                     }
                 }
-                Section {
-                    Button("Import a database") { importing = true }
-                    if let importError {
-                        Text(importError).foregroundStyle(Theme.error)
-                    }
-                } header: {
-                    Text("Import")
-                } footer: {
-                    Text("Replaces everything with a database exported by Persistent TPMS on Android (debug settings, export database). Pecham and Bekubee KY sensors need assigning again: they carry no ID, and Android tells them apart by their Bluetooth address, which iOS doesn't give.")
-                }
                 about
                 Section("Misc") {
                     Toggle(isOn: Binding(get: { settings.demoMode }, set: { monitor.setDemoMode($0) })) {
@@ -116,14 +104,6 @@ struct AppSettingsView: View {
                     } label: {
                         SettingsRow(tr("Pressure loss"), settings.pressureLoss ? tr("Experimental, on") : tr("Experimental"))
                     }
-                }
-            }
-            .fileImporter(isPresented: $importing, allowedContentTypes: [.data]) { result in
-                do {
-                    try monitor.importDatabase(from: result.get())
-                    dismiss()
-                } catch {
-                    importError = tr("Couldn't import it: \(error.localizedDescription)")
                 }
             }
             .navigationTitle("App settings")
@@ -209,7 +189,7 @@ struct AlertSoundSettingsView: View {
                     set: { settings.alertSound = $0 ? settings.lastAlertSound : .none }
                 ))
             } footer: {
-                Text("Plays in addition to the red and critical alerts' notifications, and repeats while those alerts stay active: every 10 minutes for red, every 20 seconds at first for critical, then every 10 minutes.\n\nIn the background iOS only runs the app when a sensor is heard, so it may play late or not at all. Closing the app stops the repeats too, until a new alerting sensor update is received.")
+                Text("Plays in addition to the warning and critical alerts' notifications, and repeats while those alerts stay active: every 10 minutes for warnings, every 20 seconds at first for critical, then every 10 minutes.\n\nIn the background iOS only runs the app when a sensor is heard, so it may play late or not at all. Closing the app stops the repeats too, until a new alerting sensor update is received.")
             }
             if settings.alertSound != .none {
                 Section {
@@ -511,7 +491,7 @@ struct DimSettingsView: View {
             Section {
                 Toggle("Dim when idle", isOn: $settings.dimDisplay)
             } footer: {
-                Text("Lowers the screen's brightness on the main screen once nothing new was alerted or warned about for a while. A red or critical alert going on keeps it bright, a new alert or warning brings it back up. When dimmed, a first touch only brightens the screen, lift your finger and touch again to use the app.")
+                Text("Lowers the screen's brightness on the main screen once nothing new was alerted or warned about for a while. A warning or critical alert going on keeps it bright, a new alert or warning brings it back up. When dimmed, a first touch only brightens the screen, lift your finger and touch again to use the app.")
             }
             if settings.dimDisplay {
                 Section("Dim after") {
