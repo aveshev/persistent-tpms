@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -53,8 +54,8 @@ public fun DimmedNotice(modifier: Modifier = Modifier): Unit = Surface(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             // As large as the silence button's, each on a line of its own in the narrowest room
             // ClearOfReadouts gives it
-            Text(text = stringResource(CommonR.string.screen_dimmed), style = MaterialTheme.typography.headlineSmall)
-            Text(text = stringResource(CommonR.string.tap_anywhere_to_un_dim), style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp))
+            Text(text = stringResource(CommonR.string.screen_dimmed), textAlign = TextAlign.Center, style = MaterialTheme.typography.headlineSmall)
+            Text(text = stringResource(CommonR.string.tap_anywhere_to_un_dim), textAlign = TextAlign.Center, style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp))
         }
     }
 }

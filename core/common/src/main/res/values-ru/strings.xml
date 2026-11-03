@@ -444,7 +444,7 @@
     <string name="scan_when">Сканировать, когда</string>
     <string name="scanning">Сканирование</string>
     <string name="scanning_while_open">%1$s.\nПримечание: пока приложение открыто, сканирование остаётся активным!</string>
-    <string name="screen_dimmed">Экран затемнён</string>
+    <string name="screen_dimmed">Экран затемнен</string>
     <string name="screen_off_or_locked_not_charging_no">Экран выключен или заблокирован, нет зарядки, нет движения</string>
     <string name="screen_was_turned_off_by_block_touches">Экран выключила функция\n«Блокировать касания в кармане»</string>
     <string name="sensor_alarm">, сигнал датчика</string>
@@ -500,7 +500,7 @@
     <string name="sysgration_sensors_report_their_battery_state_as">Датчики Sysgration сообщают заряд батареи в процентах, а не напряжением.\n\nНа пороге и ниже значение мигает красным. После 10 минут стабильно низких показаний появится тревожное оповещение.</string>
     <string name="system">Системная</string>
     <string name="tadpole_three_wheeler">Трицикл, 2 колеса спереди</string>
-    <string name="tap_anywhere_to_un_dim">Коснитесь, чтобы вернуть яркость</string>
+    <string name="tap_anywhere_to_un_dim">Коснитесь для отмены</string>
     <string name="tap_near_a_tyre_on_the_main">Коснитесь рядом с шиной на главном экране, чтобы ненадолго показать её показания крупным шрифтом. Их легко прочитать даже на неровной дороге.</string>
     <string name="tap_to_assign">Нажмите:\nназначить</string>
     <string name="tap_to_first_line">Нажмите:</string>
