@@ -48,6 +48,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.Locale
 import java.util.UUID
 import kotlin.coroutines.resume
 import kotlin.time.Duration
@@ -465,7 +466,14 @@ internal class AlertSpeaker(
         val status = CompletableDeferred<Int>()
         val tts = TextToSpeech(appContext) { status.complete(it) }
         launch {
-            if (status.await() == TextToSpeech.SUCCESS) send(tts)
+            if (status.await() == TextToSpeech.SUCCESS) tts
+                .apply {
+                    // The phrases are English, while the engine follows the phone's language
+                    setLanguage(Locale.US)
+                        .takeIf { it < TextToSpeech.LANG_AVAILABLE }
+                        ?.also { logger.w { "English is not available ($it), spoken in the default language" } }
+                }
+                .also { send(it) }
             else logger.w { "Text-to-speech failed to initialize, alerts won't be spoken" }
         }
         awaitClose { tts.shutdown() }
