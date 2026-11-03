@@ -276,7 +276,7 @@
     <string name="low_pressure_tyre">Шина с низким давлением?</string>
     <string name="low_voltage_alarm">Порог низкого напряжения</string>
     <string name="low_voltage_alarm_2">Порог низкого напряжения %1$s</string>
-    <string name="lowers_the_screen_s_brightness_on_the">Снижает яркость главного экрана, если какое-то время не было новых оповещений и предупреждений. При активном красном или критическом оповещении яркость сохраняется, новое оповещение или предупреждение возвращает её. На затемнённом экране первое касание только повышает яркость: уберите палец и коснитесь снова, чтобы пользоваться приложением.</string>
+    <string name="lowers_the_screen_s_brightness_on_the">Снижает яркость главного экрана, если какое-то время не было новых оповещений и предупреждений. При активном тревожном или критическом оповещении яркость сохраняется, новое оповещение или предупреждение возвращает её. На затемнённом экране первое касание только повышает яркость: уберите палец и коснитесь снова, чтобы пользоваться приложением.</string>
     <string name="ltpms_icon_app">Значок приложения LYTPMS</string>
     <string name="manage_sensors">Управление датчиками</string>
     <string name="maximum">максимум %1$s</string>
@@ -370,7 +370,7 @@
     <string name="persistent_tpms_needs_some_permission_to_continue">Persistent TPMS нужны разрешения, чтобы продолжить.\nСистема требует их для сканирования BLE</string>
     <string name="persistent_tpms_needs_the_phone_s_bluetooth">Чтобы слушать датчики TPMS, в Persistent TPMS должен быть включён Bluetooth телефона.</string>
     <string name="phone_idle">Бездействие телефона</string>
-    <string name="plays_in_addition_to_the_red_and">Звучит вместе с уведомлениями красных и критических оповещений и повторяется, пока они активны: каждые 10 минут для красных, для критических сначала каждые 20 секунд, затем каждые 10 минут.\n\nОстановка или пауза мониторинга также прекращает повторы, пока не придёт новое тревожное показание датчика.</string>
+    <string name="plays_in_addition_to_the_red_and">Звучит вместе с уведомлениями тревожных и критических оповещений и повторяется, пока они активны: каждые 10 минут для тревожных, для критических сначала каждые 20 секунд, затем каждые 10 минут.\n\nОстановка или пауза мониторинга также прекращает повторы, пока не придёт новое тревожное показание датчика.</string>
     <string name="point_the_camera_at_the_sensors_qr">Наведите камеру на QR-код датчиков</string>
     <string name="pressure">Давление</string>
     <string name="pressure_calibration">Калибровка давления</string>
@@ -438,7 +438,7 @@
     <string name="restart_app">Перезапустить</string>
     <string name="restart_the_app">Перезапустить приложение</string>
     <string name="save">Сохранить</string>
-    <string name="says_tyre_pressure_tyre_hot_or_sensor">Произносит вслух «Tyre pressure», «Tyre hot» или «Sensor battery»</string>
+    <string name="says_tyre_pressure_tyre_hot_or_sensor">Произносит вслух «Давление в шине», «Перегрев шины» или «Батарея в сенсоре»</string>
     <string name="scan_qr_code">Сканировать QR-код</string>
     <string name="scan_via_bluetooth">Найти через Bluetooth</string>
     <string name="scan_when">Сканировать, когда</string>

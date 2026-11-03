@@ -43,7 +43,7 @@ public enum class AppLanguage(public val tag: String?) {
         internal fun applyAtStartup() = current.value.setAsDefaultLocale()
     }
 
-    private val locale: Locale
+    public val locale: Locale
         get() = tag
             ?.let(Locale::forLanguageTag)
             ?: Resources.getSystem().configuration.locales[0]

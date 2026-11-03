@@ -277,7 +277,7 @@
     <string name="low_pressure_tyre">Low pressure tyre?</string>
     <string name="low_voltage_alarm">Low voltage alarm</string>
     <string name="low_voltage_alarm_2">Low voltage alarm %1$s</string>
-    <string name="lowers_the_screen_s_brightness_on_the">Lowers the screen\'s brightness on the main screen once nothing new was alerted or warned about for a while. A red or critical alert going on keeps it bright, a new alert or warning brings it back up. When dimmed, a first touch only brightens the screen, lift your finger and touch again to use the app.</string>
+    <string name="lowers_the_screen_s_brightness_on_the">Lowers the screen\'s brightness on the main screen once nothing new was alerted or warned about for a while. A warning or critical alert going on keeps it bright, a new alert or warning brings it back up. When dimmed, a first touch only brightens the screen, lift your finger and touch again to use the app.</string>
     <string name="ltpms_icon_app">LTPMS Icon app</string>
     <string name="manage_sensors">Manage sensors</string>
     <string name="maximum">maximum %1$s</string>
@@ -371,7 +371,7 @@
     <string name="persistent_tpms_needs_some_permission_to_continue">Persistent TPMS needs some permission to continue.\nTheses are required by the system in order to make BLE scan</string>
     <string name="persistent_tpms_needs_the_phone_s_bluetooth">Persistent TPMS needs the phone\'s Bluetooth to be enabled in order to listen to TPMS sensors.</string>
     <string name="phone_idle">Phone idle</string>
-    <string name="plays_in_addition_to_the_red_and">Plays in addition to the red and critical alerts\' notifications, and repeats while those alerts stay active: every 10 minutes for red, every 20 seconds at first for critical, then every 10 minutes.\n\nStopping or pausing monitoring stops the repeats too, until a new alerting sensor update is received.</string>
+    <string name="plays_in_addition_to_the_red_and">Plays in addition to the warning and critical alerts\' notifications, and repeats while those alerts stay active: every 10 minutes for warnings, every 20 seconds at first for critical, then every 10 minutes.\n\nStopping or pausing monitoring stops the repeats too, until a new alerting sensor update is received.</string>
     <string name="point_the_camera_at_the_sensors_qr">Point the camera at the sensors\' QR code</string>
     <string name="pressure">Pressure</string>
     <string name="pressure_calibration">Pressure calibration</string>
