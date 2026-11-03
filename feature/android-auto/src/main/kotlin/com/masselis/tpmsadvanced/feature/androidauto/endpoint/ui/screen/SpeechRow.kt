@@ -3,7 +3,7 @@ package com.masselis.tpmsadvanced.feature.androidauto.endpoint.ui.screen
 import androidx.car.app.Screen
 import androidx.car.app.model.CarColor.createCustom
 import androidx.car.app.model.CarIcon
-import androidx.car.app.model.GridItem
+import androidx.car.app.model.Row
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.graphics.drawable.IconCompat.createWithResource
 import com.masselis.tpmsadvanced.core.ui.DarkColors
@@ -19,11 +19,11 @@ import com.masselis.tpmsadvanced.feature.background.usecase.SilenceAlertsUseCase
  */
 context(screen: Screen)
 @Suppress("FunctionName", "FunctionNaming", "MaxLineLength")
-internal fun SpeechGridItem(
+internal fun SpeechRow(
     speech: Speech,
     onSilence: (isCritical: Boolean) -> Unit,
     onUnmute: () -> Unit,
-) = GridItem
+) = Row
     .Builder()
     .setTitle("Alert speech")
     .setImage(
@@ -33,9 +33,10 @@ internal fun SpeechGridItem(
                 if (speech is Speech.Offer) createCustom(LightColors.error.toArgb(), DarkColors.error.toArgb())
                 else createCustom(LightColors.onSurfaceVariant.toArgb(), DarkColors.onSurfaceVariant.toArgb())
             )
-            .build()
+            .build(),
+        Row.IMAGE_TYPE_SMALL
     )
-    .setText(
+    .addText(
         when (speech) {
             Speech.On -> "On"
             is Speech.Offer ->
