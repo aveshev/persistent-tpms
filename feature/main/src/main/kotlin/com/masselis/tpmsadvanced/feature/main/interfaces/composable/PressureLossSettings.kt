@@ -26,7 +26,7 @@ import com.masselis.tpmsadvanced.core.common.R as CommonR
 import androidx.compose.ui.res.stringResource
 
 /**
- * The page of the experimental pressure loss warning, opened from [MiscSettings]. It
+ * The page of the experimental pressure loss alert, opened from [MiscSettings]. It
  * applies to every vehicle, each against its own low pressure alert.
  */
 @Composable
@@ -67,7 +67,7 @@ private fun PressureLossSettings(
     )
     SettingsGroup(Modifier.padding(top = 24.dp)) {
         SwitchSettingsItem(
-            headline = stringResource(CommonR.string.pressure_loss_warning),
+            headline = stringResource(CommonR.string.pressure_loss_alert),
             checked = enabled,
             onCheckedChange = onEnabled,
             modifier = Modifier.testTag(PressureLossSettingsTags.enabled),

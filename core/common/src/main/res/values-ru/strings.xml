@@ -381,7 +381,7 @@
     <string name="pressure_high">Высокое давление</string>
     <string name="pressure_in">Давление в</string>
     <string name="pressure_loss">Потеря давления</string>
-    <string name="pressure_loss_warning">Предупреждение о потере давления</string>
+    <string name="pressure_loss_alert">Оповещение о потере давления</string>
     <string name="pressure_low">Низкое давление</string>
     <string name="printed_on_the_sensors_box_card_or">Напечатан на коробке, карточке или колпачке датчиков либо показан на другом телефоне</string>
     <string name="privacy_policy">Политика конфиденциальности</string>

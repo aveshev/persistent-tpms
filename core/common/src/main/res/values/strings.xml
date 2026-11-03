@@ -382,7 +382,7 @@
     <string name="pressure_high">Pressure high</string>
     <string name="pressure_in">Pressure in</string>
     <string name="pressure_loss">Pressure loss</string>
-    <string name="pressure_loss_warning">Pressure loss warning</string>
+    <string name="pressure_loss_alert">Pressure loss alert</string>
     <string name="pressure_low">Pressure low</string>
     <string name="printed_on_the_sensors_box_card_or">Printed on the sensors\' box, card or cap, or shared by another phone</string>
     <string name="privacy_policy">Privacy policy</string>
