@@ -466,8 +466,8 @@
     <string name="show">Показать: %1$s</string>
     <string name="show_for">Показывать</string>
     <string name="show_more_options">Показать другие параметры</string>
-    <string name="silence_alerts_for">Выключить звук оповещений на\u00A0%1$s\u00A0мин</string>
-    <string name="silence_critical_alerts_for">Выключить звук критических оповещений на\u00A0%1$s\u00A0мин</string>
+    <string name="silence_alerts_for">Выключить оповещения на\u00A0%1$s\u00A0мин</string>
+    <string name="silence_critical_alerts_for">Выключить критические оповещения на\u00A0%1$s\u00A0мин</string>
     <string name="single_axle_trailer">Одноосный прицеп</string>
     <string name="some_newer_cars_and_motorcycles_feature_always">В некоторых новых автомобилях и мотоциклах есть BLE-маячки, которые работают постоянно или во время движения. Их можно использовать для запуска сканирования. Скорее всего, их не будет на экране сопряжения Bluetooth, но здесь их можно добавить.\n\nВАЖНО: AirTag и похожие персональные трекеры используют закрытые протоколы, скрывают имена и меняют адреса, поэтому не поддерживаются.</string>
     <string name="some_phones_stop_background_apps_on_their">Некоторые телефоны сами останавливают фоновые приложения. Посмотрите, какие настройки этому мешают</string>
