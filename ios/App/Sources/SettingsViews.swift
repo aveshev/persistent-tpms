@@ -491,7 +491,7 @@ struct DimSettingsView: View {
             Section {
                 Toggle("Dim when idle", isOn: $settings.dimDisplay)
             } footer: {
-                Text("Lowers the screen's brightness on the main screen once there's been no new alert or caution for a while. A warning or critical alert going on keeps it bright, a new alert or caution brings it back up. When dimmed, a first touch only brightens the screen, lift your finger and touch again to use the app.")
+                Text("Lowers the screen's brightness on the main screen once there's been no new alert for a while. A warning or critical alert going on keeps it bright, a new alert brings it back up. When dimmed, a first touch only brightens the screen, lift your finger and touch again to use the app.")
             }
             if settings.dimDisplay {
                 Section("Dim after") {

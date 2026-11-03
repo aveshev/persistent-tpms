@@ -331,7 +331,7 @@ struct VehiclePressureSettingsView: View {
         return Form {
             Section {
                 TyreLegend(
-                    text: tr("When a sensor reports pressure outside of the range set here, it will raise an alert and blink the affected tyre indicator in red. If it's more than 20% above the maximum, or more than 25% below the minimum, it will be a critical alert. Getting within 3% of the minimum or maximum will raise a caution."),
+                    text: tr("When a sensor reports pressure outside of the range set here, it will raise an alert and blink the affected tyre indicator in red. If it's more than 20% above the maximum, or more than 25% below the minimum, it will be a critical alert. Getting within 3% of the minimum or maximum will raise a caution alert."),
                     entries: [(.fill(Theme.primary), tr("In range")), (.alerting, tr("Out of range")), (.critical, tr("Critical"))]
                 )
                 .listRowBackground(Color.clear)
