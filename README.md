@@ -1,4 +1,4 @@
-[![Develop](https://github.com/VincentMasselis/TPMS-advanced/actions/workflows/develop.yml/badge.svg)](https://github.com/VincentMasselis/TPMS-advanced/actions/workflows/develop.yml)
+[![Develop](https://github.com/aveshev/persistent-tpms/actions/workflows/develop.yml/badge.svg)](https://github.com/aveshev/persistent-tpms/actions/workflows/develop.yml)
 
 # Persistent TPMS
 

@@ -1,5 +1,0 @@
-- Real time temperature and pressure
-- Customizable alerts
-- Dark/Light mode
-- Temperature and pressure units
-- Favorites sensors

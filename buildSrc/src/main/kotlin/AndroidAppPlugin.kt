@@ -1,3 +1,4 @@
+import com.android.build.api.dsl.ApplicationExtension
 import com.android.build.api.variant.ApplicationAndroidComponentsExtension
 import com.masselis.tpmsadvanced.gitflow.GitflowExtension
 import org.gradle.api.Plugin
@@ -10,6 +11,7 @@ public class AndroidAppPlugin : Plugin<Project> {
     override fun apply(target: Project): Unit = with(target) {
         plugins.apply("com.android.application")
         apply<AndroidCommonPlugin>()
+        the<ApplicationExtension>().defaultConfig.targetSdk = libs.versions.sdk.target.map { it.toInt() }.get()
         the<ApplicationAndroidComponentsExtension>().apply {
             onVariants { variant ->
                 variant.outputs.forEach { output ->
