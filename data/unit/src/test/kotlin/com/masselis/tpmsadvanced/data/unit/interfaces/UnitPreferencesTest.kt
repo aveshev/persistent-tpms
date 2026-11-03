@@ -8,7 +8,6 @@ import io.mockk.every
 import io.mockk.mockk
 import org.junit.After
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import java.util.Locale
 import kotlin.test.assertEquals
@@ -83,14 +82,9 @@ internal class UnitPreferencesTest {
         }
     }
 
-    // Locale.isO3Country throws MissingResourceException for a region without a 3-letter code. On a
-    // phone that's Android's pseudolocales: with no unit stored yet, reading the defaults fails. The
-    // UN's numeric regions, like es-419's, throw on this JVM too but not on a phone, where Android's
-    // Locale returns them as they are, so they can't be tested here
-    @Ignore("UnitPreferences fails reading the default units in a pseudolocale")
     @Test
-    fun `a pseudolocale reads bar and Celsius`() {
-        listOf("en-XA", "ar-XB").forEach { language ->
+    fun `a region without a 3-letter code reads bar and Celsius`() {
+        listOf("en-XA", "ar-XB", "es-419", "en-001", "en-150").forEach { language ->
             test(language).apply {
                 assertEquals(PressureUnit.BAR, pressure.value, language)
                 assertEquals(TemperatureUnit.CELSIUS, temperature.value, language)
