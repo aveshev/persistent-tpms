@@ -5,6 +5,8 @@ import androidx.car.app.Screen
 import androidx.car.app.model.MessageTemplate
 import androidx.car.app.model.Template
 import androidx.lifecycle.lifecycleScope
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import com.masselis.tpmsadvanced.core.common.localized
 import com.masselis.tpmsadvanced.feature.androidauto.ioc.Bindings.Companion.TabScreenViewModel
 import com.masselis.tpmsadvanced.feature.androidauto.endpoint.ui.viewmodel.TabScreenViewModel.State
 import kotlinx.coroutines.delay
@@ -40,7 +42,7 @@ internal class TabsScreen(carContext: CarContext) : Screen(carContext) {
     @Suppress("MaxLineLength")
     override fun onGetTemplate(): Template = when (val state = viewModel.stateFlow.value) {
         State.Loading -> MessageTemplate
-            .Builder("Loading...")
+            .Builder(localized(CommonR.string.loading))
             .build()
 
         is State.Tabs -> VehicleTemplate(

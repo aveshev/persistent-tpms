@@ -112,6 +112,7 @@
     <string name="cause_manual">monitoring being started manually</string>
     <string name="cause_stay">staying active after the last activate condition ended</string>
     <string name="cause_wireless">charging wirelessly</string>
+    <string name="change_vehicle">Change vehicle</string>
     <string name="changing_restarts_the_app">Changing restarts the app</string>
     <string name="charging_wirelessly">Charging wirelessly</string>
     <string name="charging_with_a_cable">Charging with a cable</string>
@@ -257,6 +258,7 @@
     <string name="listening_for_the_sensor_to_come_back">Listening for the sensor to come back on…</string>
     <string name="listing_beacons_in">Listing beacons in %1$s s</string>
     <string name="lists_the_bluetooth_devices_around">Lists the Bluetooth devices around</string>
+    <string name="loading">Loading...</string>
     <string name="loc_front">front</string>
     <string name="loc_left">left</string>
     <string name="loc_rear">rear</string>
@@ -325,6 +327,7 @@
     <string name="no_new_beacons">No new beacons</string>
     <string name="no_not_yet">No, not yet</string>
     <string name="no_paired_device">No paired device</string>
+    <string name="no_reading">No reading</string>
     <string name="no_sensor_is_assigned_to_this_vehicle">No sensor is assigned to this vehicle</string>
     <string name="no_sensors_yet">No sensors yet</string>
     <string name="no_wifi_excepted_yet">No WiFi excepted yet</string>
@@ -564,6 +567,7 @@
     <string name="vehicle_location_already_has_a_sensor">%1$s\'s %2$s already has a sensor</string>
     <string name="vehicle_name">Vehicle name</string>
     <string name="vehicle_settings">Vehicle settings</string>
+    <string name="vehicles">Vehicles</string>
     <string name="version">Version</string>
     <string name="vibrate">Vibrate</string>
     <string name="voltage_alarm">Voltage alarm</string>

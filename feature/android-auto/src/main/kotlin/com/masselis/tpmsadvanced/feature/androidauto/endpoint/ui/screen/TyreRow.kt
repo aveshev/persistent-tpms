@@ -10,6 +10,8 @@ import androidx.car.app.model.ForegroundCarColorSpan
 import androidx.car.app.model.Row
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.graphics.drawable.IconCompat.createWithResource
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import com.masselis.tpmsadvanced.core.common.localized
 import com.masselis.tpmsadvanced.core.common.now as nowSeconds
 import com.masselis.tpmsadvanced.core.ui.DarkColors
 import com.masselis.tpmsadvanced.core.ui.LightColors
@@ -69,17 +71,17 @@ internal fun TyreRow(
                             // Explained on the vehicle's calibration page
                             .let { if (statsState.isPressureCalibrated) "$it*" else it },
                         statsState.levels[PRESSURE],
-                        if (statsState.isHighPressure) "HIGH!" else "LOW!",
+                        if (statsState.isHighPressure) localized(CommonR.string.high) else localized(CommonR.string.low),
                     )
                     .append(" · ")
                     // Only a high temperature alerts
-                    .appendIn(statsState.temperature.string(statsState.temperatureUnit), statsState.levels[TEMPERATURE], "HIGH!")
+                    .appendIn(statsState.temperature.string(statsState.temperatureUnit), statsState.levels[TEMPERATURE], localized(CommonR.string.high))
                     .apply { if (readout.showTimeSinceUpdate) append(" · ").append(elapsedLabel(statsState.timestamp, now)) }
                     .also(::addText)
                 // The sensor's own alarm or the pressure falling while riding, then a battery,
                 // shown when getting low whatever the setting
                 listOfNotNull(
-                    if (PRESSURE_LOSS in statsState.levels || SENSOR_ALARM in statsState.levels) "Leak?" to AMBER else null,
+                    if (PRESSURE_LOSS in statsState.levels || SENSOR_ALARM in statsState.levels) localized(CommonR.string.leak) to AMBER else null,
                     (statsState.batteryVoltage?.string() ?: statsState.batteryPercent?.let { "$it%" })
                         ?.takeIf { readout.showBatteryVoltage || BATTERY in statsState.levels }
                         ?.let { it to statsState.levels[BATTERY] },
@@ -91,7 +93,7 @@ internal fun TyreRow(
                     ?.also(::addText)
             }
 
-            TyreStatsStateFlow.State.NotDetected -> addText("No reading")
+            TyreStatsStateFlow.State.NotDetected -> addText(localized(CommonR.string.no_reading))
         }
     }
     .build()

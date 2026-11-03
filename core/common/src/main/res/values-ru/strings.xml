@@ -111,6 +111,7 @@
     <string name="cause_manual">мониторинг запущен вручную</string>
     <string name="cause_stay">активность после окончания последнего условия запуска</string>
     <string name="cause_wireless">беспроводная зарядка</string>
+    <string name="change_vehicle">Сменить транспорт</string>
     <string name="changing_restarts_the_app">Изменение перезапустит приложение</string>
     <string name="charging_wirelessly">Беспроводная зарядка</string>
     <string name="charging_with_a_cable">Зарядка по кабелю</string>
@@ -256,6 +257,7 @@
     <string name="listening_for_the_sensor_to_come_back">Ожидание, когда датчик снова появится на колесе…</string>
     <string name="listing_beacons_in">Список маячков через %1$s с</string>
     <string name="lists_the_bluetooth_devices_around">Показывает устройства Bluetooth поблизости</string>
+    <string name="loading">Загрузка...</string>
     <string name="loc_front">переднее</string>
     <string name="loc_left">левое</string>
     <string name="loc_rear">заднее</string>
@@ -324,6 +326,7 @@
     <string name="no_new_beacons">Новых маячков нет</string>
     <string name="no_not_yet">Нет, ещё нет</string>
     <string name="no_paired_device">Нет сопряжённых устройств</string>
+    <string name="no_reading">Нет данных</string>
     <string name="no_sensor_is_assigned_to_this_vehicle">У этого транспорта нет датчиков</string>
     <string name="no_sensors_yet">Датчиков пока нет</string>
     <string name="no_wifi_excepted_yet">Исключений WiFi пока нет</string>
@@ -563,6 +566,7 @@
     <string name="vehicle_location_already_has_a_sensor">%1$s: %2$s уже с датчиком</string>
     <string name="vehicle_name">Название транспорта</string>
     <string name="vehicle_settings">Настройки транспорта</string>
+    <string name="vehicles">Транспорт</string>
     <string name="version">Версия</string>
     <string name="vibrate">Вибрация</string>
     <string name="voltage_alarm">Порог напряжения</string>
