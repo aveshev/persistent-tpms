@@ -1,21 +1,18 @@
 package com.masselis.tpmsadvanced.feature.androidauto.endpoint.ui.screen
 
 import androidx.car.app.Screen
-import androidx.car.app.model.GridItem
-import androidx.car.app.model.GridTemplate
-import androidx.car.app.model.TabTemplate
+import androidx.car.app.model.Row
+import androidx.car.app.model.ListTemplate
 import androidx.car.app.testing.TestCarContext
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import com.masselis.tpmsadvanced.core.common.appGraph
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.VehicleDatabase
-import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesTo
 import kotlinx.coroutines.runBlocking
 import org.junit.Before
 import org.junit.Test
-import java.util.UUID
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 
@@ -24,10 +21,10 @@ internal interface VehicleDatabaseExtractor {
     val vehicleDatabase: VehicleDatabase
 }
 
-// The `TabTemplate` layout only appears once 2+ vehicles exist. Each @Test starts from the
-// single "My car" vehicle seeded on database creation (Android Test Orchestrator clears app data
-// between tests), so these insert extra vehicles into the real on-device database rather than
-// mocking TabScreenViewModel's use cases, exercising the same Metro-provided AppGraph as
+// The vehicle switch only opens once 2+ vehicles exist. Each @Test starts from the single "My car"
+// vehicle seeded on database creation (Android Test Orchestrator clears app data between tests),
+// so these insert extra vehicles into the real on-device database rather than mocking
+// TabScreenViewModel's use cases, exercising the same Metro-provided AppGraph as
 // VehicleTemplateTest.
 internal class TabsScreenTest {
 
@@ -51,82 +48,43 @@ internal class TabsScreenTest {
 
     /**
      * TabScreenViewModel builds its state asynchronously from a coroutine flow, so the first
-     * template(s) read off a freshly built screen may still reflect the previous (single-vehicle)
-     * state
+     * templates read off a freshly built screen may still be loading, or show the vehicle that was
+     * current before the test inserted one
      */
-    private fun awaitTabTemplate(screen: Screen, timeoutMs: Long = 5_000): TabTemplate {
+    private fun awaitVehicleRow(screen: Screen, name: String, timeoutMs: Long = 5_000): List<Row> {
         val deadline = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < deadline) {
-            runOnMain { screen.onGetTemplate() }.let { if (it is TabTemplate) return it }
+            runOnMain { screen.onGetTemplate() }
+                .let { it as? ListTemplate }
+                ?.singleList
+                ?.items
+                ?.map { assertIs<Row>(it) }
+                ?.takeIf { it.first().title.toString() == name }
+                ?.let { return it }
             Thread.sleep(20)
         }
-        error("Timed out waiting for a TabTemplate")
-    }
-
-    /**
-     * Same idea as awaitTabTemplate, but for the single-vehicle path, where onGetTemplate()
-     * returns the vehicle's GridTemplate directly instead of a TabTemplate.
-     */
-    private fun awaitGridTemplate(screen: Screen, timeoutMs: Long = 5_000): GridTemplate {
-        val deadline = System.currentTimeMillis() + timeoutMs
-        while (System.currentTimeMillis() < deadline) {
-            runOnMain { screen.onGetTemplate() }.let { if (it is GridTemplate) return it }
-            Thread.sleep(20)
-        }
-        error("Timed out waiting for a GridTemplate")
+        error("Timed out waiting for $name's list")
     }
 
     @Test
-    fun singleVehicleHidesTheTabsAndRendersItsGridDirectly() {
-        val gridTemplate = awaitGridTemplate(buildScreen())
+    fun aSingleVehicleIsNamedWithoutASwitch() {
+        val rows = awaitVehicleRow(buildScreen(), "My car")
 
-        // The 4 tyres, then the alert speech's silence item, there while the alerts make sound
-        val items = gridTemplate.singleList!!.items
-        assertEquals(5, items.size)
-        assertEquals("Alert speech", (items.last() as GridItem).title.toString())
+        // The vehicle, its 4 tyres, then the alert speech's item, there while the alerts make sound
+        assertEquals(6, rows.size)
+        assertEquals(false, rows.first().isBrowsable)
+        assertEquals("Alert speech", rows.last().title.toString())
     }
 
     @Test
-    fun twoVehiclesRenderOneTabPerVehicleSortedByName() {
-        val myCar = vehicleDatabase.currentVehicle().execute()
+    fun withOtherVehiclesTheCurrentOneOpensTheSwitch() {
         val otherCar = mockVehicle()
         runBlocking { vehicleDatabase.insert(otherCar.uuid, otherCar.kind, otherCar.name, true) }
 
-        val tabTemplate = awaitTabTemplate(buildScreen())
+        // "MOCK" was inserted as current, so the list is its own, not "My car"'s
+        val vehicleRow = awaitVehicleRow(buildScreen(), otherCar.name).first()
 
-        assertEquals(2, tabTemplate.tabs.size)
-        assertEquals(
-            listOf(myCar.name, otherCar.name).sorted(),
-            tabTemplate.tabs.map { it.title.toString() }.sorted()
-        )
-        assertEquals(
-            listOf(myCar.uuid.toString(), otherCar.uuid.toString()).sorted(),
-            tabTemplate.tabs.map { it.contentId }.sorted(),
-        )
-        // "Other car" was inserted as current, so its tab is the active one and the grid content
-        // reflects it, not "My car".
-        assertEquals(otherCar.uuid.toString(), tabTemplate.activeTabContentId)
-        assertIs<GridTemplate>(tabTemplate.tabContents.template)
-    }
-
-    @Test
-    fun fivePlusVehiclesCapTabsAtFourWithTheCurrentVehiclePinnedFirst() {
-        val myCar = vehicleDatabase.currentVehicle().execute()
-        runBlocking {
-            listOf("Zulu", "Alpha", "Beta", "Gamma").forEach { name ->
-                vehicleDatabase.insert(UUID.randomUUID(), Vehicle.Kind.CAR, name, false)
-            }
-        }
-
-        val tabTemplate = awaitTabTemplate(buildScreen())
-
-        // "My car" stays current (none of the 4 new vehicles were inserted as current), sorts
-        // first, and "Zulu" is the one dropped by the take(4) cap.
-        assertEquals(4, tabTemplate.tabs.size)
-        assertEquals(
-            listOf("My car", "Alpha", "Beta", "Gamma"),
-            tabTemplate.tabs.map { it.title.toString() },
-        )
-        assertEquals(myCar.uuid.toString(), tabTemplate.activeTabContentId)
+        assertEquals(true, vehicleRow.isBrowsable)
+        assertEquals("Change vehicle", vehicleRow.texts.single().toString())
     }
 }
