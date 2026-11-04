@@ -345,16 +345,19 @@ private struct SilenceAlertsButton: View {
 
     var body: some View {
         Group {
-            if let silence = speaker.silence {
-                Button { speaker.unmute() } label: {
-                    Label(silence.level == .crimson ? "All alerts silenced" : "Alerts silenced", systemImage: "speaker.slash.fill")
-                }
-                .tint(Theme.onBackground.opacity(0.3))
-            } else if let level = speaker.level {
+            switch SilenceButton.of(highest: speaker.level, silenced: speaker.silence?.level) {
+            case .idle:
+                EmptyView()
+            case let .offer(isCritical):
                 Button { speaker.silenceNow() } label: {
-                    Label("Silence \(level == .crimson ? "critical alerts" : "alerts") for 10 min", systemImage: "speaker.wave.2.fill")
+                    Label("Silence \(isCritical ? "critical alerts" : "alerts") for 10 min", systemImage: "speaker.wave.2.fill")
                 }
                 .tint(Theme.error)
+            case let .silenced(isCritical):
+                Button { speaker.unmute() } label: {
+                    Label(isCritical ? "All alerts silenced" : "Alerts silenced", systemImage: "speaker.slash.fill")
+                }
+                .tint(Theme.onBackground.opacity(0.3))
             }
         }
         .buttonStyle(.borderedProminent)
