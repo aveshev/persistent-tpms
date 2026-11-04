@@ -350,7 +350,8 @@ private struct SilenceAlertsButton: View {
                 EmptyView()
             case let .offer(isCritical):
                 Button { speaker.silenceNow() } label: {
-                    Label("Silence \(isCritical ? "critical alerts" : "alerts") for 10 min", systemImage: "speaker.wave.2.fill")
+                    // Wrapped to the width it's given, "for 10 min" kept together
+                    Label("Silence \(isCritical ? "critical alerts" : "alerts") for\u{00A0}10\u{00A0}min", systemImage: "speaker.wave.2.fill")
                 }
                 .tint(Theme.error)
             case let .silenced(isCritical, until):
@@ -377,10 +378,22 @@ private struct SilenceAlertsButton: View {
         }
         .buttonStyle(.borderedProminent)
         .buttonBorderShape(.capsule)
+        .labelStyle(IconCenteredLabelStyle())
         .font(.title3.weight(.semibold))
+        .multilineTextAlignment(.center)
         .lineLimit(1...2)
         .minimumScaleFactor(0.6)
         .controlSize(.large)
+    }
+}
+
+/// Its icon centered against all of its text's lines, a Label's stays on the first line's baseline
+private struct IconCenteredLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 12) {
+            configuration.icon
+            configuration.title
+        }
     }
 }
 
