@@ -13,7 +13,7 @@ struct QrCodeOutcome {
 
     static func of(_ result: QrCodeResult, vehicle: Vehicle, location: TyreLocation, monitor: Monitor) -> QrCodeOutcome {
         func place(_ sensor: BoundSensor) -> String {
-            sensor.location == .single ? "wheel" : sensor.location.phrase
+            sensor.location == .single ? tr("wheel") : sensor.location.phrase
         }
         /// One of the vehicle's wheels has another sensor than the one [sensors] puts there
         func overwrites(_ sensors: [BoundSensor]) -> Bool {
@@ -26,36 +26,36 @@ struct QrCodeOutcome {
             monitor.sensors
                 .first { $0.id == sensor.id && ($0.vehicleId != vehicle.id || $0.location != sensor.location) }
                 .flatMap { current in
-                    monitor.vehicles.first { $0.id == current.vehicleId }.map { "the \(place(current)) of \($0.name)" }
+                    monitor.vehicles.first { $0.id == current.vehicleId }.map { tr("the \(place(current)) of \($0.name)") }
                 }
         }
         func ask(_ sensors: [BoundSensor], _ question: String) -> QrCodeOutcome {
             let reassigns = sensors.lazy.compactMap(reassigned).first
             var message = question
             if let reassigns {
-                message += "\n\n\(sensors.count == 1 ? "This sensor is" : "One of these sensors is") already assigned to \(reassigns), it will be reassigned."
+                message += "\n\n" + (sensors.count == 1 ? tr("This sensor is already assigned to \(reassigns), it will be reassigned.") : tr("One of these sensors is already assigned to \(reassigns), it will be reassigned."))
             }
-            if overwrites(sensors) { message += "\n\nThis will overwrite already assigned sensors." }
-            return QrCodeOutcome(title: "Assign sensors", message: message, confirm: (reassigns != nil ? "Reassign" : "Yes", sensors, []))
+            if overwrites(sensors) { message += tr("\n\nThis will overwrite already assigned sensors.") }
+            return QrCodeOutcome(title: tr("Assign sensors"), message: message, confirm: (reassigns != nil ? tr("Reassign") : tr("Yes"), sensors, []))
         }
 
         switch result {
         case let .sensors(sensors):
             guard let placed = sensors.locations(on: vehicle.kind) else {
-                return QrCodeOutcome(title: "Too many sensors", message: "This QR lists \(sensors.count) sensors, but \(vehicle.name) only needs \(vehicle.kind.locations.count).\nPlease assign via Bluetooth instead.")
+                return QrCodeOutcome(title: tr("Too many sensors"), message: tr("This QR lists \(sensors.count) sensors, but \(vehicle.name) only needs \(vehicle.kind.locations.count).\nPlease assign via Bluetooth instead."))
             }
             // Assigning both would break the one sensor per wheel the database holds
             guard Set(placed.map(\.location)).count == placed.count else {
-                return QrCodeOutcome(title: "Unreadable QR", message: "Error reading QR, please assign via Bluetooth instead")
+                return QrCodeOutcome(title: tr("Unreadable QR"), message: tr("Error reading QR, please assign via Bluetooth instead"))
             }
             return ask(
                 placed.map { BoundSensor(id: $0.sensor.id, brand: .sysgration, vehicleId: vehicle.id, location: $0.location) },
-                "Assign the \(placed.count) Sysgration sensors from this QR to \(vehicle.name)?"
+                tr("Assign the \(placed.count) Sysgration sensors from this QR to \(vehicle.name)?")
             )
 
         case let .wicarlink(id):
             let sensor = BoundSensor(id: id, brand: .wicarlink, vehicleId: vehicle.id, location: location)
-            return ask([sensor], "Assign the Wicarlink sensor \(id.asSensorId(.wicarlink)) to the \(place(sensor)) of \(vehicle.name)?")
+            return ask([sensor], tr("Assign the Wicarlink sensor \(id.asSensorId(.wicarlink)) to the \(place(sensor)) of \(vehicle.name)?"))
 
         case let .shared(shared):
             // Each iPhone has its own identifier for a sensor without an ID, see isIdentifiedByAddress
@@ -63,41 +63,41 @@ struct QrCodeOutcome {
             let noId = shared.sensors.count - usable.count
             let fitting = usable.filter { vehicle.kind.locations.contains($0.location) }
             let skipped = usable.filter { vehicle.kind.locations.contains($0.location) == false }
-            let noIdNote = noId > 0 ? "\(noId == 1 ? "1 sensor carries" : "\(noId) sensors carry") no ID an iPhone can read (Pecham, Bekubee KY): assign \(noId == 1 ? "it" : "them") via Bluetooth." : nil
+            let noIdNote = noId == 1 ? tr("1 sensor carries no ID an iPhone can read (Pecham, Bekubee KY): assign it via Bluetooth.") : noId > 1 ? tr("\(noId) sensors carry no ID an iPhone can read (Pecham, Bekubee KY): assign them via Bluetooth.") : nil
             guard fitting.isEmpty == false else {
                 return QrCodeOutcome(
-                    title: "Shared sensors",
-                    message: noIdNote ?? "None of the sensors of \(shared.name) is on a wheel \(vehicle.name) has."
+                    title: tr("Shared sensors"),
+                    message: noIdNote ?? tr("None of the sensors of \(shared.name) is on a wheel \(vehicle.name) has.")
                 )
             }
             let sensors = fitting.map { BoundSensor(id: $0.id, brand: $0.brand, vehicleId: vehicle.id, location: $0.location) }
-            var message = "Assign the sensors of \(shared.name) to \(vehicle.name)?\n"
+            var message = tr("Assign the sensors of \(shared.name) to \(vehicle.name)?\n")
             for sensor in fitting {
-                message += "\n· \(sensor.location.name): \(sensor.id.asSensorId(sensor.brand)) \(sensor.brand.name)\(sensor.adjusts ? ", calibrated" : "")"
+                message += "\n· \(sensor.location.name): \(sensor.id.asSensorId(sensor.brand)) \(sensor.brand.name)" + (sensor.adjusts ? tr(", calibrated") : "")
             }
             let reassigns = sensors.compactMap { sensor in reassigned(sensor).map { (sensor, $0) } }
             for (sensor, place) in reassigns {
-                message += "\n\n\(sensor.id.asSensorId(sensor.brand)) is assigned to \(place), it will be reassigned."
+                message += tr("\n\n\(sensor.id.asSensorId(sensor.brand)) is assigned to \(place), it will be reassigned.")
             }
-            if overwrites(sensors) { message += "\n\nThis will overwrite already assigned sensors." }
+            if overwrites(sensors) { message += tr("\n\nThis will overwrite already assigned sensors.") }
             if skipped.isEmpty == false {
-                message += "\n\nNot assigned, \(vehicle.name) has no \(skipped.map(\.location.phrase).joined(separator: " or "))."
+                message += tr("\n\nNot assigned, \(vehicle.name) has no \(skipped.map(\.location.phrase).joined(separator: tr(" or "))).")
             }
             if let noIdNote { message += "\n\n\(noIdNote)" }
-            return QrCodeOutcome(title: "Shared sensors", message: message, confirm: (reassigns.isEmpty ? "Assign" : "Reassign", sensors, fitting))
+            return QrCodeOutcome(title: tr("Shared sensors"), message: message, confirm: (reassigns.isEmpty ? tr("Assign") : tr("Reassign"), sensors, fitting))
 
         case .sharedByNewerApp:
-            return QrCodeOutcome(title: "Shared sensors", message: "These sensors were shared by a newer version of the app, please update it to read them")
+            return QrCodeOutcome(title: tr("Shared sensors"), message: tr("These sensors were shared by a newer version of the app, please update it to read them"))
 
         case .sharedUnreadable:
-            return QrCodeOutcome(title: "Shared sensors", message: "Error reading the shared sensors, please scan the code again")
+            return QrCodeOutcome(title: tr("Shared sensors"), message: tr("Error reading the shared sensors, please scan the code again"))
 
         case let .duplicateWheelLocation(wheels):
             let list = wheels.map { "\n· \(TyreLocation.wheel($0).phrase)" }.joined()
-            return QrCodeOutcome(title: "Inconsistent QR code", message: "This QR code has different sensors for the same wheel:\(list)", offersBluetooth: true)
+            return QrCodeOutcome(title: tr("Inconsistent QR code"), message: tr("This QR code has different sensors for the same wheel:\(list)"), offersBluetooth: true)
 
         case .duplicateId:
-            return QrCodeOutcome(title: "Inconsistent QR code", message: "This QR code has the same sensor ID several times.", offersBluetooth: true)
+            return QrCodeOutcome(title: tr("Inconsistent QR code"), message: tr("This QR code has the same sensor ID several times."), offersBluetooth: true)
         }
     }
 }
@@ -121,7 +121,7 @@ struct QrCodeScanView: View {
             if access == .authorized {
                 QrCameraView(isActive: outcome == nil, onCode: read)
                     .ignoresSafeArea()
-                QrOverlay(text: isUnknownCode ? "Not a known TPMS QR code" : "Point the camera at the sensors' QR code")
+                QrOverlay(text: isUnknownCode ? tr("Not a known TPMS QR code") : tr("Point the camera at the sensors' QR code"))
             } else if access == .notDetermined {
                 ProgressView()
             } else {

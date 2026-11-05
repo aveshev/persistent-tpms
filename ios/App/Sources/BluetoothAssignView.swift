@@ -157,7 +157,7 @@ struct BluetoothAssignView: View {
     @StateObject private var model: BluetoothAssignModel
     @ObservedObject private var monitor: Monitor
     private let onDone: () -> Void
-    private static let forcesUpdate = "This will force it to send an update"
+    private static var forcesUpdate: String { tr("This will force it to send an update") }
 
     init(vehicle: Vehicle, location: TyreLocation, monitor: Monitor, onDone: @escaping () -> Void) {
         _model = StateObject(wrappedValue: BluetoothAssignModel(vehicle: vehicle, location: location, monitor: monitor))
@@ -170,7 +170,7 @@ struct BluetoothAssignView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     if monitor.bluetooth != .poweredOn {
-                        Banner(text: "Bluetooth is off or not allowed: the sensors can't be heard.", systemImage: "antenna.radiowaves.left.and.right.slash", color: .orange)
+                        Banner(text: tr("Bluetooth is off or not allowed: the sensors can't be heard."), systemImage: "antenna.radiowaves.left.and.right.slash", color: .orange)
                     }
                     Image(systemName: "antenna.radiowaves.left.and.right")
                         .font(.system(size: 56))
@@ -220,7 +220,7 @@ struct BluetoothAssignView: View {
     @ViewBuilder private var instructions: some View {
         if let assigned = model.assigned {
             // A sensor without an ID has nothing to show, see SensorBrand.isIdentifiedByAddress
-            let sensor = assigned.brand.isIdentifiedByAddress ? "Sensor" : "Sensor \(assigned.sensorId.asSensorId(assigned.brand))"
+            let sensor = assigned.brand.isIdentifiedByAddress ? tr("Sensor") : tr("Sensor \(assigned.sensorId.asSensorId(assigned.brand))")
             (Text("\(sensor) assigned to ") + wheelOn)
                 .font(.title2.weight(.semibold))
         } else {
@@ -229,22 +229,22 @@ struct BluetoothAssignView: View {
                 .foregroundStyle(.secondary)
             switch (model.question, model.step) {
             case (.oneFound?, _):
-                instruction("One sensor found", "Assign it to the \(model.location.phrase), or check again to make sure?")
+                instruction(tr("One sensor found"), tr("Assign it to the \(model.location.phrase), or check again to make sure?"))
             case let (.manyFound(count)?, _):
-                instruction("\(count) on-wheel sensors found", "Let's figure out which one to assign")
+                instruction(tr("\(count) on-wheel sensors found"), tr("Let's figure out which one to assign"))
             case (_, .ask):
-                instruction("Is the sensor you want to assign on the wheel right now?")
+                instruction(tr("Is the sensor you want to assign on the wheel right now?"))
             case let (_, .putOn(found, _)):
-                instruction("Put the sensor on the wheel", Self.forcesUpdate)
-                listening("Listening for on-wheel sensors…", found.count, "on-wheel")
+                instruction(tr("Put the sensor on the wheel"), Self.forcesUpdate)
+                listening(tr("Listening for on-wheel sensors…"), found.count, "on-wheel")
             case let (_, .takeOff(_, off)):
-                instruction("Remove the sensor from the wheel", Self.forcesUpdate)
-                listening("Listening for off-wheel sensors…", off.count, "off-wheel")
+                instruction(tr("Remove the sensor from the wheel"), Self.forcesUpdate)
+                listening(tr("Listening for off-wheel sensors…"), off.count, "off-wheel")
             case (_, .putBack):
-                instruction("Put the sensor back on the wheel", Self.forcesUpdate)
-                listening("Listening for the sensor to come back on…", 0, "")
+                instruction(tr("Put the sensor back on the wheel"), Self.forcesUpdate)
+                listening(tr("Listening for the sensor to come back on…"), 0, "")
             case (_, .found):
-                instruction("Sensor found")
+                instruction(tr("Sensor found"))
             }
         }
     }
@@ -256,39 +256,48 @@ struct BluetoothAssignView: View {
         }
     }
 
+    private func foundText(_ count: Int, _ kind: String) -> String {
+        switch (kind == "on-wheel", count == 1) {
+        case (true, true): tr("1 on-wheel sensor found")
+        case (true, false): tr("\(count) on-wheel sensors found")
+        case (false, true): tr("1 off-wheel sensor found")
+        case (false, false): tr("\(count) off-wheel sensors found")
+        }
+    }
+
     private func listening(_ text: String, _ count: Int, _ kind: String) -> some View {
         VStack(spacing: 8) {
             ProgressView()
             Text(text).font(.subheadline).foregroundStyle(.secondary)
             // Its line kept while nothing is found yet, so the page doesn't move when something is
-            Text(count > 0 ? "\(count) \(kind) sensor\(count > 1 ? "s" : "") found" : " ").font(.headline)
+            Text(count > 0 ? foundText(count, kind) : " ").font(.headline)
         }
     }
 
     @ViewBuilder private var actions: some View {
         if model.assigned != nil {
-            primary("Done", action: onDone)
+            primary(tr("Done"), action: onDone)
         } else if model.question == .oneFound {
-            secondary("Check again", action: model.checkAgain)
-            primary("Assign", action: model.assignFound)
+            secondary(tr("Check again"), action: model.checkAgain)
+            primary(tr("Assign"), action: model.assignFound)
         } else if case .manyFound = model.question {
-            primary("Continue", action: model.checkAgain)
+            primary(tr("Continue"), action: model.checkAgain)
         } else {
             switch model.step {
             case .ask:
-                secondary("No, not yet") { model.answer(isOnWheel: false) }
-                primary("Yes, it's on the wheel") { model.answer(isOnWheel: true) }
+                secondary(tr("No, not yet")) { model.answer(isOnWheel: false) }
+                primary(tr("Yes, it's on the wheel")) { model.answer(isOnWheel: true) }
             case let .putOn(found, low):
                 // Below 10 kPa, a sensor isn't told on a wheel from in the hand
                 if model.offersLowPressure, found.isEmpty, low.isEmpty == false {
                     Button("Low pressure tyre?", action: model.lowPressure)
                 }
-                primary("Continue", action: model.next).disabled(found.isEmpty)
+                primary(tr("Continue"), action: model.next).disabled(found.isEmpty)
             case let .takeOff(_, off):
-                primary("Continue", action: model.next).disabled(off.isEmpty)
+                primary(tr("Continue"), action: model.next).disabled(off.isEmpty)
             // Assigned by itself once back on the wheel
             case .putBack, .found:
-                primary("Continue") {}.disabled(true)
+                primary(tr("Continue")) {}.disabled(true)
             }
         }
     }

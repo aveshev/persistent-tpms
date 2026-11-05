@@ -55,6 +55,7 @@ struct MainView: View {
                 case "settings": sheet = .settings
                 default: break
                 }
+                if Demo.isPocketShown { isDimmed = true }
                 Demo.renderScreen(monitor: monitor, settings: settings)
                 Demo.checkLayouts()
                 #endif
@@ -90,7 +91,7 @@ struct MainView: View {
             }
         }
         // Over the top bar too, whose taps would go through otherwise
-        .modifier(DimWhenIdle(monitor: monitor, settings: settings, isShown: scenePhase == .active && selected == nil && sheet == nil && assigning == nil, isDimmed: $isDimmed))
+        .modifier(DimWhenIdle(monitor: monitor, settings: settings, isShown: scenePhase == .active && selected == nil && sheet == nil && assigning == nil, barHeight: barHeight, isDimmed: $isDimmed))
     }
 
     /// A tyre's readout in a large font, easy to read on a rough road, like the Android app's
@@ -254,7 +255,7 @@ struct MainView: View {
             Button("Vehicle settings", systemImage: "car") { sheet = .vehicle }
             // Laid out with what it's set to: an iOS menu line can't also hold a switch
             Button { sheet = .persistent } label: {
-                Label(settings.backgroundMonitoring ? "Persistent mode: on" : "Persistent mode: off", systemImage: settings.backgroundMonitoring ? "bell.fill" : "bell.slash")
+                Label(settings.backgroundMonitoring ? tr("Persistent mode: on") : tr("Persistent mode: off"), systemImage: settings.backgroundMonitoring ? "bell.fill" : "bell.slash")
             }
             Button("App settings", systemImage: "gear") { sheet = .settings }
             #if DEBUG
@@ -304,9 +305,9 @@ struct MainView: View {
             Banner(text: error, systemImage: "exclamationmark.triangle", color: .red)
         }
         switch monitor.bluetooth {
-        case .poweredOff: Banner(text: "Bluetooth is off: the sensors can't be heard.", systemImage: "antenna.radiowaves.left.and.right.slash", color: .orange)
-        case .unauthorized: Banner(text: "Bluetooth isn't allowed for Persistent TPMS. Allow it in Settings, Privacy & Security, Bluetooth.", systemImage: "lock", color: .orange)
-        case .unsupported: Banner(text: "This device has no Bluetooth Low Energy.", systemImage: "xmark.octagon", color: .orange)
+        case .poweredOff: Banner(text: tr("Bluetooth is off: the sensors can't be heard."), systemImage: "antenna.radiowaves.left.and.right.slash", color: .orange)
+        case .unauthorized: Banner(text: tr("Bluetooth isn't allowed for Persistent TPMS. Allow it in Settings, Privacy & Security, Bluetooth."), systemImage: "lock", color: .orange)
+        case .unsupported: Banner(text: tr("This device has no Bluetooth Low Energy."), systemImage: "xmark.octagon", color: .orange)
         default: EmptyView()
         }
     }
@@ -347,12 +348,12 @@ private struct SilenceAlertsButton: View {
         Group {
             if let silence = speaker.silence {
                 Button { speaker.unmute() } label: {
-                    Label(silence.level == .crimson ? "All alerts silenced" : "Alerts silenced", systemImage: "speaker.slash.fill")
+                    Label(silence.level == .crimson ? tr("All alerts silenced") : tr("Alerts silenced"), systemImage: "speaker.slash.fill")
                 }
                 .tint(Theme.onBackground.opacity(0.3))
             } else if let level = speaker.level {
                 Button { speaker.silenceNow() } label: {
-                    Label("Silence \(level == .crimson ? "critical alerts" : "alerts") for 10 min", systemImage: "speaker.wave.2.fill")
+                    Label(level == .crimson ? tr("Silence critical alerts for 10 min") : tr("Silence alerts for 10 min"), systemImage: "speaker.wave.2.fill")
                 }
                 .tint(Theme.error)
             }

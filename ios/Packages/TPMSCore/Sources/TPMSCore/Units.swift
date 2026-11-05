@@ -10,8 +10,8 @@ public enum PressureUnit: String, CaseIterable, Identifiable, Sendable {
     /// As written after a value, e.g. "kPa" in "250 kPa"
     public var symbol: String {
         switch self {
-        case .kiloPascal: "kPa"
-        case .bar: "bar"
+        case .kiloPascal: AppLanguage.current.isRussian ? "кПа" : "kPa"
+        case .bar: AppLanguage.current.isRussian ? "бар" : "bar"
         case .psi: "psi"
         }
     }
@@ -52,21 +52,21 @@ public struct Pressure: Comparable, Hashable, Sendable {
     /// One decimal less from 10 bar and 100 psi, like the Android app
     public func string(_ unit: PressureUnit) -> String {
         switch unit {
-        case .kiloPascal: String(format: "%.0f kPa", kpa)
-        case .bar: String(format: convert(.bar) >= 9.995 ? "%.1f bar" : "%.2f bar", convert(.bar))
-        case .psi: String(format: convert(.psi) >= 99.95 ? "%.0f psi" : "%.1f psi", convert(.psi))
+        case .kiloPascal: localizedNumber("%.0f %@", kpa, unit.symbol)
+        case .bar: localizedNumber(convert(.bar) >= 9.995 ? "%.1f %@" : "%.2f %@", convert(.bar), unit.symbol)
+        case .psi: localizedNumber(convert(.psi) >= 99.95 ? "%.0f %@" : "%.1f %@", convert(.psi), unit.symbol)
         }
     }
 
     /// The value alone, without trailing zeros: what a text field starts with
     public func numberString(_ unit: PressureUnit) -> String {
         let text = switch unit {
-        case .kiloPascal: String(format: "%.0f", kpa)
-        case .bar: String(format: "%.2f", convert(.bar))
-        case .psi: String(format: "%.1f", convert(.psi))
+        case .kiloPascal: localizedNumber("%.0f", kpa)
+        case .bar: localizedNumber("%.2f", convert(.bar))
+        case .psi: localizedNumber("%.1f", convert(.psi))
         }
-        guard text.contains(".") else { return text }
-        return String(text.reversed().drop { $0 == "0" }.drop { $0 == "." }.reversed())
+        guard let separator = AppLanguage.current.locale.decimalSeparator, text.contains(separator) else { return text }
+        return String(text.reversed().drop { $0 == "0" }.drop { String($0) == separator }.reversed())
     }
 
     public static func < (lhs: Pressure, rhs: Pressure) -> Bool { lhs.kpa < rhs.kpa }
@@ -86,10 +86,10 @@ public struct Temperature: Comparable, Hashable, Sendable {
     }
 
     public func string(_ unit: TemperatureUnit) -> String {
-        String(format: "%.0f%@", convert(unit), unit.symbol)
+        localizedNumber("%.0f%@", convert(unit), unit.symbol)
     }
 
-    public func numberString(_ unit: TemperatureUnit) -> String { String(format: "%.0f", convert(unit)) }
+    public func numberString(_ unit: TemperatureUnit) -> String { localizedNumber("%.0f", convert(unit)) }
 
     public static func < (lhs: Temperature, rhs: Temperature) -> Bool { lhs.celsius < rhs.celsius }
 }
@@ -101,7 +101,7 @@ public struct Voltage: Comparable, Hashable, Sendable {
 
     public init(volts: Float) { self.volts = volts }
 
-    public var string: String { String(format: "%.1f V", volts) }
+    public var string: String { localizedNumber("%.1f V", volts) }
 
     public func isAtOrBelow(_ other: Voltage) -> Bool { volts <= other.volts + 0.001 }
 

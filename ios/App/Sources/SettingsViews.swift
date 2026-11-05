@@ -6,8 +6,6 @@ struct AppSettingsView: View {
     @ObservedObject var monitor: Monitor
     @ObservedObject var settings: Settings
     @Environment(\.dismiss) private var dismiss
-    @State private var importing = false
-    @State private var importError: String?
     @State private var versionTaps = 0
     @State private var versionMessage: String?
 
@@ -30,17 +28,17 @@ struct AppSettingsView: View {
                     NavigationLink {
                         DimSettingsView(settings: settings)
                     } label: {
-                        SettingsRow("Dim when idle", settings.dimDisplay ? "after \(settings.dimDisplaySeconds.asDimDelay)" : "Off")
+                        SettingsRow(tr("Dim when idle"), settings.dimDisplay ? tr("after \(settings.dimDisplaySeconds.asDimDelay)") : tr("Off"))
                     }
                     NavigationLink {
                         MagnifierSettingsView(settings: settings)
                     } label: {
-                        SettingsRow("Tap to magnify", settings.magnifier ? "for \(settings.magnifierSeconds) seconds" : "Off")
+                        SettingsRow(tr("Tap to magnify"), settings.magnifier ? tr("for \(settings.magnifierSeconds) seconds") : tr("Off"))
                     }
                     NavigationLink {
                         TextSizeView(settings: settings)
                     } label: {
-                        SettingsRow("Sensor readings text size", settings.readoutTextScale.textSizeLabel)
+                        SettingsRow(tr("Sensor readings text size"), settings.readoutTextScale.textSizeLabel)
                     }
                 }
                 Section("Readings") {
@@ -61,23 +59,23 @@ struct AppSettingsView: View {
                     NavigationLink {
                         TimeSinceUpdateView(settings: settings)
                     } label: {
-                        SettingsRow("Time since last update", settings.showTimeSinceUpdate ? "On" : "Off")
+                        SettingsRow(tr("Time since last update"), settings.showTimeSinceUpdate ? tr("On") : tr("Off"))
                     }
                     Toggle(isOn: $settings.showBatteryVoltage) {
-                        SettingsRow("Always show battery", "(even when not low)")
+                        SettingsRow(tr("Always show battery"), tr("(even when not low)"))
                     }
                 }
                 Section {
                     Toggle(isOn: Binding(get: { settings.alerts }, set: { monitor.setAlerts($0) })) {
-                        SettingsRow("Alert notifications", "One for each tyre and alert. Turning it on asks for permission to notify")
+                        SettingsRow(tr("Alert notifications"))
                     }
                     NavigationLink {
                         AlertSoundSettingsView(monitor: monitor, settings: settings)
                     } label: {
-                        SettingsRow("Alert sound", settings.alertSound.label)
+                        SettingsRow(tr("Alert sound"), settings.alertSound.label)
                     }
                     Toggle(isOn: $settings.vibrateAlerts) {
-                        SettingsRow("Vibrate", "Along with the alert sound, more for a critical alert")
+                        SettingsRow(tr("Vibrate"), tr("Along with the alert sound, more for a critical alert"))
                     }
                 } header: {
                     Text("Alerts")
@@ -86,44 +84,26 @@ struct AppSettingsView: View {
                     NavigationLink {
                         PersistentModeView(monitor: monitor, settings: settings)
                     } label: {
-                        SettingsRow("Persistent mode", "Persistent scanning")
+                        SettingsRow(tr("Persistent mode"), tr("Persistent scanning"))
                     }
-                }
-                Section {
-                    Button("Import a database") { importing = true }
-                    if let importError {
-                        Text(importError).foregroundStyle(Theme.error)
-                    }
-                } header: {
-                    Text("Import")
-                } footer: {
-                    Text("Replaces everything with a database exported by Persistent TPMS on Android (debug settings, export database). Pecham and Bekubee KY sensors need assigning again: they carry no ID, and Android tells them apart by their Bluetooth address, which iOS doesn't give.")
                 }
                 about
                 Section("Misc") {
                     Toggle(isOn: Binding(get: { settings.demoMode }, set: { monitor.setDemoMode($0) })) {
-                        SettingsRow("Demo mode", "Made-up vehicles and sensors, your own come back when it's turned off")
+                        SettingsRow(tr("Demo mode"), tr("Made-up vehicles and sensors, your own come back when it's turned off"))
                     }
                     if settings.developer {
                         NavigationLink {
                             DebugSettingsView(monitor: monitor, settings: settings)
                         } label: {
-                            SettingsRow("Debug", debugSummary)
+                            SettingsRow(tr("Debug"), debugSummary)
                         }
                     }
                     NavigationLink {
                         PressureLossSettingsView(monitor: monitor, settings: settings)
                     } label: {
-                        SettingsRow("Pressure loss", "Experimental\(settings.pressureLoss ? ", on" : "")")
+                        SettingsRow(tr("Pressure loss"), settings.pressureLoss ? tr("Experimental, on") : tr("Experimental"))
                     }
-                }
-            }
-            .fileImporter(isPresented: $importing, allowedContentTypes: [.data]) { result in
-                do {
-                    try monitor.importDatabase(from: result.get())
-                    dismiss()
-                } catch {
-                    importError = "Couldn't import it: \(error.localizedDescription)"
                 }
             }
             .navigationTitle("App settings")
@@ -133,11 +113,11 @@ struct AppSettingsView: View {
     }
 
     private var debugSummary: String {
-        guard settings.debugOptions else { return "Off" }
-        let shown = [settings.showSensorId ? "Sensor ID" : nil, settings.showSensorFlags ? "Sensor flags" : nil]
+        guard settings.debugOptions else { return tr("Off") }
+        let shown = [settings.showSensorId ? tr("Sensor ID") : nil, settings.showSensorFlags ? tr("Sensor flags") : nil, settings.language != .system ? tr("Language") : nil]
             .compactMap { $0 }
             .joined(separator: ", ")
-        return shown.isEmpty ? "On" : shown
+        return shown.isEmpty ? tr("On") : shown
     }
 
     private var about: some View {
@@ -145,21 +125,21 @@ struct AppSettingsView: View {
             // 10 taps in a row show the debug options, or hide them again, as Android does with its
             // own developer options
             Button(action: versionTapped) {
-                SettingsRow("Version", Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
+                SettingsRow(tr("Version"), Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
             }
             Link(destination: URL(string: "https://github.com/VincentMasselis/TPMS-advanced")!) {
-                SettingsRow("Based on TPMS Advanced", "By Vincent Masselis, under the Apache License 2.0")
+                SettingsRow(tr("Based on TPMS Advanced"), tr("By Vincent Masselis, under the Apache License 2.0"))
             }
             Link(destination: URL(string: "https://github.com/aveshev/persistent-tpms")!) {
-                SettingsRow("Source code", "github.com/aveshev/persistent-tpms")
+                SettingsRow(tr("Source code"), "github.com/aveshev/persistent-tpms")
             }
             Link(destination: URL(string: "https://aveshev.com/persistent-tpms/privacy/")!) {
-                SettingsRow("Privacy policy")
+                SettingsRow(tr("Privacy policy"))
             }
             NavigationLink {
                 LicensesView()
             } label: {
-                SettingsRow("Open-source licenses")
+                SettingsRow(tr("Open-source licenses"))
             }
         } header: {
             Text("About")
@@ -174,9 +154,14 @@ struct AppSettingsView: View {
         if left <= 0 {
             settings.developer.toggle()
             versionTaps = 0
-            versionMessage = settings.developer ? "You are now a developer" : "You are no longer a developer"
+            versionMessage = settings.developer ? tr("You are now a developer") : tr("You are no longer a developer")
         } else if left <= Self.tapsCountedDown {
-            versionMessage = "Tap \(left) more \(left == 1 ? "time" : "times") to \(settings.developer ? "stop being a developer" : "become a developer")"
+            versionMessage = switch (left == 1, settings.developer) {
+            case (true, true): tr("Tap \(left) more time to stop being a developer")
+            case (false, true): tr("Tap \(left) more times to stop being a developer")
+            case (true, false): tr("Tap \(left) more time to become a developer")
+            case (false, false): tr("Tap \(left) more times to become a developer")
+            }
         }
     }
 }
@@ -184,9 +169,9 @@ struct AppSettingsView: View {
 extension Settings.AlertSound {
     var label: String {
         switch self {
-        case .speech: "Speech"
-        case .tones: "Tones"
-        case .none: "Off"
+        case .speech: tr("Speech")
+        case .tones: tr("Tones")
+        case .none: tr("Off")
         }
     }
 }
@@ -204,12 +189,12 @@ struct AlertSoundSettingsView: View {
                     set: { settings.alertSound = $0 ? settings.lastAlertSound : .none }
                 ))
             } footer: {
-                Text("Plays in addition to the red and critical alerts' notifications, and repeats while those alerts stay active: every 10 minutes for red, every 20 seconds at first for critical, then every 10 minutes.\n\nIn the background iOS only runs the app when a sensor is heard, so it may play late or not at all. Closing the app stops the repeats too, until a new alerting sensor update is received.")
+                Text("Plays in addition to the warning and critical alerts' notifications, and repeats while those alerts stay active: every 10 minutes for warnings, every 20 seconds at first for critical, then every 10 minutes.\n\nIn the background iOS only runs the app when a sensor is heard, so it may play late or not at all. Closing the app stops the repeats too, until a new alerting sensor update is received.")
             }
             if settings.alertSound != .none {
                 Section {
-                    option(.speech, "Says \"Tyre pressure\", \"Tyre hot\" or \"Sensor battery\" out loud")
-                    option(.tones, "A tone pattern, faster and higher pitched for a critical alert")
+                    option(.speech, tr("Says \"Tyre pressure\", \"Tyre hot\" or \"Sensor battery\" out loud"))
+                    option(.tones, tr("A tone pattern, faster and higher pitched for a critical alert"))
                 }
             }
         }
@@ -255,7 +240,7 @@ struct PersistentModeView: View {
                     }
                 ))
             } header: {
-                Text(settings.backgroundMonitoring == false ? "Current status: Off" : isListening ? "Current status: Listening" : "Current status: No sensor to listen to")
+                Text(settings.backgroundMonitoring == false ? tr("Current status: Off") : isListening ? tr("Current status: Listening") : tr("Current status: No sensor to listen to"))
                     .textCase(nil)
             } footer: {
                 Text("iOS only lets apps listen now and then in the background, so some readings are missed, more for Pecham sensors than for Wicarlink ones. Swiping the app away in the app switcher stops it until the app is opened again. After restarting the phone, it comes back once the phone is unlocked.\n\nTyres can still be monitored without it: the app scans whenever it is open.")
@@ -284,12 +269,21 @@ struct DebugSettingsView: View {
             Section {
                 Toggle("Debug", isOn: $settings.debugOptions)
             } footer: {
-                Text("What the sensors and the phone report, to help investigate them. Turning Debug off hides all of it, and keeps what is selected here.")
+                Text("What the sensors and the phone report, to help investigate them. Turning Debug off hides all of it, and keeps what is selected here, except the language, which goes back to the phone's.")
             }
             Section {
                 Toggle("Sensor ID", isOn: $settings.showSensorId)
                 Toggle(isOn: $settings.showSensorFlags) {
-                    SettingsRow("Sensor flags", "Bits 7 to 0 of the last packet's status bytes, the unset ones greyed out")
+                    SettingsRow(tr("Sensor flags"), tr("Bits 7 to 0 of the last packet's status bytes, the unset ones greyed out"))
+                }
+            }
+            .disabled(settings.debugOptions == false)
+            Section("Display") {
+                Picker("Language", selection: $settings.language) {
+                    // Each language in its own, so that it can be found from any of them
+                    ForEach(AppLanguage.allCases) { language in
+                        Text(verbatim: language.label).tag(language)
+                    }
                 }
             }
             .disabled(settings.debugOptions == false)
@@ -298,10 +292,10 @@ struct DebugSettingsView: View {
                     do {
                         exported = ExportedFile(url: try monitor.exportDatabase())
                     } catch {
-                        exportError = "Couldn't export it: \(error.localizedDescription)"
+                        exportError = tr("Couldn't export it: \(error.localizedDescription)")
                     }
                 } label: {
-                    SettingsRow("Export database", "Every stored reading, with the raw packet it came from")
+                    SettingsRow(tr("Export database"), tr("Every stored reading, with the raw packet it came from"))
                 }
                 if let exportError {
                     Text(exportError).foregroundStyle(Theme.error)
@@ -312,7 +306,7 @@ struct DebugSettingsView: View {
         .navigationBarTitleDisplayMode(.inline)
         // With nothing selected there is nothing to show: same as turning the switch off
         .onDisappear {
-            if settings.showSensorId == false, settings.showSensorFlags == false { settings.debugOptions = false }
+            if settings.showSensorId == false, settings.showSensorFlags == false, settings.language == .system { settings.debugOptions = false }
         }
         .sheet(item: $exported) { ShareSheet(url: $0.url).ignoresSafeArea() }
     }
@@ -334,7 +328,7 @@ struct LicensesView: View {
         Form {
             Section {
                 Link(destination: URL(string: "https://www.apache.org/licenses/LICENSE-2.0")!) {
-                    SettingsRow("TPMS Advanced", "By Vincent Masselis, Apache License 2.0")
+                    SettingsRow("TPMS Advanced", tr("By Vincent Masselis, Apache License 2.0"))
                 }
             } footer: {
                 Text("The iOS app uses no third-party library.")
@@ -360,7 +354,7 @@ struct TimeSinceUpdateView: View {
                 NavigationLink {
                     SensorReadingsUpdateDetailsView()
                 } label: {
-                    SettingsRow("Sensor readings update details", "How often each sensor updates, and how to check a silent one")
+                    SettingsRow(tr("Sensor readings update details"), tr("How often each sensor updates, and how to check a silent one"))
                 }
             }
             Section {
@@ -383,8 +377,8 @@ struct SensorReadingsUpdateDetailsView: View {
                     .listRowInsets(EdgeInsets())
             }
             Section("Known schedules") {
-                SettingsRow("WiCarLink", "Every 5.5 minutes, whether the vehicle moves or not, and whenever pressure changes significantly. Reads the pressure in steps of 0.1 bar (about 1.5 psi): a tyre between two steps can read one step lower when cold, and the next one up once warm")
-                SettingsRow("Pecham", "Every minute while the wheel rotates. While stationary, only when the pressure is below ~22 psi, and in either case, whenever pressure changes significantly. Reads the pressure in steps of about 0.45 psi (3.1 kPa), shown rounded to 0.1 psi: a steady tyre can go back and forth by one step")
+                SettingsRow("WiCarLink", tr("Every 5.5 minutes, whether the vehicle moves or not, and whenever pressure changes significantly. Reads the pressure in steps of 0.1 bar (about 1.5 psi): a tyre between two steps can read one step lower when cold, and the next one up once warm"))
+                SettingsRow("Pecham", tr("Every minute while the wheel rotates. While stationary, only when the pressure is below ~22 psi, and in either case, whenever pressure changes significantly. Reads the pressure in steps of about 0.45 psi (3.1 kPa), shown rounded to 0.1 psi: a steady tyre can go back and forth by one step"))
             }
             Section("When updates seem to be missing") {
                 Text("If the app does not show the sensor updating as often as you think it should, it could be due to the following reasons:\n\n1. The sensor is not sending any updates at all. You can verify that by briefly taking it off the wheel: it should sense 0 pressure, which should force an update, and the app should show an alert. If it does not, either the sensor itself or its battery may be dead.\n\n2. The sensor is sending updates, but they are not getting to the phone. Changing the phone's position relative to the wheel may help, and so may replacing the sensor's battery with a fresh one. In the worst case, you may need a different sensor brand.\n\n3. The sensor reacts to pressure changes, but fails to detect wheel rotation (if it has rotation detection). Swapping it with a sensor that reports regularly helps tell this apart from #2: if it still doesn't send updates from where the other one does, it's likely faulty and should be replaced. You can use \"Manage sensors\" in the vehicle settings to quickly move them between the wheels.")
@@ -399,13 +393,13 @@ struct SensorReadingsUpdateDetailsView: View {
 
 extension Double {
     /// "Default", or a percentage
-    var textSizeLabel: String { self == 1 ? "Default" : "\(Int((self * 100).rounded()))%" }
+    var textSizeLabel: String { self == 1 ? tr("Default") : "\(Int((self * 100).rounded()))%" }
 }
 
 extension Int {
     /// "30 seconds", "1 minute", "2 minutes", for a delay in seconds
     var asDimDelay: String {
-        self < 60 ? "\(self) seconds" : self == 60 ? "1 minute" : "\(self / 60) minutes"
+        self < 60 ? tr("\(self) seconds") : self == 60 ? tr("1 minute") : tr("\(self / 60) minutes")
     }
 }
 
@@ -497,7 +491,7 @@ struct DimSettingsView: View {
             Section {
                 Toggle("Dim when idle", isOn: $settings.dimDisplay)
             } footer: {
-                Text("Lowers the screen's brightness on the main screen once nothing new was alerted or warned about for a while. A red or critical alert going on keeps it bright, a new alert or warning brings it back up. When dimmed, a first touch only brightens the screen, lift your finger and touch again to use the app.")
+                Text("Lowers the screen's brightness on the main screen once there's been no new alert for a while. A warning or critical alert going on keeps it bright, a new alert brings it back up. When dimmed, a first touch only brightens the screen, lift your finger and touch again to use the app.")
             }
             if settings.dimDisplay {
                 Section("Dim after") {
@@ -518,7 +512,7 @@ struct DimSettingsView: View {
                 }
                 Section {
                     Toggle(isOn: $settings.pocketGuard) {
-                        SettingsRow("Block touches in a pocket", "Turns the screen off and ignores touches")
+                        SettingsRow(tr("Block touches in a pocket"), tr("Turns the screen off and ignores touches"))
                     }
                 } header: {
                     Text("In a pocket")
@@ -546,7 +540,7 @@ struct PressureLossSettingsView: View {
                     .listRowInsets(EdgeInsets())
             }
             Section {
-                Toggle("Pressure loss warning", isOn: $settings.pressureLoss)
+                Toggle("Pressure loss alert", isOn: $settings.pressureLoss)
             }
             Section("Minimum drop, in \(settings.pressureUnit.symbol)") {
                 Picker("Minimum drop", selection: $settings.pressureLossMinDrop) {
@@ -561,5 +555,15 @@ struct PressureLossSettingsView: View {
         // The alerts are rebuilt with the new settings
         .onChange(of: settings.pressureLoss) { _, _ in monitor.reload() }
         .onChange(of: settings.pressureLossMinDrop) { _, _ in monitor.reload() }
+    }
+}
+
+extension AppLanguage {
+    var label: String {
+        switch self {
+        case .system: tr("Language system")
+        case .english: "English"
+        case .russian: "Русский"
+        }
     }
 }

@@ -17,7 +17,7 @@ struct TyreDetailView: View {
                 Section("Sensor") {
                     if let sensor {
                         LabeledContent("Brand", value: sensor.brand.name)
-                        LabeledContent("ID", value: sensor.brand.isIdentifiedByAddress ? "Told apart by this iPhone" : sensor.id.asSensorId(sensor.brand))
+                        LabeledContent("ID", value: sensor.brand.isIdentifiedByAddress ? tr("Told apart by this iPhone") : sensor.id.asSensorId(sensor.brand))
                     } else {
                         Text("No sensor is assigned to this tyre.").foregroundStyle(.secondary)
                     }
@@ -28,7 +28,7 @@ struct TyreDetailView: View {
                         LabeledContent("Temperature", value: reading.temperature.string(settings.temperatureUnit))
                         if let volts = reading.batteryVoltage { LabeledContent("Battery", value: volts.string) }
                         if let percent = reading.batteryPercent { LabeledContent("Battery", value: "\(percent) %") }
-                        LabeledContent("Signal", value: "\(reading.rssi) dBm")
+                        LabeledContent("Signal", value: tr("\(reading.rssi) dBm"))
                         LabeledContent("Received", value: Date(timeIntervalSince1970: reading.timestamp).formatted(date: .abbreviated, time: .standard))
                         if let status = AdvertisingPacket(bytes: reading.raw).statusBytes {
                             LabeledContent("Status byte", value: status.map { String(format: "%02X", $0) }.joined(separator: " "))
@@ -70,12 +70,12 @@ struct TyreDetailView: View {
         let unit = settings.pressureUnit
         return switch alertClass {
         case .pressure: tyre.alerts.isHighPressure
-            ? "Pressure at or near the maximum, \(thresholds.highPressure.string(unit))"
-            : "Pressure at or near the minimum, \(thresholds.lowPressure.string(unit))"
-        case .temperature: "Temperature at or near the hot one, \(thresholds.highTemp.string(settings.temperatureUnit))"
-        case .battery: "Battery low"
-        case .pressureLoss: tyre.loss.loss.map { "Lost \($0.drop.string(unit)) since its highest reading of the ride" } ?? "Losing pressure"
-        case .sensorAlarm: "The sensor reports a pressure drop. A fall in temperature can raise it too."
+            ? tr("Pressure at or near the maximum, \(thresholds.highPressure.string(unit))")
+            : tr("Pressure at or near the minimum, \(thresholds.lowPressure.string(unit))")
+        case .temperature: tr("Temperature at or near the hot one, \(thresholds.highTemp.string(settings.temperatureUnit))")
+        case .battery: tr("Battery low")
+        case .pressureLoss: tyre.loss.loss.map { tr("Lost \($0.drop.string(unit)) since its highest reading of the ride") } ?? tr("Losing pressure")
+        case .sensorAlarm: tr("The sensor reports a pressure drop. A fall in temperature can raise it too.")
         }
     }
 }

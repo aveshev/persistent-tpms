@@ -27,40 +27,40 @@ struct VehicleSettingsView: View {
         let isAssigned = monitor.sensors.contains { $0.vehicleId == vehicle.id }
         let unit = settings.pressureUnit
         let front = pressureSummary(vehicle.lowPressure, vehicle.highPressure, unit)
-        let rear = vehicle.separateRearPressure ? vehicle.rearLowPressure.flatMap { low in vehicle.rearHighPressure.map { "Rear \(pressureSummary(low, $0, unit))" } } : nil
-        let spare = vehicle.separateSparePressure ? vehicle.spareLowPressure.flatMap { low in vehicle.spareHighPressure.map { "Spare \(pressureSummary(low, $0, unit))" } } : nil
+        let rear = vehicle.separateRearPressure ? vehicle.rearLowPressure.flatMap { low in vehicle.rearHighPressure.map { tr("Rear \(pressureSummary(low, $0, unit))") } } : nil
+        let spare = vehicle.separateSparePressure ? vehicle.spareLowPressure.flatMap { low in vehicle.spareHighPressure.map { tr("Spare \(pressureSummary(low, $0, unit))") } } : nil
         let others = [rear, spare].compactMap { $0 }
         return Form {
             Section("Alert thresholds") {
                 NavigationLink {
                     VehiclePressureSettingsView(vehicleId: vehicle.id, monitor: monitor, settings: settings)
                 } label: {
-                    SettingsRow("Pressure", others.isEmpty ? front : (["Front \(front)"] + others).joined(separator: " · "))
+                    SettingsRow(tr("Pressure"), others.isEmpty ? front : ([tr("Front \(front)")] + others).joined(separator: " · "))
                 }
                 NavigationLink {
                     VehicleTemperatureSettingsView(vehicleId: vehicle.id, monitor: monitor, settings: settings)
                 } label: {
-                    SettingsRow("Temperature", "Cold \(vehicle.lowTemp.numberString(settings.temperatureUnit)) · Hot \(vehicle.highTemp.numberString(settings.temperatureUnit)) \(settings.temperatureUnit.symbol)")
+                    SettingsRow(tr("Temperature"), tr("Cold \(vehicle.lowTemp.numberString(settings.temperatureUnit)) · Hot \(vehicle.highTemp.numberString(settings.temperatureUnit)) \(settings.temperatureUnit.symbol)"))
                 }
                 NavigationLink {
                     VehicleBatterySettingsView(vehicleId: vehicle.id, monitor: monitor)
                 } label: {
-                    SettingsRow("Battery", monitor.batteryKinds(vehicle).summary(vehicle))
+                    SettingsRow(tr("Battery"), monitor.batteryKinds(vehicle).summary(vehicle))
                 }
             }
             Section("Sensors") {
                 NavigationLink {
                     ManageSensorsView(vehicleId: vehicle.id, monitor: monitor, settings: settings)
                 } label: {
-                    SettingsRow("Manage sensors", "Move, calibrate, delete")
+                    SettingsRow(tr("Manage sensors"), tr("Move, calibrate, delete"))
                 }
                 NavigationLink {
                     ShareSensorsView(vehicleId: vehicle.id, monitor: monitor)
                 } label: {
-                    SettingsRow("Share sensors", "Share with another phone via QR")
+                    SettingsRow(tr("Share sensors"), tr("Share with another phone via QR"))
                 }
                 Button { confirmClear = true } label: {
-                    SettingsRow("Clear all sensors", isAssigned ? "Removes every sensor assigned to this vehicle" : "No sensor is assigned to this vehicle", color: Theme.error)
+                    SettingsRow(tr("Clear all sensors"), isAssigned ? tr("Removes every sensor assigned to this vehicle") : tr("No sensor is assigned to this vehicle"), color: Theme.error)
                 }
                 .disabled(isAssigned == false)
             }
@@ -71,7 +71,7 @@ struct VehicleSettingsView: View {
                 }
                 .foregroundStyle(Theme.onBackground)
                 Button { confirmDelete = true } label: {
-                    SettingsRow("Delete vehicle", monitor.vehicles.count > 1 ? nil : "The only vehicle cannot be deleted", color: Theme.error)
+                    SettingsRow(tr("Delete vehicle"), monitor.vehicles.count > 1 ? nil : tr("The only vehicle cannot be deleted"), color: Theme.error)
                 }
                 .disabled(monitor.vehicles.count <= 1)
             }
@@ -138,9 +138,9 @@ struct BatteryKinds {
 
     func summary(_ vehicle: Vehicle) -> String {
         switch (showsVoltage, showsPercent) {
-        case (true, false): "Low voltage alarm \(vehicle.lowBatteryVoltage.string)"
-        case (false, true): "Low battery alarm \(vehicle.lowBatteryPercent)%"
-        default: "Low alarms \(vehicle.lowBatteryVoltage.string) · \(vehicle.lowBatteryPercent)%"
+        case (true, false): tr("Low voltage alarm \(vehicle.lowBatteryVoltage.string)")
+        case (false, true): tr("Low battery alarm \(vehicle.lowBatteryPercent)%")
+        default: tr("Low alarms \(vehicle.lowBatteryVoltage.string) · \(vehicle.lowBatteryPercent)%")
         }
     }
 }
@@ -331,8 +331,8 @@ struct VehiclePressureSettingsView: View {
         return Form {
             Section {
                 TyreLegend(
-                    text: "When a sensor reports pressure outside of the range set here, it will raise an alert and blink the affected tyre indicator in red. If it's more than 20% above the maximum, or more than 25% below the minimum, it will be a critical alert. Getting within 3% of the minimum or maximum will raise a warning.",
-                    entries: [(.fill(Theme.primary), "In range"), (.alerting, "Out of range"), (.critical, "Critical")]
+                    text: tr("When a sensor reports pressure outside of the range set here, it will raise a warning alert and blink the affected tyre indicator in red. If it's more than 20% above the maximum, or more than 25% below the minimum, it will be a critical alert. Getting within 3% of the minimum or maximum will raise a caution alert."),
+                    entries: [(.fill(Theme.primary), tr("In range")), (.alerting, tr("Out of range")), (.critical, tr("Critical"))]
                 )
                 .listRowBackground(Color.clear)
                 .listRowInsets(EdgeInsets())
@@ -350,7 +350,7 @@ struct VehiclePressureSettingsView: View {
                                 vehicle.separateRearPressure = enabled
                             }
                         })) {
-                            SettingsRow("Set rear pressure separately", "Turn on if the rear tyres need a different pressure than the front ones")
+                            SettingsRow(tr("Set rear pressure separately"), tr("Turn on if the rear tyres need a different pressure than the front ones"))
                         }
                     }
                     if canSeparateSpare {
@@ -363,21 +363,21 @@ struct VehiclePressureSettingsView: View {
                                 vehicle.separateSparePressure = enabled
                             }
                         })) {
-                            SettingsRow("Set spare pressure separately", "Turn on if the spare needs a different pressure than the front tyres")
+                            SettingsRow(tr("Set spare pressure separately"), tr("Turn on if the spare needs a different pressure than the front tyres"))
                         }
                     }
                 }
             }
             range(frontHeader(canSeparateRear && rear == nil, canSeparateSpare && spare == nil, separable: canSeparateRear || canSeparateSpare), vehicle.lowPressure...max(vehicle.lowPressure, vehicle.highPressure), .front)
-            if let rear { range("Rear", rear, .rear) }
-            if let spare { range("Spare", spare, .spare) }
+            if let rear { range(tr("Rear"), rear, .rear) }
+            if let spare { range(tr("Spare"), spare, .spare) }
         }
     }
 
     /// Every location the front range applies to: "Front, rear & spare", "Front & spare", "Front"…
     private func frontHeader(_ withRear: Bool, _ withSpare: Bool, separable: Bool) -> String {
-        guard separable else { return "Expected range" }
-        let names = ["Front", withRear ? "rear" : nil, withSpare ? "spare" : nil].compactMap { $0 }
+        guard separable else { return tr("Expected range") }
+        let names = [tr("Front"), withRear ? tr("rear") : nil, withSpare ? tr("spare") : nil].compactMap { $0 }
         return names.count == 1 ? names[0] : names.dropLast().joined(separator: ", ") + " & " + names[names.count - 1]
     }
 
@@ -385,7 +385,7 @@ struct VehiclePressureSettingsView: View {
         let unit = settings.pressureUnit
         return Section(header) {
             Button {
-                edit("Minimum pressure", range.lowerBound, Self.limits.lowerBound...range.upperBound) { pressure in
+                edit(tr("Minimum pressure"), range.lowerBound, Self.limits.lowerBound...range.upperBound) { pressure in
                     monitor.update(vehicleId) { vehicle in
                         switch axle {
                         case .front: vehicle.lowPressure = pressure
@@ -395,10 +395,10 @@ struct VehiclePressureSettingsView: View {
                     }
                 }
             } label: {
-                SettingsRow("Minimum", range.lowerBound.string(unit))
+                SettingsRow(tr("Minimum"), range.lowerBound.string(unit))
             }
             Button {
-                edit("Maximum pressure", range.upperBound, range.lowerBound...Self.limits.upperBound) { pressure in
+                edit(tr("Maximum pressure"), range.upperBound, range.lowerBound...Self.limits.upperBound) { pressure in
                     monitor.update(vehicleId) { vehicle in
                         switch axle {
                         case .front: vehicle.highPressure = pressure
@@ -408,7 +408,7 @@ struct VehiclePressureSettingsView: View {
                     }
                 }
             } label: {
-                SettingsRow("Maximum", range.upperBound.string(unit))
+                SettingsRow(tr("Maximum"), range.upperBound.string(unit))
             }
         }
     }
@@ -465,7 +465,7 @@ struct VehicleTemperatureSettingsView: View {
         let unit = settings.temperatureUnit
         let low = vehicle.lowTemp, high = vehicle.highTemp
         // The colours' and the alert levels' margins, in degrees of the displayed unit
-        let degrees = { (celsius: Float) in String(format: "%.0f %@", unit == .celsius ? celsius : celsius * 1.8, unit.symbol) }
+        let degrees = { (celsius: Float) in localizedNumber("%.0f %@", unit == .celsius ? celsius : celsius * 1.8, unit.symbol) }
         let half = max(0, (high.celsius - low.celsius) / 2)
         let fineStart = Temperature(celsius: low.celsius + min(Self.warmUp, half))
         let fineEnd = Temperature(celsius: high.celsius - min(AlertThresholds.amberTemperatureBelow, half))
@@ -473,12 +473,12 @@ struct VehicleTemperatureSettingsView: View {
         return Form {
             Section {
                 TyreLegend(
-                    text: "A tyre indicator is blue up to the cold temperature, where the rubber gets too stiff, and turns green over the next \(degrees(Self.warmUp)). It stays green until \(degrees(AlertThresholds.amberTemperatureBelow)) below hot, then turns towards red. Going above hot will raise an alert and blink the affected tyre indicator in red. Going \(degrees(AlertThresholds.crimsonTemperatureAbove)) above hot will raise a critical alert.",
+                    text: tr("A tyre indicator is blue up to the cold temperature, where the rubber gets too stiff, and turns green over the next \(degrees(Self.warmUp)). It stays green until \(degrees(AlertThresholds.amberTemperatureBelow)) below hot, then turns towards red. Going above hot will raise a warning alert and blink the affected tyre indicator in red. Going \(degrees(AlertThresholds.crimsonTemperatureAbove)) above hot will raise a critical alert."),
                     entries: [
-                        (.fill(Theme.tertiary), "Cold\n\(low.numberString(unit)) \(unit.symbol)"),
-                        (.fill(Theme.primary), "OK\n\(fineStart.numberString(unit)) – \(fineEnd.numberString(unit)) \(unit.symbol)"),
-                        (.alerting, "Hot\n\(high.numberString(unit)) \(unit.symbol)"),
-                        (.critical, "Critical\n\(critical.numberString(unit)) \(unit.symbol)"),
+                        (.fill(Theme.tertiary), tr("Cold\n\(low.numberString(unit)) \(unit.symbol)")),
+                        (.fill(Theme.primary), tr("OK\n\(fineStart.numberString(unit)) – \(fineEnd.numberString(unit)) \(unit.symbol)")),
+                        (.alerting, tr("Hot\n\(high.numberString(unit)) \(unit.symbol)")),
+                        (.critical, tr("Critical\n\(critical.numberString(unit)) \(unit.symbol)")),
                     ]
                 )
                 .listRowBackground(Color.clear)
@@ -487,14 +487,14 @@ struct VehicleTemperatureSettingsView: View {
             Section("Temperatures") {
                 // Cold stays below hot so the colours keep their order
                 Button {
-                    edit("Cold temperature", low, Self.limits.lowerBound...high) { value in monitor.update(vehicleId) { $0.lowTemp = value } }
+                    edit(tr("Cold temperature"), low, Self.limits.lowerBound...high) { value in monitor.update(vehicleId) { $0.lowTemp = value } }
                 } label: {
-                    SettingsRow("Cold", "\(low.numberString(unit)) \(unit.symbol)")
+                    SettingsRow(tr("Cold"), "\(low.numberString(unit)) \(unit.symbol)")
                 }
                 Button {
-                    edit("Hot temperature", high, low...Self.limits.upperBound) { value in monitor.update(vehicleId) { $0.highTemp = value } }
+                    edit(tr("Hot temperature"), high, low...Self.limits.upperBound) { value in monitor.update(vehicleId) { $0.highTemp = value } }
                 } label: {
-                    SettingsRow("Hot", "\(high.numberString(unit)) \(unit.symbol)")
+                    SettingsRow(tr("Hot"), "\(high.numberString(unit)) \(unit.symbol)")
                 }
             }
         }
@@ -548,21 +548,21 @@ struct VehicleBatterySettingsView: View {
                 Section {
                     Button {
                         editing = NumberEdit(
-                            title: "Low voltage alarm", value: voltage.volts,
+                            title: tr("Low voltage alarm"), value: voltage.volts,
                             // Below 2 V the sensors stop sending before reporting it, above 3 V a fresh battery would alarm
                             range: 2...3,
                             // The sensors report their voltage in steps of 0.1 V
                             step: 0.1, unit: "V",
-                            format: { String(format: "%.1f", $0) },
+                            format: { localizedNumber("%.1f", $0) },
                             onConfirm: { value in monitor.update(vehicleId) { $0.lowBatteryVoltage = Voltage(volts: value) } }
                         )
                     } label: {
-                        SettingsRow("Low voltage alarm", voltage.string)
+                        SettingsRow(tr("Low voltage alarm"), voltage.string)
                     }
                 } header: {
                     Text("Voltage alarm")
                 } footer: {
-                    Text("If the sensor reports battery voltage, you can set when to report it as low. Within 0.1 V of the setting, it's shown in orange. After 10 minutes of consistently low readings it will raise an alert. The app will use a slightly reduced value when temperatures are low, to account for the voltage drop.")
+                    Text("If the sensor reports battery voltage, you can set when to report it as low. Within 0.1 V of the setting, it's shown in orange. After 10 minutes of consistently low readings it will raise a warning alert. The app will use a slightly reduced value when temperatures are low, to account for the voltage drop.")
                 }
             }
             if kinds.showsPercent {
@@ -572,7 +572,7 @@ struct VehicleBatterySettingsView: View {
                 Section {
                     Button {
                         editing = NumberEdit(
-                            title: "Low battery alarm", value: Float(percent),
+                            title: tr("Low battery alarm"), value: Float(percent),
                             // Up to half the battery, past which a fresh battery is never far from alarming
                             range: 5...50,
                             step: 5, unit: "%",
@@ -580,12 +580,12 @@ struct VehicleBatterySettingsView: View {
                             onConfirm: { value in monitor.update(vehicleId) { $0.lowBatteryPercent = Int(value.rounded()) } }
                         )
                     } label: {
-                        SettingsRow("Low battery alarm", "\(percent)%")
+                        SettingsRow(tr("Low battery alarm"), "\(percent)%")
                     }
                 } header: {
                     Text("Percentage alarm")
                 } footer: {
-                    Text("Sysgration sensors report their battery state as a percentage rather than a voltage.\n\nAt or below the setting, it will blink red. After 10 minutes of consistently low readings it will raise an alarm.")
+                    Text("Sysgration sensors report their battery state as a percentage rather than a voltage.\n\nAt or below the setting, it will blink red. After 10 minutes of consistently low readings it will raise a warning alert.")
                 }
             }
         }
@@ -595,9 +595,9 @@ struct VehicleBatterySettingsView: View {
     private func samples(normal: String, gettingLow: String, low: String) -> some View {
         TimelineView(.periodic(from: .now, by: 0.1)) { context in
             HStack(alignment: .top) {
-                sample(normal, Theme.onBackground, "Normal", isHidden: false)
-                sample(gettingLow, Theme.orange, "Getting low", isHidden: false)
-                sample(low, Theme.error, "Low alarm", isHidden: Blink.red.isFirstPhase(context.date) == false)
+                sample(normal, Theme.onBackground, tr("Normal"), isHidden: false)
+                sample(gettingLow, Theme.orange, tr("Getting low"), isHidden: false)
+                sample(low, Theme.error, tr("Low alarm"), isHidden: Blink.red.isFirstPhase(context.date) == false)
             }
         }
         .listRowBackground(Color.clear)
@@ -662,31 +662,33 @@ struct SensorCalibrationView: View {
                 // Greyed out rather than hidden while the calibration is off
                 Button {
                     editing = NumberEdit(
-                        title: "Offset", value: calibration.offset.convert(unit),
+                        title: tr("Offset"), value: calibration.offset.convert(unit),
                         range: -Self.offsetLimit.convert(unit)...Self.offsetLimit.convert(unit),
                         step: unit.offsetStep, unit: unit.symbol,
                         format: { Pressure($0, unit).numberString(unit) },
                         onConfirm: { draft.draft.calibration.offset = Pressure($0, unit) }
                     )
                 } label: {
-                    SettingsRow("Offset", (calibration.offset.kpa > 0 ? "+" : "") + calibration.offset.string(unit))
+                    SettingsRow(tr("Offset"), (calibration.offset.kpa > 0 ? "+" : "") + calibration.offset.string(unit))
                 }
                 Button {
                     editing = NumberEdit(
-                        title: "Multiplier", value: calibration.multiplier,
+                        title: tr("Multiplier"), value: calibration.multiplier,
                         range: 0.5...1.5,
                         step: 0.01, unit: "×",
-                        format: { String(format: "%.2f", $0) },
+                        format: { localizedNumber("%.2f", $0) },
                         onConfirm: { draft.draft.calibration.multiplier = $0 }
                     )
                 } label: {
-                    SettingsRow("Multiplier", String(format: "×%.2f", calibration.multiplier))
+                    SettingsRow(tr("Multiplier"), localizedNumber("×%.2f", calibration.multiplier))
                 }
             } header: {
                 Text("Correction")
             } footer: {
                 // "read as": the corrected pressure isn't only shown, the alerts check it too
-                Text("Example: \(example.string(unit)) reported by \(read != nil ? "this" : "a") sensor is read as \(calibration.applyTo(example).string(unit))* (asterisk added when displaying corrected values)")
+                read != nil
+                    ? Text("Example: \(example.string(unit)) reported by this sensor is read as \(calibration.applyTo(example).string(unit))* (asterisk added when displaying corrected values)")
+                    : Text("Example: \(example.string(unit)) reported by a sensor is read as \(calibration.applyTo(example).string(unit))* (asterisk added when displaying corrected values)")
             }
             .disabled(isEnabled == false)
             .opacity(isEnabled ? 1 : 0.38)
@@ -717,7 +719,7 @@ struct SensorCalibrationView: View {
     /// with this sensor only has nothing to apply it to, applying to it is all there is.
     private var actions: some View {
         VStack(spacing: 8) {
-            let toSensor = "Apply to \(sensor.location == .single ? "this" : sensor.location.shortPhrase) sensor"
+            let toSensor = sensor.location == .single ? tr("Apply to this sensor") : tr("Apply to \(sensor.location.shortPhrase) sensor")
             if draft.others.isEmpty {
                 Button(action: applyToSensor) { Text(toSensor).frame(maxWidth: .infinity) }
                     .buttonStyle(.borderedProminent)

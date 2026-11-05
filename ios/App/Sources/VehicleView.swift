@@ -455,14 +455,14 @@ struct TyreReadout: View {
                 reading.map { $0.pressure.string(settings.pressureUnit) + (tyre?.isCalibrated == true ? "*" : "") } ?? "-.--",
                 levels[.pressure],
                 size: size,
-                criticalLabel: tyre?.alerts.isHighPressure == true ? "HIGH!" : "LOW!"
+                criticalLabel: tyre?.alerts.isHighPressure == true ? tr("HIGH!") : tr("LOW!")
             )
-            line(reading?.temperature.string(settings.temperatureUnit) ?? "-.-", levels[.temperature], size: size, criticalLabel: "HIGH!")
+            line(reading?.temperature.string(settings.temperatureUnit) ?? "-.-", levels[.temperature], size: size, criticalLabel: tr("HIGH!"))
             if let reading, lines.showsTime {
                 line(Self.elapsed(reading.timestamp, now: date), nil, size: size)
             }
             if lines.showsLeak {
-                line("Leak?", .amber, size: size)
+                line(tr("Leak?"), .amber, size: size)
             }
             if let battery = lines.battery {
                 line(battery, levels[.battery], size: size)
@@ -513,11 +513,11 @@ struct TyreReadout: View {
         let minutes = Int(max(0, now.timeIntervalSince1970 - timestamp) / 60)
         let hours = minutes / 60
         return switch true {
-        case minutes == 0: "<1 min"
-        case minutes < 120: "\(minutes) min"
-        case hours < 48: "\(hours) hours"
+        case minutes == 0: tr("<1 min")
+        case minutes < 120: tr("\(minutes) min")
+        case hours < 48: tr("\(hours) hours")
         case hours / 24 > 99: "99+ days"
-        default: "\(hours / 24) days"
+        default: tr("\(hours / 24) days")
         }
     }
 }

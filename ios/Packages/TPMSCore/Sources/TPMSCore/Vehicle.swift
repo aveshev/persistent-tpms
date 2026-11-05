@@ -45,16 +45,16 @@ public enum TyreLocation: Hashable, Identifiable, Sendable {
 
     public var name: String {
         switch self {
-        case .axle(.front): "Front"
-        case .axle(.rear): "Rear"
-        case .side(.left): "Left"
-        case .side(.right): "Right"
-        case .wheel(.frontLeft): "Front left"
-        case .wheel(.frontRight): "Front right"
-        case .wheel(.rearLeft): "Rear left"
-        case .wheel(.rearRight): "Rear right"
-        case .spare: "Spare"
-        case .single: "Wheel"
+        case .axle(.front): tr("Front")
+        case .axle(.rear): tr("Rear")
+        case .side(.left): tr("Left")
+        case .side(.right): tr("Right")
+        case .wheel(.frontLeft): tr("Front left")
+        case .wheel(.frontRight): tr("Front right")
+        case .wheel(.rearLeft): tr("Rear left")
+        case .wheel(.rearRight): tr("Rear right")
+        case .spare: tr("Spare")
+        case .single: tr("Wheel")
         }
     }
 
@@ -90,13 +90,13 @@ public enum VehicleKind: String, CaseIterable, Identifiable, Sendable {
 
     public var name: String {
         switch self {
-        case .car: "Car"
-        case .singleAxleTrailer: "Single axle trailer"
-        case .motorcycle: "Motorcycle"
-        case .tadpoleThreeWheeler: "Tadpole three-wheeler"
-        case .deltaThreeWheeler: "Delta three-wheeler"
-        case .carWithSpare: "Car with a spare tyre"
-        case .monowheel: "Monowheel"
+        case .car: tr("Car")
+        case .singleAxleTrailer: tr("Single axle trailer")
+        case .motorcycle: tr("Motorcycle")
+        case .tadpoleThreeWheeler: tr("Tadpole three-wheeler")
+        case .deltaThreeWheeler: tr("Delta three-wheeler")
+        case .carWithSpare: tr("Car with a spare tyre")
+        case .monowheel: tr("Monowheel")
         }
     }
 

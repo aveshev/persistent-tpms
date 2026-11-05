@@ -66,13 +66,19 @@ final class Notifier {
     }
 
     private func title(_ alertClass: AlertClass, _ level: AlertLevel, _ isHigh: Bool) -> String {
-        let severity = level == .crimson ? "critical " : ""
+        let isCritical = level == .crimson
         return switch alertClass {
-        case .pressure: severity + (isHigh ? "pressure high" : "pressure low")
-        case .temperature: severity + "temperature high"
-        case .battery: level == .amber ? "battery getting low" : "battery low"
-        case .pressureLoss: "losing pressure"
-        case .sensorAlarm: "the sensor reports a leak"
+        case .pressure:
+            switch (isCritical, isHigh) {
+            case (true, true): tr("critical pressure high")
+            case (true, false): tr("critical pressure low")
+            case (false, true): tr("pressure high")
+            case (false, false): tr("pressure low")
+            }
+        case .temperature: isCritical ? tr("critical temperature high") : tr("temperature high")
+        case .battery: level == .amber ? tr("battery getting low") : tr("battery low")
+        case .pressureLoss: tr("losing pressure")
+        case .sensorAlarm: tr("the sensor reports a leak")
         }
     }
 
@@ -80,16 +86,16 @@ final class Notifier {
         let unit = settings.pressureUnit
         return switch alertClass {
         case .pressure:
-            "\(reading.pressure.string(unit)), set from \(thresholds.lowPressure.string(unit)) to \(thresholds.highPressure.string(unit))"
+            tr("\(reading.pressure.string(unit)), set from \(thresholds.lowPressure.string(unit)) to \(thresholds.highPressure.string(unit))")
         case .temperature:
-            "\(reading.temperature.string(settings.temperatureUnit)), hot from \(thresholds.highTemp.string(settings.temperatureUnit))"
+            tr("\(reading.temperature.string(settings.temperatureUnit)), hot from \(thresholds.highTemp.string(settings.temperatureUnit))")
         case .battery:
-            reading.batteryVoltage.map { "\($0.string), the alarm being at \(thresholds.lowBatteryVoltage.string)" }
-                ?? reading.batteryPercent.map { "\($0) %, the alarm being at \(thresholds.lowBatteryPercent) %" } ?? ""
+            reading.batteryVoltage.map { tr("\($0.string), the alarm being at \(thresholds.lowBatteryVoltage.string)") }
+                ?? reading.batteryPercent.map { tr("\($0) %, the alarm being at \(thresholds.lowBatteryPercent) %") } ?? ""
         case .pressureLoss:
-            loss.map { "\($0.drop.string(unit)) lost since its highest reading of the ride, now \(reading.pressure.string(unit))" } ?? ""
+            loss.map { tr("\($0.drop.string(unit)) lost since its highest reading of the ride, now \(reading.pressure.string(unit))") } ?? ""
         case .sensorAlarm:
-            "Read \(reading.pressure.string(unit)). A fall in temperature can raise it too."
+            tr("Read \(reading.pressure.string(unit)). A fall in temperature can raise it too.")
         }
     }
 }

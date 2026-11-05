@@ -47,7 +47,7 @@ struct ShareSensorsView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(shared.name).font(.headline)
                 ForEach(shared.sensors, id: \.id) { sensor in
-                    Text("\(sensor.location.name): \(sensor.id.asSensorId(sensor.brand))\(sensor.adjusts ? ", calibrated" : "")")
+                    Text(verbatim: "\(sensor.location.name): \(sensor.id.asSensorId(sensor.brand))" + (sensor.adjusts ? tr(", calibrated") : ""))
                         .font(.subheadline)
                 }
                 if sensors.count < all.count {

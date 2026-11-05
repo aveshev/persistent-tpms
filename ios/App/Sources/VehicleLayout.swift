@@ -27,7 +27,7 @@ struct ReadoutLines {
             ? reading?.batteryVoltage?.string ?? reading?.batteryPercent.map { "\($0)%" }
             : nil
         sensorId = isBasic == false && settings.showsSensorId
-            ? reading.map { $0.brand.isIdentifiedByAddress ? "No ID" : $0.sensorId.asSensorId($0.brand) }
+            ? reading.map { $0.brand.isIdentifiedByAddress ? tr("No ID") : $0.sensorId.asSensorId($0.brand) }
             : nil
         flags = isBasic == false && settings.showsSensorFlags
             ? reading.flatMap { AdvertisingPacket(bytes: $0.raw).statusBytes.map(Array.init) } ?? []
@@ -399,11 +399,11 @@ struct VehicleLayout {
     static func widestReading(_ unit: PressureUnit, isOutlined: Bool, size: CGFloat) -> CGFloat {
         let font = UIFont.systemFont(ofSize: size, weight: .semibold)
         let lines = max(
-            ((widestPressure[unit] ?? "") as NSString).size(withAttributes: [.font: font]).width,
+            ((widestPressure[unit.symbol] ?? "").replacingOccurrences(of: ".", with: AppLanguage.current.locale.decimalSeparator ?? ".") as NSString).size(withAttributes: [.font: font]).width,
             (widestDetail as NSString).size(withAttributes: [.font: font]).width
         )
         return isOutlined
-            ? max(lines, ("Tap to" as NSString).size(withAttributes: [.font: UIFont.systemFont(ofSize: size * ReadoutKind.tapToAssignScale, weight: .semibold)]).width)
+            ? max(lines, (tr("Tap to") as NSString).size(withAttributes: [.font: UIFont.systemFont(ofSize: size * ReadoutKind.tapToAssignScale, weight: .semibold)]).width)
             : lines
     }
 
@@ -418,8 +418,9 @@ struct VehicleLayout {
             ?? ""
     }
 
-    private static let widestPressure: [PressureUnit: String] = [
-        PressureUnit.kiloPascal: "1034 kPa*", .bar: "8.88 bar*", .psi: "88.8 psi*",
+    /// By the unit's symbol, which follows the language
+    private static let widestPressure: [String: String] = [
+        "kPa": "1034 kPa*", "кПа": "1034 кПа*", "bar": "8.88 bar*", "бар": "8.88 бар*", "psi": "88.8 psi*",
     ]
     .mapValues { widest([$0]) }
 
@@ -482,7 +483,9 @@ struct VehicleBounds: Equatable {
 /// Lays its only view out over the vehicle, as the Android app's ClearOfReadouts, covering no reading,
 /// whichever fits first:
 /// - between the axles, centered on its middle
-/// - in the room between the top bar and the vehicle, while the bar is over it
+/// - in the room under the vehicle, while the bar is over it. Extra lines on the rear's readouts can
+///   leave less room there than above it, between the bar and the vehicle, where it then goes rather
+///   than showing smaller.
 /// - in the room past the readings' end, under the bar's end corner, while the bar is beside it, or
 ///   the widest part of it a spare's readout leaves, as close to the middle as it gets there
 /// - between the axles still, raised to cover the front's lower lines rather than the rear's pressure
@@ -523,12 +526,18 @@ struct ClearOfReadouts: Layout {
         .withBottom(box.height - clearance)
         let besideObstacles = obstacles.filter { $0.intersects(beside) }
         let aimY = isBarOver == false && besideObstacles.isEmpty ? box.height / 2 : nil
+        // Under the vehicle at full size, then above it. Otherwise the widest room beside it.
         let rooms: [CGRect] = isBarOver
             ? [
+                CGRect(x: vehicle.minX, y: (readouts + bounds.frames).reduce(bounds.image) { $0.union($1) }.maxY + clearance, width: vehicle.width, height: 0)
+                    .withBottom(box.height - clearance),
+            ]
+            .filter { height <= $0.height }
+            + [
                 CGRect(x: vehicle.minX, y: bar.map(\.maxY).max() ?? 0, width: vehicle.width, height: 0)
                     .withBottom(readouts.reduce(bounds.image) { $0.union($1) }.minY - clearance),
             ]
-            : besideObstacles.isEmpty
+            : (besideObstacles.isEmpty
                 ? [beside]
                 : besideObstacles.flatMap { obstacle in
                     [
@@ -536,11 +545,11 @@ struct ClearOfReadouts: Layout {
                         beside.withTop(obstacle.maxY + clearance),
                         beside.withLeft(obstacle.maxX + clearance),
                     ]
-                }
-        // The widest room it fits in, at the largest size it fits there
+                })
+            .sorted { $0.width > $1.width }
+        // The first room it fits in, at the largest size it fits there
         let inRoom = rooms
             .filter { $0.width > 0 && $0.height > 0 && isClear($0) }
-            .sorted { $0.width > $1.width }
             .lazy
             .compactMap { room -> (CGRect, ProposedViewSize)? in
                 let proposal = ProposedViewSize(room.size)
