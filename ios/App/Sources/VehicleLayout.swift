@@ -118,6 +118,8 @@ struct VehicleLayout {
         let start: CGFloat
         let end: CGFloat
         let height: CGFloat
+        /// What's under the room at the screen's bottom, the home indicator
+        var bottomInset: CGFloat = 0
     }
 
     /// What's laid out, whatever the room
@@ -177,7 +179,7 @@ struct VehicleLayout {
         }
 
         /// As a share of the room's height, the image's, like VehicleSizing.imageHeight
-        func imageHeight(_ room: CGSize, corners: Corners?, size: CGFloat, atLeast: CGFloat = minImageHeight) -> CGFloat {
+        func imageHeight(_ room: CGSize, corners: Corners?, size: CGFloat, atLeast: CGFloat = minImageHeight, isAreaLimited: Bool = true) -> CGFloat {
             let between = room.width - (corners?.start ?? 0) - (corners?.end ?? 0)
             let sides = CGFloat(sides)
             let overlap = 1 - (1 - drawing.inset) / 2 * sides
@@ -190,8 +192,10 @@ struct VehicleLayout {
                     (room.width - corners.start - between / 2 - readoutWidth(size) - (spareBesideGap + slotWidth(size) + outlineOutset) - screenMargin) * 2 / overlap / perWidth
                 )
             }
-            height = min(height, (maxImageArea * max(between, 0) / (drawing.ratio * room.height)).squareRoot())
-            height = max(height, atLeast)
+            if isAreaLimited {
+                height = min(height, (maxImageArea * drawing.tallness * max(between, 0) / (drawing.ratio * room.height)).squareRoot())
+            }
+            height = max(height, atLeast * drawing.tallness)
             // Down to the spare's readout rather than to the image's bottom, see VehicleLayout's spareOverflow
             let most = spareRoom(size, corners: corners)
                 .map { (room.height - verticalMargin * 2 - $0) / (room.height * drawing.spareBottom) }
@@ -203,8 +207,11 @@ struct VehicleLayout {
     let textSize: CGFloat
     let slotWidth: CGFloat
     let image: CGRect
+    /// What its height would be without the maximum area, see isBesideBetter
+    let unlimitedImageHeight: CGFloat
     /// Where what's over the vehicle centers on, see VehicleDrawing.Middle, nil for the screen's middle
     let middleY: CGFloat?
+    let isSingleAxle: Bool
     let tyres: [TyreLocation: CGRect]
     let readouts: [TyreLocation: CGRect]
     /// Around a location's tyre and readout, of the locations outlined, and the spare when it's framed
@@ -231,6 +238,7 @@ struct VehicleLayout {
         let slot = content.slotWidth(size)
         let readoutWidth = content.readoutWidth(size)
         let share = max(0, content.imageHeight(room, corners: corners, size: size))
+        unlimitedImageHeight = room.height * max(0, content.imageHeight(room, corners: corners, size: size, atLeast: 0, isAreaLimited: false))
         let height = room.height * share, width = height * drawing.ratio
         let basic = ReadoutLines.basic.height * size
         // The image and its readouts are centered together, in what's between the corners
@@ -238,8 +246,12 @@ struct VehicleLayout {
         let oneSided: CGFloat = (hasLeft ? readoutWidth : 0) - readoutWidth
         let cornersShift: CGFloat = (corners?.start ?? 0) - (corners?.end ?? 0)
         let offsetX: CGFloat = (oneSided + cornersShift) / 2
-        let spareOverflow = max(0, (content.spareRoom(size, corners: corners) ?? 0) - height * (1 - drawing.spareBottom))
-        let image = CGRect(x: (room.width - width) / 2 + offsetX, y: (room.height - height) / 2 - spareOverflow / 2, width: width, height: height)
+        let spareOverflow = content.spareRoom(size, corners: corners).map { max(0, $0 - height * (1 - drawing.spareBottom)) } ?? 0
+        let centeredY = (room.height - height) / 2 - spareOverflow / 2
+        // In landscape only the home indicator takes room, at the bottom: down to the screen's middle
+        // as far as it stays above it
+        let towardsMiddle = min((corners?.bottomInset ?? 0) / 2, max(0, room.height - verticalMargin - centeredY - height))
+        let image = CGRect(x: (room.width - width) / 2 + offsetX, y: centeredY + towardsMiddle, width: width, height: height)
         let tyres: [TyreLocation: CGRect] = drawing.tyres.reduce(into: [:]) { rects, tyre in
             let long: CGFloat = drawing.tyreHeight * height
             let short: CGFloat = long * drawing.tyreRatio
@@ -344,6 +356,7 @@ struct VehicleLayout {
         case .at(let share): middleY = image.minY + share * height
         case .screen: middleY = nil
         }
+        isSingleAxle = drawing.isSingleAxle
     }
 
     /// The top bar goes beside the vehicle when that leaves it the tallest image, like Android's
@@ -351,7 +364,9 @@ struct VehicleLayout {
     /// and stay over the vehicle. This keeps what fits first, then the largest text.
     static func isBesideBetter(_ beside: VehicleLayout, than over: VehicleLayout) -> Bool {
         if beside.fits != over.fits { return beside.fits }
-        return beside.textSize != over.textSize ? beside.textSize > over.textSize : beside.image.height > over.image.height
+        // Without the maximum area, or a vehicle as wide as it's tall would have the bar over it in
+        // landscape: more area, but less height
+        return beside.textSize != over.textSize ? beside.textSize > over.textSize : beside.unlimitedImageHeight > over.unlimitedImageHeight
     }
 
     /// A line in the room between two readouts one above the other, like FitsText's separators,
@@ -389,7 +404,8 @@ struct VehicleLayout {
                     : frame)
             },
             image: moved(image),
-            middleY: middleY.map { $0 + origin.y }
+            middleY: middleY.map { $0 + origin.y },
+            isSingleAxle: isSingleAxle
         )
     }
 
@@ -469,6 +485,8 @@ struct VehicleBounds: Equatable {
     let image: CGRect
     /// Nil for the screen's middle
     let middleY: CGFloat?
+    /// Nothing goes between its axles
+    let isSingleAxle: Bool
 
     struct Key: PreferenceKey {
         static let defaultValue: VehicleBounds? = nil
@@ -481,7 +499,8 @@ struct VehicleBounds: Equatable {
 
 /// Lays its only view out over the vehicle, as the Android app's ClearOfReadouts, covering no reading,
 /// whichever fits first:
-/// - between the axles, centered on its middle
+/// - between the axles, centered on its middle, unless it has a single axle: there's nothing between
+///   its axles, it would cover the drawing. It then goes under the vehicle even with its text smaller.
 /// - in the room under the vehicle, while the bar is over it. Extra lines on the rear's readouts can
 ///   leave less room there than above it, between the bar and the vehicle, where it then goes rather
 ///   than showing smaller.
@@ -493,6 +512,9 @@ struct ClearOfReadouts: Layout {
     let bounds: VehicleBounds?
     /// The top bar: all across, or its end corner
     let bar: [CGRect]
+    /// What the home indicator takes under the box while the bar is beside the vehicle: it aims for the
+    /// screen's middle rather than the box's
+    let bottomInset: CGFloat
 
     private static let clearance: CGFloat = 8
 
@@ -524,14 +546,14 @@ struct ClearOfReadouts: Layout {
         )
         .withBottom(box.height - clearance)
         let besideObstacles = obstacles.filter { $0.intersects(beside) }
-        let aimY = isBarOver == false && besideObstacles.isEmpty ? box.height / 2 : nil
+        let aimY = isBarOver == false && besideObstacles.isEmpty ? (box.height + bottomInset) / 2 : nil
         // Under the vehicle at full size, then above it. Otherwise the widest room beside it.
         let rooms: [CGRect] = isBarOver
             ? [
                 CGRect(x: vehicle.minX, y: (readouts + bounds.frames).reduce(bounds.image) { $0.union($1) }.maxY + clearance, width: vehicle.width, height: 0)
                     .withBottom(box.height - clearance),
             ]
-            .filter { height <= $0.height }
+            .filter { bounds.isSingleAxle || height <= $0.height }
             + [
                 CGRect(x: vehicle.minX, y: bar.map(\.maxY).max() ?? 0, width: vehicle.width, height: 0)
                     .withBottom(readouts.reduce(bounds.image) { $0.union($1) }.minY - clearance),
@@ -564,7 +586,7 @@ struct ClearOfReadouts: Layout {
             .map(\.minY)
             .min()
             .map { between.offsetBy(dx: 0, dy: min($0 - clearance - between.maxY, 0)) }
-        let (placed, placedProposal) = isClear(between)
+        let (placed, placedProposal) = bounds.isSingleAxle == false && isClear(between)
             ? (between, ProposedViewSize(width: vehicle.width, height: nil))
             : inRoom ?? (raised ?? between, ProposedViewSize(width: vehicle.width, height: nil))
         subview.place(

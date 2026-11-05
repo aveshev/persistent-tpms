@@ -176,7 +176,7 @@ struct MainView: View {
             let barHeight = barHeight
             let barGaps = Self.besideTitleStart + Self.besideTitleEnd + Self.barPadding + barHeight
             let end = min(barTitleWidth, size.width * Self.barMaxEndShare - barGaps) + barGaps
-            let corners = VehicleLayout.Corners(start: 0, end: end, height: barHeight)
+            let corners = VehicleLayout.Corners(start: 0, end: end, height: barHeight, bottomInset: geometry.safeAreaInsets.bottom)
             let over = CGSize(width: size.width, height: size.height - barHeight)
             let isBeside = VehicleLayout.isBesideBetter(
                 VehicleLayout(content, room: size, corners: corners),
@@ -222,7 +222,7 @@ struct MainView: View {
             }
             .coordinateSpace(.named(VehicleBounds.space))
             .overlayPreferenceValue(VehicleBounds.Key.self) { bounds in
-                ClearOfReadouts(bounds: bounds, bar: [bar]) {
+                ClearOfReadouts(bounds: bounds, bar: [bar], bottomInset: isBeside ? geometry.safeAreaInsets.bottom : 0) {
                     // Never both: an alert to silence keeps the screen bright
                     if isDimmed { DimmedNotice() } else { SilenceAlertsButton(speaker: monitor.speaker) }
                 }
