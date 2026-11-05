@@ -76,8 +76,8 @@ public class AppPreferences internal constructor(
     }
 
     /**
-     * Switches the tyre scan to balanced after its first reading, as it used to, instead of keeping
-     * it at low latency the whole time it runs (main screen shown, or persistent scanning active)
+     * Switches the tyre scan to balanced after its first reading, as it used to, even while the app
+     * is visible, instead of following whether the app is visible: low latency if so, else balanced
      */
     public val balancedAfterFirstReading: MutableStateFlow<Boolean> = observableStateFlow(
         sharedPreferences.getBoolean("BALANCED_AFTER_FIRST_READING", false)
