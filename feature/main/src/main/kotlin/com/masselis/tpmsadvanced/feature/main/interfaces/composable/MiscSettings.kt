@@ -67,11 +67,8 @@ internal fun MiscSettings(
                 ?.let { listOf(it.joinToString(", "), "${it.first()} and more") }
                 .orEmpty()
                 .map(::AnnotatedString),
-            // Leaving the page with nothing selected turns the switch off, which only happens once
-            // the page is gone: shown that way from the start rather than as on with nothing to show
-            checked = debugOptions && selected.isNotEmpty(),
-            // Turned on without anything to show, the only sensible next step is to pick something.
-            // Leaving the page without doing so turns it off again.
+            checked = debugOptions,
+            // Turned on without anything to show, the only sensible next step is to pick something
             onCheckedChange = { enabled ->
                 viewModel.debugOptions.value = enabled
                 if (enabled && selected.isEmpty()) openDebug()

@@ -70,7 +70,7 @@ internal fun UnexpectedStopAlert(
 @Preview
 @Composable
 @Suppress("MagicNumber")
-private fun UnexpectedStopAlertPreview() = UnexpectedStopAlert(
+internal fun UnexpectedStopAlertPreview() = UnexpectedStopAlert(
     UnexpectedStop(System.currentTimeMillis() - 90 * MINUTE_IN_MILLIS, ForceStop),
     onDismissRequest = {},
     onLearnMore = {},
@@ -78,5 +78,5 @@ private fun UnexpectedStopAlertPreview() = UnexpectedStopAlert(
 
 @Preview
 @Composable
-private fun UnexpectedStopAlertUnknownPreview() =
+internal fun UnexpectedStopAlertUnknownPreview() =
     UnexpectedStopAlert(UnexpectedStop(null, Unknown), onDismissRequest = {}, onLearnMore = {})

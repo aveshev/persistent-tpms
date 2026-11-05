@@ -43,6 +43,7 @@ import com.masselis.tpmsadvanced.feature.background.usecase.BeaconDiscoveryUseCa
 import java.util.Locale
 import kotlin.math.ceil
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.microseconds
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -231,13 +232,16 @@ private fun ScanningItem(page: Page, onReload: () -> Unit) =
 
 private const val DISABLED_ALPHA = 0.38f
 
-/** "0.3 s", "0.02 s" or "0.005 s": 0.1 s steps unless shorter, so that a fast beacon isn't "0.0 s" */
+/**
+ * "0.3 s", "0.02 s" or "0.005 s": 0.1 s steps unless shorter, so that a fast beacon isn't "0.0 s". Chosen
+ * by what each rounds to, so that 99 ms is "0.1 s" rather than "0.10 s".
+ */
 @Suppress("MagicNumber")
 private fun Duration.asSeconds() = String.format(
     Locale.ROOT,
     when {
-        this >= 100.milliseconds -> "%.1f s"
-        this >= 10.milliseconds -> "%.2f s"
+        this >= 95.milliseconds -> "%.1f s"
+        this >= 9500.microseconds -> "%.2f s"
         else -> "%.3f s"
     },
     inWholeMicroseconds / 1_000_000.0,
