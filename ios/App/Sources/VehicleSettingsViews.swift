@@ -465,7 +465,7 @@ struct VehicleTemperatureSettingsView: View {
         let unit = settings.temperatureUnit
         let low = vehicle.lowTemp, high = vehicle.highTemp
         // The colours' and the alert levels' margins, in degrees of the displayed unit
-        let degrees = { (celsius: Float) in String(format: "%.0f %@", unit == .celsius ? celsius : celsius * 1.8, unit.symbol) }
+        let degrees = { (celsius: Float) in localizedNumber("%.0f %@", unit == .celsius ? celsius : celsius * 1.8, unit.symbol) }
         let half = max(0, (high.celsius - low.celsius) / 2)
         let fineStart = Temperature(celsius: low.celsius + min(Self.warmUp, half))
         let fineEnd = Temperature(celsius: high.celsius - min(AlertThresholds.amberTemperatureBelow, half))
@@ -553,7 +553,7 @@ struct VehicleBatterySettingsView: View {
                             range: 2...3,
                             // The sensors report their voltage in steps of 0.1 V
                             step: 0.1, unit: "V",
-                            format: { String(format: "%.1f", $0) },
+                            format: { localizedNumber("%.1f", $0) },
                             onConfirm: { value in monitor.update(vehicleId) { $0.lowBatteryVoltage = Voltage(volts: value) } }
                         )
                     } label: {
@@ -676,11 +676,11 @@ struct SensorCalibrationView: View {
                         title: tr("Multiplier"), value: calibration.multiplier,
                         range: 0.5...1.5,
                         step: 0.01, unit: "×",
-                        format: { String(format: "%.2f", $0) },
+                        format: { localizedNumber("%.2f", $0) },
                         onConfirm: { draft.draft.calibration.multiplier = $0 }
                     )
                 } label: {
-                    SettingsRow(tr("Multiplier"), String(format: "×%.2f", calibration.multiplier))
+                    SettingsRow(tr("Multiplier"), localizedNumber("×%.2f", calibration.multiplier))
                 }
             } header: {
                 Text("Correction")

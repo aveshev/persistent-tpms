@@ -50,3 +50,9 @@ public enum AppLanguage: String, CaseIterable, Identifiable, Sendable {
 public func tr(_ key: String.LocalizationValue) -> String {
     String(localized: key, bundle: AppLanguage.current.bundle)
 }
+
+/// A number in the chosen language's format. With the phone's language, that also follows its Number
+/// Format setting. `String(format:)` alone always writes a period.
+public func localizedNumber(_ format: String, _ arguments: CVarArg...) -> String {
+    String(format: format, locale: AppLanguage.current.locale, arguments: arguments)
+}

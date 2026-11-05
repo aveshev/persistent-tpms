@@ -399,7 +399,7 @@ struct VehicleLayout {
     static func widestReading(_ unit: PressureUnit, isOutlined: Bool, size: CGFloat) -> CGFloat {
         let font = UIFont.systemFont(ofSize: size, weight: .semibold)
         let lines = max(
-            ((widestPressure[unit] ?? "") as NSString).size(withAttributes: [.font: font]).width,
+            ((widestPressure[unit.symbol] ?? "").replacingOccurrences(of: ".", with: AppLanguage.current.locale.decimalSeparator ?? ".") as NSString).size(withAttributes: [.font: font]).width,
             (widestDetail as NSString).size(withAttributes: [.font: font]).width
         )
         return isOutlined
@@ -418,8 +418,9 @@ struct VehicleLayout {
             ?? ""
     }
 
-    private static let widestPressure: [PressureUnit: String] = [
-        PressureUnit.kiloPascal: "1034 kPa*", .bar: "8.88 bar*", .psi: "88.8 psi*",
+    /// By the unit's symbol, which follows the language
+    private static let widestPressure: [String: String] = [
+        "kPa": "1034 kPa*", "кПа": "1034 кПа*", "bar": "8.88 bar*", "бар": "8.88 бар*", "psi": "88.8 psi*",
     ]
     .mapValues { widest([$0]) }
 
