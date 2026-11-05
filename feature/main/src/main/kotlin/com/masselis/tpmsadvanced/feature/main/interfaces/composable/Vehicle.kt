@@ -121,9 +121,9 @@ private val VERTICAL_MARGIN = OUTLINE_OUTSET + SCREEN_MARGIN
  */
 private val PressureUnit.widestReadout: String
     get() = when (this) {
-        KILO_PASCAL -> "1034 kpa*"
-        BAR -> "8.88 bar*"
-        PSI -> "88.8 psi*"
+        KILO_PASCAL -> "1034 ${string()}*"
+        BAR -> "8.88 ${string()}*"
+        PSI -> "88.8 ${string()}*"
     }
 
 /** Widest plausible detail lines of a readout, see [TyreStat] */
