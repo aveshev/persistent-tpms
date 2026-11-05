@@ -73,7 +73,7 @@ struct TyreDetailView: View {
             ? "Pressure at or near the maximum, \(thresholds.highPressure.string(unit))"
             : "Pressure at or near the minimum, \(thresholds.lowPressure.string(unit))"
         case .temperature: "Temperature at or near the hot one, \(thresholds.highTemp.string(settings.temperatureUnit))"
-        case .battery: "Battery low"
+        case .battery: "Sensor battery low"
         case .pressureLoss: tyre.loss.loss.map { "Lost \($0.drop.string(unit)) since its highest reading of the ride" } ?? "Losing pressure"
         case .sensorAlarm: "The sensor reports a pressure drop. A fall in temperature can raise it too."
         }
