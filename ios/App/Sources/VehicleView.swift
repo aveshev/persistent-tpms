@@ -156,7 +156,7 @@ struct VehicleView: View {
     var body: some View {
         let blinks = move != nil || (isManaging == false && vehicle.kind.locations.contains { tyre($0)?.alerts.levels.values.contains { $0 >= .red } == true })
         // Fast enough for the blinking while something blinks, otherwise for the time since update
-        TimelineView(.periodic(from: .now, by: blinks ? 0.2 : 15)) { context in
+        TimelineView(.periodic(from: Blink.lastTick(before: Date()), by: blinks ? Blink.tick : 15)) { context in
             GeometryReader { geometry in
                 let content = VehicleLayout.Content(vehicle: vehicle, monitor: monitor, settings: settings, baseSize: baseSize, isManaging: isManaging, isMoving: move != nil, date: context.date)
                 let layout = VehicleLayout(content, room: geometry.size, corners: corners)
