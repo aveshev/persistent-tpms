@@ -14,6 +14,7 @@ struct MainView: View {
     @State private var magnifiedAt = Date()
     @State private var isDimmed = false
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @ScaledMetric(relativeTo: .body) private var baseSize: CGFloat = TyreReadout.baseSize
     /// The bar's text, as large as a .headline
     @ScaledMetric(relativeTo: .headline) private var headlineSize: CGFloat = 17
@@ -225,6 +226,12 @@ struct MainView: View {
                 ClearOfReadouts(bounds: bounds, bar: [bar], bottomInset: isBeside ? geometry.safeAreaInsets.bottom : 0) {
                     // Never both: an alert to silence keeps the screen bright
                     if isDimmed { DimmedNotice() } else { SilenceAlertsButton(speaker: monitor.speaker) }
+                }
+                // iOS hides its status bar there, in the corner the bar leaves empty
+                if isBeside, verticalSizeClass == .compact {
+                    LandscapeStatus(room: LandscapeStatus.room(in: size.width, of: bounds, barHeight: barHeight))
+                        .frame(height: barHeight)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 }
             }
             .overlay { magnified.map { magnifier(vehicle, $0) } }
