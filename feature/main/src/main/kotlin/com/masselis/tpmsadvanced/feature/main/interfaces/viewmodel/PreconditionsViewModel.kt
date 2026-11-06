@@ -11,4 +11,6 @@ internal class PreconditionsViewModel(
     fun requiredPermission() = bluetoothLeScanner.missingPermission()
 
     fun isBluetoothRequired() = bluetoothLeScanner.isBluetoothRequired
+
+    fun isLocationRequired() = bluetoothLeScanner.isLocationRequired
 }
