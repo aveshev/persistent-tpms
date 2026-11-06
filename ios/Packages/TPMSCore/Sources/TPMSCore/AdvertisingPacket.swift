@@ -118,7 +118,8 @@ public struct AdvertisingPacket {
         }
 
         // Bekubee TC.TPMS (AOOCCI), see RawBekubeeTcTpms.kt. The manufacturer data's first 2 bytes
-        // are a status byte and the battery in decivolts, then come °C, the pressure (absolute, in
+        // are a status byte (0x01 after the pressure rose, 0x02 after it fell, 0x00 steady) and the
+        // battery in decivolts, then come °C, the pressure (absolute, in
         // 0.1 psi, 146 at 0 psi) and the sensor's address, whose last 3 bytes are its ID
         if name == "TC.TPMS", serviceUUIDs16.contains(0xA828), let m = manufacturer, m.data.count >= 9 {
             let d = [UInt8](m.data)
@@ -153,7 +154,7 @@ public struct AdvertisingPacket {
         let a = [UInt8](bytes)
         if name == "BR" || name == "KY" { return a.count > 10 ? [a[10]] : nil }
         if name == "TPMS" { return manufacturer.map { [UInt8($0.companyId & 0xFF)] } }
-        // 0x01 with pressure, 0x02 without
+        // 0x01 after the pressure rose, 0x02 after it fell, 0x00 steady
         if name == "TC.TPMS" { return manufacturer.map { [UInt8($0.companyId & 0xFF)] } }
         if let m = manufacturer?.data, m.count > 15, m[m.startIndex + 1] == 0xEA, m[m.startIndex + 2] == 0xCA {
             return [m[m.startIndex + 15]]
