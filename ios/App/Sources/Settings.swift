@@ -23,6 +23,46 @@ final class Settings: ObservableObject {
         didSet { defaults.set(backgroundMonitoring, forKey: "backgroundMonitoring") }
     }
 
+    // MARK: Ride notification, off until turned on like the alerts' notifications
+
+    /// The switch over the triggers below, which keep their state while it's off
+    @Published var rideNotification: Bool {
+        didSet { defaults.set(rideNotification, forKey: "rideNotification") }
+    }
+
+    /// Never touched yet: turning it on for the first time also turns on what needs no setup
+    var isRideNotificationNew: Bool { defaults.object(forKey: "rideNotification") == nil }
+
+    /// Invites to open the app when a bound sensor is heard after a long gap
+    @Published var rideSensors: Bool {
+        didSet { defaults.set(rideSensors, forKey: "rideSensors") }
+    }
+
+    /// Invites to open the app when one of [rideBeaconDevices] comes back nearby
+    @Published var rideBeacon: Bool {
+        didSet { defaults.set(rideBeacon, forKey: "rideBeacon") }
+    }
+
+    @Published var rideBeaconDevices: [RideBeacon] {
+        didSet { defaults.set(try? JSONEncoder().encode(rideBeaconDevices), forKey: "rideBeaconDevices") }
+    }
+
+    /// The Shortcuts action invites to open the app. It's recorded as run either way.
+    @Published var rideShortcut: Bool {
+        didSet { defaults.set(rideShortcut, forKey: "rideShortcut") }
+    }
+
+    /// How long away from the vehicle before being heard again counts as back near it, shorter on the debug page to try it
+    @Published var rideAbsentFor: Double {
+        didSet { defaults.set(rideAbsentFor, forKey: "rideAbsentFor") }
+    }
+
+    /// How long after the last trigger an unopened notification counts as stale, shorter on the debug
+    /// page to try it
+    @Published var rideStaleAfter: Double {
+        didSet { defaults.set(rideStaleAfter, forKey: "rideStaleAfter") }
+    }
+
     enum Theme: String, CaseIterable, Identifiable {
         case system, light, dark
         var id: String { rawValue }
@@ -158,6 +198,18 @@ final class Settings: ObservableObject {
             ?? (region == "US" ? .fahrenheit : .celsius)
         alerts = defaults.bool(forKey: "alerts")
         backgroundMonitoring = defaults.object(forKey: "backgroundMonitoring") as? Bool ?? true
+        rideSensors = defaults.bool(forKey: "rideSensors")
+        rideBeacon = defaults.bool(forKey: "rideBeacon")
+        // A single device was kept before
+        rideBeaconDevices = defaults.data(forKey: "rideBeaconDevices").flatMap { try? JSONDecoder().decode([RideBeacon].self, from: $0) }
+            ?? defaults.data(forKey: "rideBeaconDevice").flatMap { try? JSONDecoder().decode(RideBeacon.self, from: $0) }.map { [$0] }
+            ?? []
+        rideShortcut = defaults.bool(forKey: "rideShortcut")
+        // Before this switch, turning a trigger on was enough
+        let isAnyTriggerOn = ["rideSensors", "rideBeacon", "rideShortcut"].contains { UserDefaults.standard.bool(forKey: $0) }
+        rideNotification = UserDefaults.standard.object(forKey: "rideNotification") as? Bool ?? isAnyTriggerOn
+        rideAbsentFor = defaults.object(forKey: "rideAbsentFor") as? Double ?? RideTriggers.defaultAbsentFor
+        rideStaleAfter = defaults.object(forKey: "rideStaleAfter") as? Double ?? RideTriggers.defaultStaleAfter
         theme = defaults.string(forKey: "theme").flatMap(Theme.init(rawValue:)) ?? .system
         readoutTextScale = defaults.object(forKey: "readoutTextScale") as? Double ?? 1
         magnifier = defaults.object(forKey: "magnifier") as? Bool ?? true
