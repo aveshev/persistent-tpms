@@ -24,17 +24,16 @@ public data class PressureCalibration(
         get() = hasOffset || hasMultiplier
 
     /**
-     * A pressure of 0, which is how a flat tyre is reported, is left as is so an [offset] never
-     * hides it. A correction below 0 is clamped to 0 for the same reason.
+     * Every pressure is corrected, 0 included: a sensor off its tyre reads [offset], like the
+     * calibration says it should. A flat tyre still shows far below the low pressure alarm. A
+     * correction below 0 is clamped to 0.
      */
     public fun applyTo(pressure: Pressure): Pressure = pressure
-        .takeIf { it.hasPressure() }
-        ?.kpa
-        ?.times(multiplier)
-        ?.plus(offset.kpa)
-        ?.coerceAtLeast(0f)
-        ?.kpa
-        ?: pressure
+        .kpa
+        .times(multiplier)
+        .plus(offset.kpa)
+        .coerceAtLeast(0f)
+        .kpa
 
     private companion object {
         /** Far below the finest displayed pressure, 1 kPa */
