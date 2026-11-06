@@ -10,8 +10,9 @@ import UIKit
 /// through state restoration, but not after the user swiped it away or after a reboot.
 final class Scanner: NSObject, CBCentralManagerDelegate {
 
-    /// Pecham and Bekubee KY (0x27A5), Wicarlink and Sysgration (0xFBB0), Bekubee TPMS (0xA827)
-    static let services = ["27A5", "FBB0", "A827"].map { CBUUID(string: $0) }
+    /// Pecham and Bekubee KY (0x27A5), Wicarlink and Sysgration (0xFBB0), Bekubee TPMS (0xA827),
+    /// Bekubee TC.TPMS (0xA828)
+    static let services = ["27A5", "FBB0", "A827", "A828"].map { CBUUID(string: $0) }
 
     var onAdvertisement: ((_ packet: AdvertisingPacket, _ peripheral: UUID, _ rssi: Int) -> Void)?
     var onState: ((CBManagerState) -> Void)?

@@ -66,7 +66,7 @@ public enum QrCodeResult: Hashable, Sendable {
 
     // A code is its index in these, the same as Android's: only ever append to them
     private static let kinds: [VehicleKind] = [.car, .singleAxleTrailer, .motorcycle, .tadpoleThreeWheeler, .deltaThreeWheeler, .carWithSpare, .monowheel]
-    private static let brands: [SensorBrand] = [.pecham, .bekubeeKy, .wicarlink, .bekubeeTpms, .sysgration]
+    private static let brands: [SensorBrand] = [.pecham, .bekubeeKy, .wicarlink, .bekubeeTpms, .sysgration, .bekubeeTcTpms]
     private static let locations: [TyreLocation] = [
         .wheel(.frontLeft), .wheel(.frontRight), .wheel(.rearLeft), .wheel(.rearRight),
         .axle(.front), .axle(.rear), .side(.left), .side(.right), .spare, .single,
