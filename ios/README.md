@@ -19,6 +19,8 @@ as the Android tests.
   - `Database`: SQLite in the Android app's `car.db` schema (version 12, `12.db`), so a database
     opens in either app.
   - `BurstFilter`: only the first copy of a sensor's burst goes through, like Android's.
+  - `OngoingAlerts`: the red and critical alerts going on, what the vehicle menu blinks for, like
+    Android's `AlertSpeaker.ongoing`. `Blink`: the blinking elements' phases, like `Blink.kt`.
 - `App/Sources`: the app.
   - `Scanner`: CoreBluetooth, in the foreground and the background.
   - `Monitor`: the app's state, what's received, stored and alerted on.
@@ -69,8 +71,11 @@ The settings and menus follow Android's, screen by screen:
   while critical, an asterisk on a calibrated pressure). Tap to magnify a tyre's readout, long press
   for its sensor and readings. "Tap to assign" outlines on the tyres without a sensor. The silence
   button while an alert sound plays.
-- **Vehicle menu**: switching, a warning on the vehicles alerting, adding a vehicle. Its kind is
-  chosen when adding it, like on Android.
+- **Vehicle menu**: switching, adding a vehicle, its kind chosen when adding it, like on Android. A
+  red disc blinks behind its arrow while another vehicle has a red or critical alert, and the list's
+  alerting names blink red, see [docs/alerts.md](../docs/alerts.md). A popover rather than a `Menu`,
+  whose lines can't blink. Nothing dismisses an alert here, so one stops counting 30 minutes after
+  its sensor's last reading.
 - **Gear menu**: Vehicle settings, Persistent mode, App settings, and in debug builds with the debug
   options on, Simulate a reading (shown and alerted on, not stored).
 - **Vehicle settings**: Pressure (front, rear, spare), Temperature and Battery, each on its own page
@@ -82,7 +87,7 @@ The settings and menus follow Android's, screen by screen:
   following the pressure as it's put on the wheel, taken off and put back.
 - **App settings**:
   - Display: theme, readings text size (on top of Dynamic Type), tap to magnify and for how long, dim
-    when idle (the brightness divided, darkened over the content at the lowest brightness already, the
+    when idle (black over the content, the status bar and home indicator hidden, the brightness left to iOS, the
     proximity sensor turning the screen off in a pocket). Like on Android, the phone doesn't lock
     itself while the main screen is shown.
   - Readings: units, time since last update with its details, battery.
@@ -144,5 +149,9 @@ The main screen's layout can be checked without a Simulator or a phone, as Mac C
 copy of `project.yml` with `SUPPORTS_MACCATALYST: YES` under another name, build it for
 `platform=macOS,variant=Mac Catalyst`, and run the app's binary with `-demo` and either `-layoutcheck`
 (prints each vehicle kind's text and image sizes, `MISFIT` where something overlaps) or
-`-kind CAR -textscale 3.1176 -render out.png` (`-landscape`, `-unassigned`, `-screen manage`). Catalyst ignores
+`-kind CAR -textscale 3.1176 -render out.png` (`-landscape`, `-unassigned`, `-screen manage`,
+`-otheralert red|crimson`). Catalyst ignores
 Dynamic Type, so `-textscale` stands for it, 0.8235 for its smallest size and 3.1176 for its largest.
+
+`python3 ios/compare_strings.py`, from the repository's root, lists the text that differs from the
+Android app on `origin/develop`: non-breaking spaces, other wordings, what only one app has.

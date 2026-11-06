@@ -88,7 +88,9 @@ internal fun Modifier.reportsImage(): Modifier = LocalVehicleBounds.current
  * as the room beside them, and as tall as its content wants at that width. Covering no reading,
  * whichever fits first:
  * - between the axles, centered on its middle
- * - in the room between the top bar and the vehicle, while the bar is over it (taller screens)
+ * - in the room under the vehicle, while the bar is over it (taller screens), the vehicle being
+ *   centered under the bar. Extra lines on the rear's readouts can leave less room there than above
+ *   it, between the bar and the vehicle, where it then goes rather than showing smaller.
  * - in the room past the readings' end, under the bar's end corner, while the bar is beside it
  *   (wider screens), or the widest part of it a spare's readout leaves, as close to the window's
  *   vertical middle as it gets there. Its text is made smaller, down to [TEXT_SCALES]' smallest,
@@ -162,14 +164,22 @@ internal fun ClearOfReadouts(
         // it. Beside a spare's readout, it's centered in what that leaves.
         val aimY = (windowHeight / 2f - origin.y).takeIf { isBarOver.not() && besideObstacles.isEmpty() }
         val inRoom = if (isBarOver) {
-            // Between the bar and the vehicle, as wide as the readings
-            Rect(
-                left = vehicle.left,
-                // The bar's height leaves room around what's in it already
-                top = bounds.bar.maxOfOrNull { it.bottom } ?: 0f,
-                right = vehicle.right,
-                bottom = readouts.values.fold(image, Rect::union).top - clearance,
-            ).let(::listOf)
+            // Under the vehicle, then between the bar and the vehicle, as wide as the readings
+            listOfNotNull(
+                Rect(
+                    left = vehicle.left,
+                    top = (readouts.values + frames).fold(image, Rect::union).bottom + clearance,
+                    right = vehicle.right,
+                    bottom = height - clearance,
+                ).takeIf { heightAt(full, it.width) <= it.height },
+                Rect(
+                    left = vehicle.left,
+                    // The bar's height leaves room around what's in it already
+                    top = bounds.bar.maxOfOrNull { it.bottom } ?: 0f,
+                    right = vehicle.right,
+                    bottom = readouts.values.fold(image, Rect::union).top - clearance,
+                ),
+            )
         } else {
             // Beside, or the parts what's there leaves
             besideObstacles

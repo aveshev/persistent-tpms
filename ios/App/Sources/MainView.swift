@@ -13,6 +13,7 @@ struct MainView: View {
     @State private var magnified: TyreLocation?
     @State private var magnifiedAt = Date()
     @State private var isDimmed = false
+    @State private var isVehicleListOpen = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @ScaledMetric(relativeTo: .body) private var baseSize: CGFloat = TyreReadout.baseSize
@@ -92,7 +93,7 @@ struct MainView: View {
             }
         }
         // Over the top bar too, whose taps would go through otherwise
-        .modifier(DimWhenIdle(monitor: monitor, settings: settings, isShown: scenePhase == .active && selected == nil && sheet == nil && assigning == nil, barHeight: barHeight, isDimmed: $isDimmed))
+        .modifier(DimWhenIdle(monitor: monitor, settings: settings, isShown: scenePhase == .active && selected == nil && sheet == nil && assigning == nil && isVehicleListOpen == false, barHeight: barHeight, isDimmed: $isDimmed))
     }
 
     /// A tyre's readout in a large font, easy to read on a rough road, like the Android app's
@@ -279,30 +280,99 @@ struct MainView: View {
         .accessibilityLabel("Settings")
     }
 
-    /// The current vehicle's name, switching to another one, like CurrentVehicleDropdown
+    /// The current vehicle's name, switching to another one, like CurrentVehicleDropdown. A popover
+    /// rather than a `Menu`, whose lines can't blink and which doesn't tell it's open.
     private var vehicleMenu: some View {
-        Menu {
-            ForEach(monitor.vehicles) { vehicle in
-                Button {
-                    monitor.setCurrent(vehicle)
-                } label: {
-                    if vehicle.isCurrent {
-                        Label(vehicle.name, systemImage: "checkmark")
-                    } else if monitor.isAlerting(vehicle.id) {
-                        Label(vehicle.name, systemImage: "exclamationmark.triangle.fill")
-                    } else {
-                        Text(vehicle.name)
-                    }
-                }
-            }
-            Divider()
-            Button("Add a vehicle", systemImage: "plus") { sheet = .addVehicle }
+        Button {
+            isVehicleListOpen = true
         } label: {
             HStack(spacing: 4) {
                 Text(monitor.current?.name ?? "Persistent TPMS").font(.system(size: barTitleSize, weight: .semibold)).lineLimit(1)
-                Image(systemName: "chevron.down").font(.system(size: barTitleSize * 12 / 17, weight: .semibold))
+                vehicleMenuArrow
             }
             .foregroundStyle(Theme.onBackground)
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $isVehicleListOpen, arrowEdge: .top) {
+            ViewThatFits(in: .vertical) {
+                vehicleList
+                ScrollView { vehicleList }
+            }
+            .presentationCompactAdaptation(.popover)
+        }
+    }
+
+    /// Every alerting vehicle's name blinks red at its own worst level's pace, the one shown included
+    private var vehicleList: some View {
+        let isBlinking = monitor.vehicles.contains { monitor.ongoing.worst(of: $0.id, now: Date()) != nil }
+        return TimelineView(.periodic(from: Blink.lastTick(before: Date()), by: isBlinking ? Blink.tick : 15)) { context in
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(monitor.vehicles) { vehicle in
+                    let isOn = monitor.ongoing.worst(of: vehicle.id, now: context.date)?.blink?.isFirstPhase(context.date) ?? false
+                    vehicleListLine(systemImage: vehicle.isCurrent ? "checkmark" : nil) {
+                        monitor.setCurrent(vehicle)
+                        isVehicleListOpen = false
+                    } title: {
+                        Text(vehicle.name).foregroundStyle(isOn ? Theme.error : Theme.onBackground)
+                    }
+                }
+                Divider()
+                vehicleListLine(systemImage: "plus") {
+                    isVehicleListOpen = false
+                    // A sheet asked for while the popover is still leaving wouldn't show
+                    Task { @MainActor in
+                        try? await Task.sleep(for: .seconds(0.4))
+                        sheet = .addVehicle
+                    }
+                } title: {
+                    Text("Add a vehicle").foregroundStyle(Theme.onBackground)
+                }
+            }
+            .frame(minWidth: 220, alignment: .leading)
+            .padding(.vertical, 4)
+        }
+    }
+
+    private func vehicleListLine(systemImage: String?, action: @escaping () -> Void, @ViewBuilder title: () -> some View) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                // Its room kept, for the names to line up
+                Image(systemName: systemImage ?? "checkmark")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Theme.onBackground)
+                    .opacity(systemImage == nil ? 0 : 1)
+                    .accessibilityHidden(systemImage == nil)
+                title()
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 16)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Another vehicle alerting is told before the list is opened, by a red disc behind the arrow, in
+    /// sync with the tyres and as fast as they blink for it, not while the list is open. Drawn behind
+    /// the arrow, nothing moves while it blinks.
+    private var vehicleMenuArrow: some View {
+        let shown = monitor.current?.id
+        let isBlinking = monitor.ongoing.worst(otherThan: shown, now: Date()) != nil
+        return TimelineView(.periodic(from: Blink.lastTick(before: Date()), by: isBlinking ? Blink.tick : 15)) { context in
+            let isOn = isVehicleListOpen == false
+                && monitor.ongoing.worst(otherThan: shown, now: context.date)?.blink?.isFirstPhase(context.date) == true
+            Image(systemName: "chevron.down")
+                .font(.system(size: barTitleSize * 12 / 17, weight: .semibold))
+                .foregroundStyle(isOn ? Color.white : Theme.onBackground)
+                // Under what barTitleWidth counts for it, which would otherwise be a tight fit for the name
+                .frame(width: barTitleSize * 15 / 17)
+                .background {
+                    if isOn {
+                        Circle()
+                            .fill(Theme.error)
+                            .frame(width: barTitleSize * 20 / 17, height: barTitleSize * 20 / 17)
+                    }
+                }
         }
     }
 
@@ -353,24 +423,55 @@ private struct SilenceAlertsButton: View {
 
     var body: some View {
         Group {
-            if let silence = speaker.silence {
-                Button { speaker.unmute() } label: {
-                    Label(silence.level == .crimson ? "All alerts silenced" : "Alerts silenced", systemImage: "speaker.slash.fill")
-                }
-                .tint(Theme.onBackground.opacity(0.3))
-            } else if let level = speaker.level {
+            switch SilenceButton.of(highest: speaker.level, silence: speaker.silence) {
+            case .idle:
+                EmptyView()
+            case let .offer(isCritical):
                 Button { speaker.silenceNow() } label: {
-                    Label("Silence \(level == .crimson ? "critical alerts" : "alerts") for 10 min", systemImage: "speaker.wave.2.fill")
+                    // Wrapped to the width it's given, "for 10 min" kept together
+                    Label("Silence \(isCritical ? "critical alerts" : "alerts") for\u{00A0}10\u{00A0}min", systemImage: "speaker.wave.2.fill")
                 }
                 .tint(Theme.error)
+            case let .silenced(isCritical, until):
+                // The speaker only drops an ended silence at its next reading. Nothing's left to
+                // silence by then, what it dropped isn't kept, so the button just goes away.
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    let minutesLeft = SilenceButton.minutesLeft(until: until, now: context.date)
+                    if minutesLeft > 0 {
+                        Button { speaker.unmute() } label: {
+                            Label {
+                                VStack(spacing: 2) {
+                                    Text(isCritical ? "All alerts silenced" : "Alerts silenced")
+                                    Text("\(minutesLeft) min left, tap to unmute")
+                                        .font(.callout)
+                                }
+                            } icon: {
+                                Image(systemName: "speaker.slash.fill")
+                            }
+                        }
+                        .tint(Theme.onBackground.opacity(0.3))
+                    }
+                }
             }
         }
         .buttonStyle(.borderedProminent)
         .buttonBorderShape(.capsule)
+        .labelStyle(IconCenteredLabelStyle())
         .font(.title3.weight(.semibold))
+        .multilineTextAlignment(.center)
         .lineLimit(1...2)
         .minimumScaleFactor(0.6)
         .controlSize(.large)
+    }
+}
+
+/// Its icon centered against all of its text's lines, a Label's stays on the first line's baseline
+private struct IconCenteredLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 12) {
+            configuration.icon
+            configuration.title
+        }
     }
 }
 
