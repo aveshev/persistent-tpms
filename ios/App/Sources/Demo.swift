@@ -31,6 +31,17 @@ enum Demo {
     }
 
     #if DEBUG
+    /// `-otheralert red|crimson` has a vehicle other than the one shown alerting, to see the vehicle
+    /// menu blink, without a reading and so without a sound
+    static func ongoingAlerts(_ vehicles: [Vehicle]) -> OngoingAlerts {
+        guard let level = argument("-otheralert").flatMap({ ["red": AlertLevel.red, "crimson": .crimson][$0] }),
+              let other = vehicles.first(where: { $0.isCurrent == false }),
+              let location = other.kind.locations.first
+        else { return OngoingAlerts() }
+        // Far ahead, for as long as it's looked at
+        return OngoingAlerts().next(.init(vehicleId: other.id, location: location), levels: [.pressure: level], at: Date().timeIntervalSince1970 + 24 * 3600)
+    }
+
     /// Renders the main screen into the file `-render <path>`, in the room an iPhone's safe area leaves
     /// (`-landscape`, or portrait), then quits. Runs without a Simulator as Mac Catalyst, see README.md:
     /// it's the same SwiftUI and fonts, in a plain window. One a launch: `textScale` is read as views

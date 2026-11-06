@@ -32,6 +32,8 @@ final class Monitor: ObservableObject {
     @Published private(set) var vehicles: [Vehicle] = []
     @Published private(set) var sensors: [BoundSensor] = []
     @Published private(set) var tyres: [TyreKey: Tyre] = [:]
+    /// What the vehicle menu blinks for
+    @Published private(set) var ongoing = OngoingAlerts()
     @Published private(set) var nearby: [Int: Nearby] = [:]
     @Published private(set) var bluetooth: CBManagerState = .unknown
     @Published private(set) var error: String?
@@ -65,13 +67,10 @@ final class Monitor: ObservableObject {
     func isAlerting(_ vehicleId: UUID? = nil, now: Date = Date()) -> Bool {
         tyres.contains { key, tyre in
             (vehicleId == nil || key.vehicleId == vehicleId)
-                && tyre.latest.map { now.timeIntervalSince1970 - $0.timestamp < Self.alertHeldFor } == true
+                && tyre.latest.map { now.timeIntervalSince1970 - $0.timestamp < OngoingAlerts.heldFor } == true
                 && tyre.alerts.levels.contains { $0.key != .battery && $0.value >= .red }
         }
     }
-
-    /// How long an alert keeps counting after its sensor's last reading
-    private static let alertHeldFor: TimeInterval = 30 * 60
 
     /// Opens the database and starts the scan. Called at launch, also when iOS relaunches the app
     /// in the background for a sensor it was scanning for.
@@ -84,6 +83,9 @@ final class Monitor: ObservableObject {
                 let around = try Demo.seed(database)
                 self.database = database
                 reload()
+                #if DEBUG
+                ongoing = Demo.ongoingAlerts(vehicles)
+                #endif
                 nearby = Dictionary(uniqueKeysWithValues: around.map { ($0.sensorId, Nearby(reading: $0, lastSeen: Date(timeIntervalSince1970: $0.timestamp))) })
                 bluetooth = .poweredOn
             } catch {
@@ -119,6 +121,7 @@ final class Monitor: ObservableObject {
             scanner.stop()
             // No reading could clear their alerts any more
             speaker.stopAll()
+            ongoing = OngoingAlerts()
         }
     }
 
@@ -127,6 +130,7 @@ final class Monitor: ObservableObject {
         settings.demoMode = enabled
         scanner.stop()
         speaker.stopAll()
+        ongoing = OngoingAlerts()
         notifier.clearAll()
         database = nil
         nearby = [:]
@@ -183,6 +187,7 @@ final class Monitor: ObservableObject {
                 }
             }
             self.tyres = tyres
+            ongoing = ongoing.reevaluated { tyres[TyreKey(vehicleId: $0.vehicleId, location: $0.location)]?.alerts.notifiable }
             error = nil
         } catch {
             self.error = "\(error)"
@@ -230,6 +235,7 @@ final class Monitor: ObservableObject {
         tyre.loss = tyre.loss.next(reading)
         tyre.alerts = tyre.alerts.next(reading, vehicle.thresholds(location), warnedLoss(tyre))
         tyres[key] = tyre
+        ongoing = ongoing.next(OngoingAlerts.Tyre(vehicleId: vehicle.id, location: location), levels: tyre.alerts.notifiable, at: reading.timestamp)
         speaker.update(tag: "\(vehicle.id)-\(location.code)", levels: tyre.alerts.notifiable)
         if settings.alerts {
             notifier.update(vehicle: vehicle, location: location, alerts: tyre.alerts, loss: warnedLoss(tyre), settings: settings)
