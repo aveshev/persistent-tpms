@@ -1,0 +1,52 @@
+name: iOS
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - ios/**
+      - .github/workflows/ios.yml
+  pull_request:
+    branches:
+      - develop
+    paths:
+      - ios/**
+      - .github/workflows/ios.yml
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and test iOS
+    runs-on: macos-15
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v7
+
+      - name: Test the package without UI
+        working-directory: ios/Packages/TPMSCore
+        run: swift test
+
+      - name: Generate the Xcode project
+        working-directory: ios
+        run: |
+          brew install xcodegen
+          xcodegen generate
+
+      # Unsigned: nothing here has an Apple account, and only whether it compiles matters
+      - name: Build the app
+        working-directory: ios
+        run: >
+          xcodebuild
+          -project PersistentTPMS.xcodeproj
+          -scheme PersistentTPMS
+          -destination 'generic/platform=iOS'
+          -derivedDataPath build
+          CODE_SIGNING_ALLOWED=NO
+          build
