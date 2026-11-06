@@ -21,4 +21,6 @@ dependencies {
     api(libs.kotlinx.coroutines.android)
     api(platform(libs.google.firebase.bom))
     api(platform(libs.androidx.compose.bom))
+
+    testImplementation(project(":core:test"))
 }

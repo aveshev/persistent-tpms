@@ -57,4 +57,4 @@ public fun DimmedNotice(modifier: Modifier = Modifier): Unit = Surface(
 
 @Preview
 @Composable
-private fun DimmedNoticePreview() = DimmedNotice()
+internal fun DimmedNoticePreview() = DimmedNotice()

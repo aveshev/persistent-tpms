@@ -119,7 +119,7 @@ private val VERTICAL_MARGIN = OUTLINE_OUTSET + SCREEN_MARGIN
  */
 private val PressureUnit.widestReadout: String
     get() = when (this) {
-        KILO_PASCAL -> "1034 kpa*"
+        KILO_PASCAL -> "1034 kPa*"
         BAR -> "8.88 bar*"
         PSI -> "88.8 psi*"
     }
@@ -161,7 +161,11 @@ private val SPARE_BOTTOM = SPARE_Y + SPARE_HALF_HEIGHT
 
 /** Width of the vehicle's image over its height */
 private val Kind.imageRatio: Float
-    get() = if (this == Kind.CAR_WITH_SPARE) SPARE_CAR_IMAGE_RATIO else IMAGE_RATIO
+    get() = when (this) {
+        Kind.CAR_WITH_SPARE -> SPARE_CAR_IMAGE_RATIO
+        Kind.MONOWHEEL -> MONOWHEEL_IMAGE_RATIO
+        else -> IMAGE_RATIO
+    }
 
 /** Height of a tyre as a fraction of the image height, but a mono-wheel's, see [MONOWHEEL_TYRE_HEIGHT] */
 private val Kind.tyreHeight: Float
@@ -179,8 +183,19 @@ private val SPARE_LINE_CLEARANCE = 6.dp
 
 
 /** A monowheel's tyre is drawn much taller and narrower than the others, its width following [MONOWHEEL_TYRE_RATIO] */
-private const val MONOWHEEL_TYRE_HEIGHT = .377f
+private const val MONOWHEEL_TYRE_HEIGHT = .726f
 private const val MONOWHEEL_TYRE_RATIO = 11.2f / 52f
+
+/** Its image is cropped to its drawing, a vehicle with no length */
+private const val MONOWHEEL_IMAGE_RATIO = 625f / 720f
+
+/**
+ * How narrow its image is, 1 for the tall ones. A vehicle looks fine filling the screen's height when
+ * it's tall, too large when it's as wide as it's tall: [MAX_IMAGE_AREA] and [MIN_IMAGE_HEIGHT] shrink
+ * with this, the minimum keeping the image as wide as the tall ones'.
+ */
+private val Kind.tallness: Float
+    get() = (IMAGE_RATIO / imageRatio).coerceAtMost(1f)
 
 /** Distance between the centers of a vehicle's outermost tyres, as a fraction of the image width */
 private const val CAR_TRACK = .74f
@@ -280,7 +295,12 @@ public fun CurrentVehicle(
                     },
                 )
             }
-            ClearOfReadouts(bounds, Modifier.fillMaxSize(), overlay)
+            ClearOfReadouts(
+                bounds = bounds,
+                isSingleAxle = component.vehicle.kind in listOf(Kind.MONOWHEEL, Kind.SINGLE_AXLE_TRAILER),
+                modifier = Modifier.fillMaxSize(),
+                content = overlay,
+            )
         }
     }
 }
@@ -403,6 +423,7 @@ internal class VehicleSizing(
         /** See [Vehicle]'s */
         corners: Pair<Dp, Dp>?,
         atLeast: Float = MIN_IMAGE_HEIGHT,
+        maxArea: Float = MAX_IMAGE_AREA * kind.tallness,
     ): Float {
         val (start, end) = corners ?: (0.dp to 0.dp)
         // Between the corners, where the vehicle's top is
@@ -427,8 +448,8 @@ internal class VehicleSizing(
                     ?: Float.MAX_VALUE
             )
             // (imageHeight * maxHeight)² * imageRatio <= MAX_IMAGE_AREA * between * maxHeight
-            .coerceAtMost(sqrt(MAX_IMAGE_AREA * between.value.coerceAtLeast(0f) / (kind.imageRatio * maxHeight.value)))
-            .coerceAtLeast(atLeast)
+            .coerceAtMost(sqrt(maxArea * between.value.coerceAtLeast(0f) / (kind.imageRatio * maxHeight.value)))
+            .coerceAtLeast(atLeast * kind.tallness)
             // Down to the spare's readout rather than to the image's bottom, see Vehicle's offset
             .coerceAtMost(
                 spareRoom(corners)
@@ -1298,8 +1319,14 @@ private fun Monowheel(
 ) {
     ConstraintLayout(modifier = modifier) {
         val (vehicleImage, tyre, stats, tap) = createRefs()
-        VehicleImage(vehicleImage, R.drawable.schema_monowheel_top_view, "Image of your monowheel", imageHeight)
-        val wheelY = .505f
+        VehicleImage(
+            vehicleImage,
+            R.drawable.schema_monowheel_top_view,
+            "Image of your monowheel",
+            imageHeight,
+            MONOWHEEL_IMAGE_RATIO,
+        )
+        val wheelY = .51f
         val axle = imageGuideline(wheelY, imageHeight)
         with(Location.Single) {
             Tyre(
@@ -1346,7 +1373,7 @@ private fun Monowheel(
         }
         // Last, over everything else, above the wheel rather than over it
         createRef().also { ref ->
-            val above = imageGuideline(.2f, imageHeight)
+            val above = imageGuideline(0f, imageHeight)
             center(
                 Modifier.constrainAs(ref) {
                     centerHorizontallyTo(vehicleImage)
