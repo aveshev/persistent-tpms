@@ -35,6 +35,9 @@ internal abstract class OpenBackMergePullRequest : DefaultTask() {
     abstract val githubToken: Property<String>
 
     @get:Input
+    abstract val repository: Property<String>
+
+    @get:Input
     abstract val source: Property<String>
 
     @get:Input
@@ -49,7 +52,7 @@ internal abstract class OpenBackMergePullRequest : DefaultTask() {
     @TaskAction
     internal fun process() = curl(
         "-X", "POST",
-        "https://api.github.com/repos/VincentMasselis/TPMS-advanced/pulls",
+        "https://api.github.com/repos/${repository.get()}/pulls",
         "-d",
         JsonObject(
             mapOf(
@@ -81,8 +84,8 @@ internal abstract class OpenBackMergePullRequest : DefaultTask() {
                 errorMessages.any { "A pull request already exists" in it } ->
                     curl(
                         "-X", "GET",
-                        "https://api.github.com/repos/VincentMasselis/TPMS-advanced/pulls" +
-                                "?head=VincentMasselis:${source.get()}&base=${target.get()}&state=open",
+                        "https://api.github.com/repos/${repository.get()}/pulls" +
+                                "?head=${repository.get().substringBefore('/')}:${source.get()}&base=${target.get()}&state=open",
                     ).let { Json.decodeFromString<JsonArray>(it) }
                         .let { prSearchResponse ->
                             prSearchResponse.singleOrNull()

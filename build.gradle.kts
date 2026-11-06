@@ -33,6 +33,7 @@ keys(keysFile.asFile)?.also { keys ->
     apply<GithubPlugin>()
     configure<GithubExtension> {
         githubToken = keys.githubToken
+        repository = "aveshev/persistent-tpms"
         currentReleaseTag = gitflow.currentReleaseTag
         lastReleaseCommitSha = gitflow.lastReleaseCommitSha
         backMergeSource = gitflow.mainBranch
