@@ -335,7 +335,8 @@ internal class BluetoothLeScannerImpl(
             RawPecham.SERVICE_UUID,
             RawWicarlink.SERVICE_UUID,
             RawBekubeeKy.SERVICE_UUID,
-            RawBekubeeTpms.SERVICE_UUID
+            RawBekubeeTpms.SERVICE_UUID,
+            RawBekubeeTcTpms.SERVICE_UUID,
         )
         private val FILTERS = SERVICE_UUIDS.map { ScanFilter.Builder().setServiceUuid(it).build() }
 

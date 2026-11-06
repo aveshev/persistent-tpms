@@ -52,6 +52,16 @@ internal class DeepLinkTest {
     }
 
     @Test
+    fun openWithoutPath() = test(uri = Uri.parse("tpmsadvanced://vehicle")).use {
+        composeTestRule.home {}
+    }
+
+    @Test
+    fun openNotAnUuid() = test(uri = Uri.parse("tpmsadvanced://vehicle/not-a-uuid")).use {
+        composeTestRule.home {}
+    }
+
+    @Test
     fun openCurrentAndOpenNewVehicle() {
         val currentName = database.vehicleQueries.currentFavourite().asOne().execute().name
         test(uri = null).use {

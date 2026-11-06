@@ -21,6 +21,7 @@ public class GithubPlugin : Plugin<Project> {
             project.tasks.register<CreateRelease>("createGithubPreRelease") {
                 dependsOn("tagCommitWithCurrentVersion")
                 githubToken = ext.githubToken
+                repository = ext.repository
                 tagName = ext.currentReleaseTag
                 lastReleaseCommitSha = ext.lastReleaseCommitSha
                 preRelease = true
@@ -28,12 +29,14 @@ public class GithubPlugin : Plugin<Project> {
         val upsertGithubRelease = project.tasks.register<CreateRelease>("createGithubRelease") {
             dependsOn("tagCommitWithCurrentVersion")
             githubToken = ext.githubToken
+            repository = ext.repository
             tagName = ext.currentReleaseTag
             lastReleaseCommitSha = ext.lastReleaseCommitSha
             preRelease = false
         }.get()
         project.tasks.register<OpenBackMergePullRequest>("openBackMergePullRequest") {
             githubToken = ext.githubToken
+            repository = ext.repository
             source = ext.backMergeSource
             target = ext.backMergeTarget
         }
