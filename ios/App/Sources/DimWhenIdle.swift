@@ -2,11 +2,12 @@ import SwiftUI
 import TPMSCore
 import UIKit
 
-/// Lowers the screen's brightness once nothing new was alerted or warned about, nor touched, for a
-/// while, like the Android app's DimWhenIdle. A red or critical alert going on keeps it bright, a
+/// Darkens the screen once nothing new was alerted or warned about, nor touched, for a while, like
+/// the Android app's DimWhenIdle. A red or critical alert going on keeps it bright, a
 /// new alert or warning brings it back up. When dimmed, a first touch only brightens the screen.
-/// At its lowest already, the screen is made darker over the content too, which wouldn't look dimmed
-/// otherwise, though the status bar stays as it is.
+/// It's black over the content, with the status bar and the home indicator hidden, rather than a lower
+/// brightness: iOS keeps adjusting the brightness to the light, against a level set here, and an app can't
+/// tell what it would have chosen when brightening. On an OLED screen, black saves as much.
 /// While dimmed, covering the proximity sensor (a pocket) turns the screen off and ignores touches.
 /// The phone doesn't lock itself while the main screen is shown, like the Android app's KeepScreenOn.
 struct DimWhenIdle: ViewModifier {
@@ -16,12 +17,6 @@ struct DimWhenIdle: ViewModifier {
     let isShown: Bool
     @State private var lastActivity = Date()
     @Binding var isDimmed: Bool
-    /// The brightness before dimming, given back when brightening
-    @State private var brightness: CGFloat?
-    /// How dark the screen is made over its content, dimmed at the lowest brightness already
-    private static let darkenedAlpha = 0.3
-    /// So low that dividing it can barely, if at all, be told apart on the screen
-    private static let lowBrightness: CGFloat = 0.05
 
     func body(content: Content) -> some View {
         let levels = currentLevels
@@ -30,7 +25,7 @@ struct DimWhenIdle: ViewModifier {
             .overlay {
                 if isDimmed {
                     // Takes the first touch, which only brightens
-                    Color.black.opacity(isLow ? Self.darkenedAlpha : 0.001)
+                    Color.black.opacity(DimOverlay.alpha(divisor: settings.dimDisplayDivisor))
                         .contentShape(Rectangle())
                         .onTapGesture { wake() }
                         .ignoresSafeArea()
@@ -51,7 +46,8 @@ struct DimWhenIdle: ViewModifier {
                 if levels.contains(where: { key, level in previous[key].map { level > $0 } ?? true }) { wake() }
             }
             .onChange(of: isAlerting) { _, isAlerting in if isAlerting { wake() } }
-            .onChange(of: settings.dimDisplayDivisor) { _, _ in if isDimmed { brightness.map { screen?.brightness = $0 / CGFloat(settings.dimDisplayDivisor) } } }
+            .statusBarHidden(isDimmed)
+            .persistentSystemOverlays(isDimmed ? .hidden : .automatic)
             .onChange(of: isShown, initial: true) { _, isShown in
                 UIApplication.shared.isIdleTimerDisabled = isShown
             }
@@ -69,16 +65,7 @@ struct DimWhenIdle: ViewModifier {
 
     private var isAlerting: Bool { monitor.isAlerting() }
 
-    private var isLow: Bool { (brightness ?? 1) <= Self.lowBrightness }
-
-    private var screen: UIScreen? {
-        UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.screen }.first
-    }
-
     private func dim() {
-        guard let screen else { return }
-        brightness = screen.brightness
-        screen.brightness /= CGFloat(settings.dimDisplayDivisor)
         isDimmed = true
         UIDevice.current.isProximityMonitoringEnabled = settings.pocketGuard
     }
@@ -87,8 +74,6 @@ struct DimWhenIdle: ViewModifier {
         lastActivity = Date()
         UIDevice.current.isProximityMonitoringEnabled = false
         guard isDimmed else { return }
-        brightness.map { screen?.brightness = $0 }
-        brightness = nil
         isDimmed = false
     }
 }

@@ -82,7 +82,7 @@ The settings and menus follow Android's, screen by screen:
   following the pressure as it's put on the wheel, taken off and put back.
 - **App settings**:
   - Display: theme, readings text size (on top of Dynamic Type), tap to magnify and for how long, dim
-    when idle (the brightness divided, darkened over the content at the lowest brightness already, the
+    when idle (black over the content, the status bar and home indicator hidden, the brightness left to iOS, the
     proximity sensor turning the screen off in a pocket). Like on Android, the phone doesn't lock
     itself while the main screen is shown.
   - Readings: units, time since last update with its details, battery.
