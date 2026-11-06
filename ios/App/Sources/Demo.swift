@@ -41,6 +41,8 @@ enum Demo {
         // Far ahead, for as long as it's looked at
         return OngoingAlerts().next(.init(vehicleId: other.id, location: location), levels: [.pressure: level], at: Date().timeIntervalSince1970 + 24 * 3600)
     }
+    /// `-pocket`: dimmed, and saying the screen was just turned off in a pocket, for -render
+    static var isPocketShown: Bool { ProcessInfo.processInfo.arguments.contains("-pocket") }
 
     /// Renders the main screen into the file `-render <path>`, in the room an iPhone's safe area leaves
     /// (`-landscape`, or portrait), then quits. Runs without a Simulator as Mac Catalyst, see README.md:

@@ -15,6 +15,7 @@ struct MainView: View {
     @State private var isDimmed = false
     @State private var isVehicleListOpen = false
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @ScaledMetric(relativeTo: .body) private var baseSize: CGFloat = TyreReadout.baseSize
     /// The bar's text, as large as a .headline
     @ScaledMetric(relativeTo: .headline) private var headlineSize: CGFloat = 17
@@ -56,6 +57,7 @@ struct MainView: View {
                 case "settings": sheet = .settings
                 default: break
                 }
+                if Demo.isPocketShown { isDimmed = true }
                 Demo.renderScreen(monitor: monitor, settings: settings)
                 Demo.checkLayouts()
                 #endif
@@ -91,7 +93,7 @@ struct MainView: View {
             }
         }
         // Over the top bar too, whose taps would go through otherwise
-        .modifier(DimWhenIdle(monitor: monitor, settings: settings, isShown: scenePhase == .active && selected == nil && sheet == nil && assigning == nil && isVehicleListOpen == false, isDimmed: $isDimmed))
+        .modifier(DimWhenIdle(monitor: monitor, settings: settings, isShown: scenePhase == .active && selected == nil && sheet == nil && assigning == nil && isVehicleListOpen == false, barHeight: barHeight, isDimmed: $isDimmed))
     }
 
     /// A tyre's readout in a large font, easy to read on a rough road, like the Android app's
@@ -176,7 +178,7 @@ struct MainView: View {
             let barHeight = barHeight
             let barGaps = Self.besideTitleStart + Self.besideTitleEnd + Self.barPadding + barHeight
             let end = min(barTitleWidth, size.width * Self.barMaxEndShare - barGaps) + barGaps
-            let corners = VehicleLayout.Corners(start: 0, end: end, height: barHeight)
+            let corners = VehicleLayout.Corners(start: 0, end: end, height: barHeight, bottomInset: geometry.safeAreaInsets.bottom)
             let over = CGSize(width: size.width, height: size.height - barHeight)
             let isBeside = VehicleLayout.isBesideBetter(
                 VehicleLayout(content, room: size, corners: corners),
@@ -222,9 +224,15 @@ struct MainView: View {
             }
             .coordinateSpace(.named(VehicleBounds.space))
             .overlayPreferenceValue(VehicleBounds.Key.self) { bounds in
-                ClearOfReadouts(bounds: bounds, bar: [bar]) {
+                ClearOfReadouts(bounds: bounds, bar: [bar], bottomInset: isBeside ? geometry.safeAreaInsets.bottom : 0) {
                     // Never both: an alert to silence keeps the screen bright
                     if isDimmed { DimmedNotice() } else { SilenceAlertsButton(speaker: monitor.speaker) }
+                }
+                // iOS hides its status bar there, in the corner the bar leaves empty
+                if isBeside, verticalSizeClass == .compact {
+                    LandscapeStatus(room: LandscapeStatus.room(in: size.width, of: bounds, barHeight: barHeight))
+                        .frame(height: barHeight)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 }
             }
             .overlay { magnified.map { magnifier(vehicle, $0) } }
