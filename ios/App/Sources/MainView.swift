@@ -345,24 +345,55 @@ private struct SilenceAlertsButton: View {
 
     var body: some View {
         Group {
-            if let silence = speaker.silence {
-                Button { speaker.unmute() } label: {
-                    Label(silence.level == .crimson ? "All alerts silenced" : "Alerts silenced", systemImage: "speaker.slash.fill")
-                }
-                .tint(Theme.onBackground.opacity(0.3))
-            } else if let level = speaker.level {
+            switch SilenceButton.of(highest: speaker.level, silence: speaker.silence) {
+            case .idle:
+                EmptyView()
+            case let .offer(isCritical):
                 Button { speaker.silenceNow() } label: {
-                    Label("Silence \(level == .crimson ? "critical alerts" : "alerts") for 10 min", systemImage: "speaker.wave.2.fill")
+                    // Wrapped to the width it's given, "for 10 min" kept together
+                    Label("Silence \(isCritical ? "critical alerts" : "alerts") for\u{00A0}10\u{00A0}min", systemImage: "speaker.wave.2.fill")
                 }
                 .tint(Theme.error)
+            case let .silenced(isCritical, until):
+                // The speaker only drops an ended silence at its next reading. Nothing's left to
+                // silence by then, what it dropped isn't kept, so the button just goes away.
+                TimelineView(.periodic(from: .now, by: 1)) { context in
+                    let minutesLeft = SilenceButton.minutesLeft(until: until, now: context.date)
+                    if minutesLeft > 0 {
+                        Button { speaker.unmute() } label: {
+                            Label {
+                                VStack(spacing: 2) {
+                                    Text(isCritical ? "All alerts silenced" : "Alerts silenced")
+                                    Text("\(minutesLeft) min left, tap to unmute")
+                                        .font(.callout)
+                                }
+                            } icon: {
+                                Image(systemName: "speaker.slash.fill")
+                            }
+                        }
+                        .tint(Theme.onBackground.opacity(0.3))
+                    }
+                }
             }
         }
         .buttonStyle(.borderedProminent)
         .buttonBorderShape(.capsule)
+        .labelStyle(IconCenteredLabelStyle())
         .font(.title3.weight(.semibold))
+        .multilineTextAlignment(.center)
         .lineLimit(1...2)
         .minimumScaleFactor(0.6)
         .controlSize(.large)
+    }
+}
+
+/// Its icon centered against all of its text's lines, a Label's stays on the first line's baseline
+private struct IconCenteredLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 12) {
+            configuration.icon
+            configuration.title
+        }
     }
 }
 

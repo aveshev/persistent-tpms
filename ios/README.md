@@ -146,3 +146,6 @@ copy of `project.yml` with `SUPPORTS_MACCATALYST: YES` under another name, build
 (prints each vehicle kind's text and image sizes, `MISFIT` where something overlaps) or
 `-kind CAR -textscale 3.1176 -render out.png` (`-landscape`, `-unassigned`, `-screen manage`). Catalyst ignores
 Dynamic Type, so `-textscale` stands for it, 0.8235 for its smallest size and 3.1176 for its largest.
+
+`python3 ios/compare_strings.py`, from the repository's root, lists the text that differs from the
+Android app on `origin/develop`: non-breaking spaces, other wordings, what only one app has.

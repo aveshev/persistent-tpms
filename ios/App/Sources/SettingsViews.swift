@@ -77,7 +77,7 @@ struct AppSettingsView: View {
                         SettingsRow("Alert sound", settings.alertSound.label)
                     }
                     Toggle(isOn: $settings.vibrateAlerts) {
-                        SettingsRow("Vibrate", "Along with the alert sound, more for a critical alert")
+                        SettingsRow("Vibrate", "Along with the alert sound, harder for a critical alert")
                     }
                 } header: {
                     Text("Alerts")
@@ -518,7 +518,7 @@ struct DimSettingsView: View {
                 }
                 Section {
                     Toggle(isOn: $settings.pocketGuard) {
-                        SettingsRow("Block touches in a pocket", "Turns the screen off and ignores touches")
+                        SettingsRow("Block touches in a pocket", "Turns the screen black and ignores touches")
                     }
                 } header: {
                     Text("In a pocket")
