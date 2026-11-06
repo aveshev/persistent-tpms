@@ -180,9 +180,11 @@ internal class BluetoothLeScannerImpl(
     @OptIn(ExperimentalCoroutinesApi::class)
     @RequiresPermission("android.permission.BLUETOOTH_SCAN")
     private fun scan(mode: Int) = flow {
-        while (true) {
-            emit(Unit)
+        emit(Unit)
+        // Below Android 12, a scan started while the app isn't visible may get no results
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) while (true) {
             delay(SCAN_RESTART)
+            emit(Unit)
         }
     }
         .flatMapLatest {
@@ -335,7 +337,10 @@ internal class BluetoothLeScannerImpl(
         /**
          * Android moves a scan running for too long to low power without telling the app, even with
          * the app on screen: "regularScanTimeout" in the system log, after 5 minutes on a Pixel 7 on
-         * Android 17 (`scan_timeout_millis`). Each restart starts that clock over.
+         * Android 17 (`scan_timeout_millis`). Each restart starts that clock over. Only from Android
+         * 12: before, a scan restarted with the app in the background may need a location access
+         * that the app can lose, see `MonitorService`, and a Galaxy S9+ on Android 10 had no such
+         * timeout.
          */
         private val SCAN_RESTART = 4.minutes
     }

@@ -1,5 +1,7 @@
 package com.masselis.tpmsadvanced.feature.main.usecase
 
+import android.os.Build.VERSION.SDK_INT
+import android.os.Build.VERSION_CODES.S
 import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -46,10 +48,12 @@ internal class ListenTyreSmartDutyUseCase(
 
     internal companion object {
         /**
-         * Whether this phone keeps a low latency scan at low latency in the background. False for
-         * every phone for now: only one model was measured, and the app can't detect the drop, so
-         * enable it here once a phone or an Android version is known to be spared.
+         * Below Android 12, the high duty scan runs in the background too. A Galaxy S9+ on Android
+         * 10 kept it at full duty for 45 minutes with the screen off. There, a scan started while
+         * the app isn't visible needs location in the background, see `MonitorService`, so
+         * switching scans on leaving the app risks a deaf one. Android 12 and later scan without
+         * location, and the Pixel's drop happens there.
          */
-        const val KEEPS_LOW_LATENCY_IN_BACKGROUND: Boolean = false
+        val KEEPS_LOW_LATENCY_IN_BACKGROUND: Boolean = SDK_INT < S
     }
 }

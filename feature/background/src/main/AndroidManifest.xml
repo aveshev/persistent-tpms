@@ -68,11 +68,15 @@
             </intent-filter>
         </receiver>
 
-        <!-- https://developer.android.com/about/versions/14/changes/fgs-types-required#connected-device -->
+        <!-- https://developer.android.com/about/versions/14/changes/fgs-types-required#connected-device
+             location is only used on Android 10 and 11, where scan results need location access:
+             see ServiceNotifier and MonitorService. The service never starts with it from Android
+             14 on, which is when FOREGROUND_SERVICE_LOCATION would be required. -->
         <service
             android:name="com.masselis.tpmsadvanced.feature.background.interfaces.MonitorService"
             android:exported="false"
-            android:foregroundServiceType="connectedDevice" />
+            android:foregroundServiceType="connectedDevice|location"
+            tools:ignore="ForegroundServicePermission" />
 
     </application>
 </manifest>

@@ -6,7 +6,9 @@ import android.app.PendingIntent.getActivity
 import android.app.PendingIntent.getBroadcast
 import android.app.Service
 import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
 import android.os.Build.VERSION.SDK_INT
+import android.os.Build.VERSION_CODES
 import android.os.Build.VERSION_CODES.Q
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
@@ -235,7 +237,13 @@ internal class ServiceNotifier(
                         notificationId,
                         it,
                         // https://developer.android.com/about/versions/14/changes/fgs-types-required#connected-device
-                        if (SDK_INT >= Q) FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE else 0
+                        // On Android 10 and 11, a scan gets results only with location access,
+                        // which this type extends to the background: see MonitorService
+                        when (SDK_INT) {
+                            Q, VERSION_CODES.R -> FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or FOREGROUND_SERVICE_TYPE_LOCATION
+                            in Q..Int.MAX_VALUE -> FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+                            else -> 0
+                        }
                     )
                 } catch (e: SecurityException) {
                     // The system refuses a connectedDevice foreground service when Bluetooth scan
