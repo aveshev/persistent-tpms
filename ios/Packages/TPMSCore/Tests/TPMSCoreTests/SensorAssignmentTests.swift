@@ -241,8 +241,8 @@ final class SensorMoveTests: XCTestCase {
 final class CalibrationTests: XCTestCase {
     private let offset = PressureCalibration(offset: Pressure(kpa: 10), multiplier: 1)
 
-    func testAFlatTyreStaysFlat() {
-        XCTAssertEqual(offset.applyTo(Pressure(kpa: 0)), Pressure(kpa: 0))
+    func testZeroIsCorrectedTooButNeverGoesBelowZero() {
+        XCTAssertEqual(offset.applyTo(Pressure(kpa: 0)), Pressure(kpa: 10))
         XCTAssertEqual(PressureCalibration(offset: Pressure(kpa: -50), multiplier: 1).applyTo(Pressure(kpa: 20)), Pressure(kpa: 0))
     }
 

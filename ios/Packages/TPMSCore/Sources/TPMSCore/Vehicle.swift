@@ -225,10 +225,11 @@ public struct PressureCalibration: Hashable, Sendable {
     /// float unit conversions and −/+ steps.
     public var adjusts: Bool { abs(offset.kpa) >= 0.01 || abs(multiplier - 1) >= 0.0001 }
 
-    /// A pressure of 0, which is how a flat tyre is reported, is left as is so an offset never hides
-    /// it. A correction below 0 is clamped to 0 for the same reason.
+    /// Every pressure is corrected, 0 included: a sensor off its tyre reads the offset, like the
+    /// calibration says it should. A flat tyre still shows far below the low pressure alarm. A
+    /// correction below 0 is clamped to 0.
     public func applyTo(_ pressure: Pressure) -> Pressure {
-        pressure.kpa > 0 ? Pressure(kpa: max(0, pressure.kpa * multiplier + offset.kpa)) : pressure
+        Pressure(kpa: max(0, pressure.kpa * multiplier + offset.kpa))
     }
 }
 
