@@ -77,7 +77,7 @@ struct AppSettingsView: View {
                         SettingsRow("Alert sound", settings.alertSound.label)
                     }
                     Toggle(isOn: $settings.vibrateAlerts) {
-                        SettingsRow("Vibrate", "Along with the alert sound, more for a critical alert")
+                        SettingsRow("Vibrate", "Along with the alert sound, harder for a critical alert")
                     }
                 } header: {
                     Text("Alerts")
@@ -145,7 +145,8 @@ struct AppSettingsView: View {
             // 10 taps in a row show the debug options, or hide them again, as Android does with its
             // own developer options
             Button(action: versionTapped) {
-                SettingsRow("Version", Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
+                // The full version, like Android's versionName: 0.9.0-dev+<sha>, see Version.base.xcconfig
+                SettingsRow("Version", Bundle.main.object(forInfoDictionaryKey: "PersistentTPMSVersionName") as? String)
             }
             Link(destination: URL(string: "https://github.com/VincentMasselis/TPMS-advanced")!) {
                 SettingsRow("Based on TPMS Advanced", "By Vincent Masselis, under the Apache License 2.0")
@@ -552,7 +553,7 @@ struct DimSettingsView: View {
                 }
                 Section {
                     Toggle(isOn: $settings.pocketGuard) {
-                        SettingsRow("Block touches in a pocket", "Turns the screen off and ignores touches")
+                        SettingsRow("Block touches in a pocket", "Turns the screen black and ignores touches")
                     }
                 } header: {
                     Text("In a pocket")

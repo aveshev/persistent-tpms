@@ -46,6 +46,8 @@ internal class ShortcutUseCase(
                                     Intent.ACTION_VIEW,
                                     "tpmsadvanced://vehicle/${vehicle.uuid}".toUri(),
                                 )
+                                    // Lite, Pro and TPMS Advanced all handle this scheme
+                                    .setPackage(appContext.packageName)
                             )
                             .build()
                     }

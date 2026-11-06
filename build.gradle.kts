@@ -29,10 +29,20 @@ tasks.register<BumpVersionTask>("bumpVersion") {
     this.versionCatalog = layout.projectDirectory.file("gradle/libs.versions.toml")
 }
 
+// The iOS app's version, the same as the Android app's: see WriteIosVersionTask
+tasks.register<WriteIosVersionTask>("writeIosVersion") {
+    version = gitflow.version.map { it.toString() }
+    versionCode = gitflow.versionCode
+    versionName = gitflow.versionName
+    commit = providers.exec { commandLine("git", "rev-parse", "HEAD") }.standardOutput.asText
+    xcconfigFile = layout.projectDirectory.file("ios/Version.xcconfig")
+}
+
 keys(keysFile.asFile)?.also { keys ->
     apply<GithubPlugin>()
     configure<GithubExtension> {
         githubToken = keys.githubToken
+        repository = "aveshev/persistent-tpms"
         currentReleaseTag = gitflow.currentReleaseTag
         lastReleaseCommitSha = gitflow.lastReleaseCommitSha
         backMergeSource = gitflow.mainBranch

@@ -16,6 +16,8 @@ struct VehicleDrawing {
     let inset: CGFloat
     let tyres: [TyreLocation: CGPoint]
     var middle = Middle.betweenAxles
+    /// What's over the vehicle goes under it rather than over the drawing
+    var isSingleAxle = false
 
     /// Where what's over the vehicle centers on when it fits there, like Vehicle.kt's center
     enum Middle {
@@ -35,6 +37,11 @@ struct VehicleDrawing {
     /// Where the spare is, and its bottom edge, as fractions of the image's height
     var spareCenter: CGFloat { tyres[.spare]?.y ?? 1 }
     var spareBottom: CGFloat { spareCenter + tyreHeight * tyreRatio / 2 }
+
+    /// How narrow its image is, 1 for the tall ones. A vehicle looks fine filling the screen's height
+    /// when it's tall, too large when it's as wide as it's tall: the maximum area and the minimum
+    /// height shrink with this, the minimum keeping the image as wide as the tall ones'.
+    var tallness: CGFloat { min(1, Self.ratio / ratio) }
 
     private static let ratio: CGFloat = 625 / 1386
     private static let tyreHeight: CGFloat = 0.165
@@ -78,7 +85,8 @@ struct VehicleDrawing {
                 image: "schema_single_axle_trailer_top_view", ratio: ratio, tyreHeight: tyreHeight, tyreRatio: tyreRatio,
                 inset: outer(0.86, tyreHeight, ratio),
                 tyres: pair(track: 0.86, y: 0.686, .side(.left), .side(.right)),
-                middle: .screen
+                middle: .screen,
+                isSingleAxle: true
             )
         case .motorcycle:
             VehicleDrawing(
@@ -99,9 +107,10 @@ struct VehicleDrawing {
             )
         case .monowheel:
             VehicleDrawing(
-                image: "schema_monowheel_top_view", ratio: ratio, tyreHeight: 0.377, tyreRatio: 11.2 / 52, inset: 1,
-                tyres: [.single: CGPoint(x: 0.5, y: 0.505)],
-                middle: .at(0.2)
+                image: "schema_monowheel_top_view", ratio: 625 / 720, tyreHeight: 0.726, tyreRatio: 11.2 / 52, inset: 1,
+                tyres: [.single: CGPoint(x: 0.5, y: 0.51)],
+                middle: .at(0),
+                isSingleAxle: true
             )
         }
     }
@@ -156,7 +165,7 @@ struct VehicleView: View {
     var body: some View {
         let blinks = move != nil || (isManaging == false && vehicle.kind.locations.contains { tyre($0)?.alerts.levels.values.contains { $0 >= .red } == true })
         // Fast enough for the blinking while something blinks, otherwise for the time since update
-        TimelineView(.periodic(from: .now, by: blinks ? 0.2 : 15)) { context in
+        TimelineView(.periodic(from: Blink.lastTick(before: Date()), by: blinks ? Blink.tick : 15)) { context in
             GeometryReader { geometry in
                 let content = VehicleLayout.Content(vehicle: vehicle, monitor: monitor, settings: settings, baseSize: baseSize, isManaging: isManaging, isMoving: move != nil, date: context.date)
                 let layout = VehicleLayout(content, room: geometry.size, corners: corners)

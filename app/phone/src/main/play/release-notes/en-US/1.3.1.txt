@@ -1,1 +1,0 @@
-- Fixed crash on startup when migrating to the latest database schema

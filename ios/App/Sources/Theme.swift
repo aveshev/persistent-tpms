@@ -57,24 +57,6 @@ extension AlertLevel {
     }
 }
 
-/// A blinking element's two phases, shown then hidden, like Blink.kt. Every blink counts from the
-/// epoch, so every element switches together.
-struct Blink {
-    let first: Double
-    let second: Double
-
-    static let red = Blink(first: 0.6, second: 0.2)
-    static let critical = Blink(first: 0.2, second: 0.2)
-    /// A crimson reading's alternation with "LOW!" or "HIGH!"
-    static let criticalLabel = Blink(first: 0.8, second: 0.8)
-    /// An outline waiting for its tyre's sensor
-    static let waiting = Blink(first: 0.4, second: 0.4)
-
-    func isFirstPhase(_ date: Date) -> Bool {
-        date.timeIntervalSince1970.truncatingRemainder(dividingBy: first + second) < first
-    }
-}
-
 extension TyreLocation {
     /// "front left wheel", "spare wheel", a monowheel's only "wheel", like Android's appendLoc
     var phrase: String {

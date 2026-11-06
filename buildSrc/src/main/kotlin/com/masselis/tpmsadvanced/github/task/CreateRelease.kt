@@ -37,6 +37,9 @@ internal abstract class CreateRelease : DefaultTask() {
     abstract val githubToken: Property<String>
 
     @get:Input
+    abstract val repository: Property<String>
+
+    @get:Input
     abstract val tagName: Property<SemanticVersion>
 
     @get:Input
@@ -73,7 +76,7 @@ internal abstract class CreateRelease : DefaultTask() {
                         "-H", "Accept: application/vnd.github+json",
                         "-H", "Authorization: Bearer ${githubToken.get()}",
                         "-H", "X-GitHub-Api-Version: 2022-11-28",
-                        "https://api.github.com/repos/VincentMasselis/TPMS-advanced/releases",
+                        "https://api.github.com/repos/${repository.get()}/releases",
                         "-d",
                         JsonObject(
                             mapOf(
@@ -112,7 +115,7 @@ internal abstract class CreateRelease : DefaultTask() {
                                 "-H", "Authorization: Bearer ${githubToken.get()}",
                                 "-H", "X-GitHub-Api-Version: 2022-11-28",
                                 "-H", "Content-Type: application/octet-stream",
-                                "https://uploads.github.com/repos/VincentMasselis/TPMS-advanced/releases/$releaseId/assets?name=${apk.name}",
+                                "https://uploads.github.com/repos/${repository.get()}/releases/$releaseId/assets?name=${apk.name}",
                                 "--data-binary", "@${apk.absolutePath}"
                             )
                         }
