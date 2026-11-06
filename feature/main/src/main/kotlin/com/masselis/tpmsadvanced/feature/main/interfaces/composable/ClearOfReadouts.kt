@@ -87,7 +87,8 @@ internal fun Modifier.reportsImage(): Modifier = LocalVehicleBounds.current
  * Lays [content] out over the vehicle [bounds] tells of, as wide as its readings and image, or
  * as the room beside them, and as tall as its content wants at that width. Covering no reading,
  * whichever fits first:
- * - between the axles, centered on its middle
+ * - between the axles, centered on its middle, unless [isSingleAxle]: there's nothing between its
+ *   axles, it would cover the drawing. It then goes under the vehicle even with its text smaller.
  * - in the room under the vehicle, while the bar is over it (taller screens), the vehicle being
  *   centered under the bar. Extra lines on the rear's readouts can leave less room there than above
  *   it, between the bar and the vehicle, where it then goes rather than showing smaller.
@@ -105,6 +106,7 @@ internal fun Modifier.reportsImage(): Modifier = LocalVehicleBounds.current
 @Composable
 internal fun ClearOfReadouts(
     bounds: VehicleBounds,
+    isSingleAxle: Boolean,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -171,7 +173,7 @@ internal fun ClearOfReadouts(
                     top = (readouts.values + frames).fold(image, Rect::union).bottom + clearance,
                     right = vehicle.right,
                     bottom = height - clearance,
-                ).takeIf { heightAt(full, it.width) <= it.height },
+                ).takeIf { isSingleAxle || heightAt(full, it.width) <= it.height },
                 Rect(
                     left = vehicle.left,
                     // The bar's height leaves room around what's in it already
@@ -207,7 +209,7 @@ internal fun ClearOfReadouts(
                     }
                 }
             }
-        val (measurable, placed) = between.takeIf(isClear)?.let { full to it }
+        val (measurable, placed) = between.takeIf { isSingleAxle.not() && isClear(it) }?.let { full to it }
             ?: inRoom
             // Raised over the front's lower lines, its bottom off the rear's readouts
             ?: readouts.values

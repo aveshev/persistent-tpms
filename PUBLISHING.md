@@ -4,8 +4,8 @@ Git-flow is enforced by the `gitflow` buildSrc plugin, backed by the `git` CLI. 
 a plain Gradle task - the `workflow_dispatch` entry points just run the same tasks in CI.
 
 Before cutting a release, add the Play Store release note for the new version under
-`app/phone/src/main/play/release-notes/en-US/<version>.txt` - `createRelease`/`createHotfix`
-check it exists before doing anything else.
+`app/phone/src/main/play/release-notes/en-US/<version>.txt` - publishing to the Play Store fails
+without it. The notes of older versions follow it, as many as fit Play's 500 characters.
 
 To create a release from `develop`, run:
 
@@ -20,7 +20,7 @@ To create a release from `develop`, run:
 [CONTRIBUTING.md](CONTRIBUTING.md)); always available in CI.
 
 Alternatively, trigger the
-[Start a new version branch](https://github.com/VincentMasselis/TPMS-advanced/actions/workflows/gitflow-start-version.yml)
+[Start a new version branch](https://github.com/aveshev/persistent-tpms/actions/workflows/gitflow-start-version.yml)
 workflow (`gh workflow run gitflow-start-version.yml -f flow=release -f bump=minor -f
 release-note="..."`) to do this from CI. Its `release-note` input is a single-line text box - use
 literal `\n` for line breaks (e.g. `- Fix A\n- Fix B`); the workflow unescapes it before writing
@@ -28,7 +28,7 @@ the file.
 
 If the version bump and release note are already committed to `develop` yourself, skip to
 `createRelease commitAddedFiles pushGitflowBranch`, or trigger
-[Cut a version branch](https://github.com/VincentMasselis/TPMS-advanced/actions/workflows/gitflow-cut-branch.yml)
+[Cut a version branch](https://github.com/aveshev/persistent-tpms/actions/workflows/gitflow-cut-branch.yml)
 (`gh workflow run gitflow-cut-branch.yml -f flow=release`).
 
 - `assertReleaseBranchIsValid`: checks the release branch was actually cut from `develop` (not
@@ -46,7 +46,7 @@ console.
 
 Hotfixes use the same workflows/tasks from `main` with `flow=hotfix` (pick `bump=patch` yourself -
 nothing enforces it), cutting `hotfix/<version>`. Pushing it triggers
-[hotfix.yml](https://github.com/VincentMasselis/TPMS-advanced/actions/workflows/hotfix.yml), which
+[hotfix.yml](https://github.com/aveshev/persistent-tpms/actions/workflows/hotfix.yml), which
 runs the buildSrc unit tests, `assertHotfixBranchIsValid`, `build`, `verifyPaparazzi` and the
 instrumented tests (`pixel2api34DebugAndroidTest`, `copyScreenshot`) - no beta publish or
 pre-release; a hotfix only reaches users once merged into `main`.
@@ -54,7 +54,7 @@ pre-release; a hotfix only reaches users once merged into `main`.
 ## Publish in production
 
 Pushing to `main` (via merging a `hotfix/*` or `release/*` branch) triggers
-[production.yml](https://github.com/VincentMasselis/TPMS-advanced/actions/workflows/production.yml):
+[production.yml](https://github.com/aveshev/persistent-tpms/actions/workflows/production.yml):
 `assertVersionWasNotPushInProductionYet`, `createGithubRelease`,
 `publishToPlayStoreProductionRelease`, `updatePlayStoreScreenshotsRelease`,
 `openBackMergePullRequest`.

@@ -36,7 +36,6 @@ dependencies {
     api(libs.compose.navigation)
     // Tools
     api(libs.accompanist.permissions)
-    api(libs.placeholder)
 
     implementation(project(":core:debug-ui"))
 

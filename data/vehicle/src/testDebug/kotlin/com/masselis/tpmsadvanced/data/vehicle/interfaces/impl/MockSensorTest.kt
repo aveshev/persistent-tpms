@@ -1,6 +1,7 @@
 package com.masselis.tpmsadvanced.data.vehicle.interfaces.impl
 
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.impl.MockSensor.BEKUBEE_KY
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.impl.MockSensor.BEKUBEE_TC_TPMS
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.impl.MockSensor.BEKUBEE_TPMS
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.impl.MockSensor.PECHAM
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.impl.MockSensor.SYSGRATION
@@ -47,6 +48,7 @@ internal class MockSensorTest {
         WICARLINK to 10f,
         BEKUBEE_TPMS to 1f,
         SYSGRATION to 0.001f,
+        BEKUBEE_TC_TPMS to 0.6895f,
     )
 
     /** The 16-bit service UUID the scan filters must find in each advertisement */
@@ -56,6 +58,7 @@ internal class MockSensorTest {
         WICARLINK to 0xFBB0,
         BEKUBEE_TPMS to 0xA827,
         SYSGRATION to 0xFBB0,
+        BEKUBEE_TC_TPMS to 0xA828,
     )
 
     @Test
@@ -76,6 +79,7 @@ internal class MockSensorTest {
                         WICARLINK -> RawWicarlink::class
                         BEKUBEE_TPMS -> RawBekubeeTpms::class
                         SYSGRATION -> RawSysgration::class
+                        BEKUBEE_TC_TPMS -> RawBekubeeTcTpms::class
                     },
                     raw?.let { it::class },
                     "$sensor $reading"
@@ -112,7 +116,7 @@ internal class MockSensorTest {
 
     @Test
     fun `a low battery is reported as a voltage, not as an alarm`() {
-        listOf(PECHAM, BEKUBEE_KY, WICARLINK, BEKUBEE_TPMS).forEach { sensor ->
+        listOf(PECHAM, BEKUBEE_KY, WICARLINK, BEKUBEE_TPMS, BEKUBEE_TC_TPMS).forEach { sensor ->
             sensor
                 .advertisement(reading(kpa = 200f, celsius = 20f, battery = 20))
                 .decodedTyre()!!
@@ -133,7 +137,7 @@ internal class MockSensorTest {
     @Test
     fun `flags go to the status byte the tyre shows`() {
         reading(kpa = 200f, celsius = 20f, flags = 0x5A).let { reading ->
-            listOf(PECHAM, BEKUBEE_KY, WICARLINK, BEKUBEE_TPMS, SYSGRATION).forEach { sensor ->
+            listOf(PECHAM, BEKUBEE_KY, WICARLINK, BEKUBEE_TPMS, SYSGRATION, BEKUBEE_TC_TPMS).forEach { sensor ->
                 val advertisement = sensor.advertisement(reading)
                 assertNotNull(advertisement.decoded(), "$sensor with flags")
                 assertEquals(listOf<UByte>(0x5Au), AdvertisingPacket(advertisement).statusBytes, "$sensor")
@@ -161,6 +165,7 @@ internal class MockSensorTest {
         assertFailsWith<IllegalArgumentException> { BEKUBEE_TPMS.advertisement(reading(kpa = 200f, celsius = 20f, battery = 40)) }
         assertFailsWith<IllegalArgumentException> { WICARLINK.advertisement(reading(kpa = 200f, celsius = 20f, id = 0x1000000)) }
         assertFailsWith<IllegalArgumentException> { SYSGRATION.advertisement(reading(kpa = 200f, celsius = 20f, id = 0x123456)) }
+        assertFailsWith<IllegalArgumentException> { BEKUBEE_TC_TPMS.advertisement(reading(kpa = 200f, celsius = 20f, id = 0x1000000)) }
     }
 
     /** AD structures by type, as `ScanRecord.parseFromBytes` splits them */

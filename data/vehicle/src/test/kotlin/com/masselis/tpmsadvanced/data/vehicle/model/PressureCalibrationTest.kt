@@ -23,8 +23,8 @@ internal class PressureCalibrationTest {
     }
 
     @Test
-    fun `leaves a missing pressure at zero`() {
-        assertEquals(0f.kpa, PressureCalibration(10f.kpa, 1.1f).applyTo(0f.kpa))
+    fun `corrects a pressure of zero too`() {
+        assertEquals(10f, PressureCalibration(10f.kpa, 1.1f).applyTo(0f.kpa).kpa, 0.001f)
     }
 
     @Test

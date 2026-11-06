@@ -1,3 +1,0 @@
-- Updated design elements to use the latest version of Google's Material design
-- Fixed background and notification feature
-- Fixed pressure returned by Pecham sensors

@@ -118,6 +118,33 @@ internal enum class MockSensor {
             // Flags, service UUID 0xFBB0, manufacturer data under company ID 0x0001
             "0201060303B0FB13FF0100".hexToByteArray() + manufacturerData
         }
+    },
+
+    /**
+     * `id` is the last 3 bytes of the Bluetooth address the advertisement carries. `flags` is the
+     * first manufacturer data byte: 0x00 (the default) with a steady pressure, 0x01 after it rose,
+     * 0x02 after it fell.
+     */
+    BEKUBEE_TC_TPMS {
+        override fun advertisement(reading: Reading): ByteArray = byteArrayOf(
+            (reading.flags?.within("flags", 0..255) ?: 0x00).toByte(),
+            (reading.battery ?: 30).within("battery", 0..255).toByte(),
+            reading.celsius.within("celsius", -128f..127f).roundToInt().toByte(),
+            *Pressure(reading.kpa.within("kpa", 0f..1000f))
+                .asPsi()
+                .times(10)
+                .roundToInt()
+                .plus(146)
+                .let { byteArrayOf((it shr 8).toByte(), it.toByte()) },
+            // The vendor's half of the address, captured from a real sensor (see BekubeeTcTpmsTest)
+            0x34,
+            0x30,
+            0x07,
+            *reading.id.within("id", 0..0xFFFFFF).let { byteArrayOf((it shr 16).toByte(), (it shr 8).toByte(), it.toByte()) },
+        ).let { manufacturerData ->
+            // Name "TC.TPMS", manufacturer data, service UUID 0xA828
+            "080854432E54504D530CFF".hexToByteArray() + manufacturerData + "030328A8".hexToByteArray()
+        }
     };
 
     abstract fun advertisement(reading: Reading): ByteArray

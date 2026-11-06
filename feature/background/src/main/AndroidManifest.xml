@@ -34,6 +34,9 @@
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
     <uses-permission android:name="com.google.android.gms.permission.ACTIVITY_RECOGNITION" />
 
+    <!-- The keep-alive instructions, fetched from dontkillmyapp.com -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- The default text-to-speech engine, for the status announcements of the debug settings -->
     <queries>
         <intent>

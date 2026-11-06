@@ -5,6 +5,7 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Pressure
 import com.masselis.tpmsadvanced.data.vehicle.model.PressureCalibration
 import com.masselis.tpmsadvanced.data.vehicle.model.Sensor
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.BEKUBEE_KY
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.BEKUBEE_TC_TPMS
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.BEKUBEE_TPMS
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.PECHAM
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.SYSGRATION
@@ -110,7 +111,7 @@ internal data class SharedSensors(
             CAR_WITH_SPARE,
             MONOWHEEL,
         )
-        private val brands = listOf(PECHAM, BEKUBEE_KY, WICARLINK, BEKUBEE_TPMS, SYSGRATION)
+        private val brands = listOf(PECHAM, BEKUBEE_KY, WICARLINK, BEKUBEE_TPMS, SYSGRATION, BEKUBEE_TC_TPMS)
         private val locations = listOf(
             Location.Wheel(FRONT_LEFT),
             Location.Wheel(FRONT_RIGHT),

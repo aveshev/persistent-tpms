@@ -24,7 +24,7 @@ public value class Pressure(public val kpa: Float) : Parcelable, Comparable<Pres
     }
 
     public fun string(unit: PressureUnit, compact: Boolean = false): String = when (unit) {
-        KILO_PASCAL -> (if (compact) "%.0fk" else "%.0f kpa").format(kpa)
+        KILO_PASCAL -> (if (compact) "%.0fk" else "%.0f kPa").format(kpa)
         // One decimal less from 10 bar and 100 psi, so high pressures keep the width of "8.88 bar"
         // and "88.8 psi" (tyre readouts are laid out for those)
         BAR -> when {

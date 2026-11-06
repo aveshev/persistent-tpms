@@ -64,7 +64,7 @@ jobs:
         # credential in the first place.
         run: |
           token=$(jq -r .GITHUB_TOKEN secrets/keys.json)
-          git remote set-url origin "https://x-access-token:${token}@github.com/VincentMasselis/TPMS-advanced.git"
+          git remote set-url origin "https://x-access-token:${token}@github.com/${GITHUB_REPOSITORY}.git"
           identity=$(curl -sf -H "Authorization: token ${token}" https://api.github.com/user)
           login=$(echo "$identity" | jq -r .login)
           id=$(echo "$identity" | jq -r .id)

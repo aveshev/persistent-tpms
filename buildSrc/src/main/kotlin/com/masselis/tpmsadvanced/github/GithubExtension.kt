@@ -5,6 +5,10 @@ import org.gradle.api.provider.Property
 
 public interface GithubExtension {
     public val githubToken: Property<String>
+
+    /** The `owner/name` of the repository holding the releases and the back-merge pull requests. */
+    public val repository: Property<String>
+
     public val currentReleaseTag: Property<SemanticVersion>
     public val lastReleaseCommitSha: Property<String>
 
