@@ -145,7 +145,8 @@ struct AppSettingsView: View {
             // 10 taps in a row show the debug options, or hide them again, as Android does with its
             // own developer options
             Button(action: versionTapped) {
-                SettingsRow("Version", Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
+                // The full version, like Android's versionName: 0.9.0-dev+<sha>, see Version.base.xcconfig
+                SettingsRow("Version", Bundle.main.object(forInfoDictionaryKey: "PersistentTPMSVersionName") as? String)
             }
             Link(destination: URL(string: "https://github.com/VincentMasselis/TPMS-advanced")!) {
                 SettingsRow("Based on TPMS Advanced", "By Vincent Masselis, under the Apache License 2.0")

@@ -132,6 +132,7 @@ With the Command Line Tools selected rather than Xcode, prefix the commands with
 `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`.
 
 ```bash
+./gradlew writeIosVersion
 cd ios
 xcodegen generate
 (cd Packages/TPMSCore && swift test)
@@ -139,6 +140,13 @@ xcodebuild -project PersistentTPMS.xcodeproj -scheme PersistentTPMS -destination
 xcrun devicectl device install app --device <device id> build/Build/Products/Debug-iphoneos/PersistentTPMS.app
 ```
 
+`./gradlew writeIosVersion`, from the repository's root (`JAVA_HOME` set to Android Studio's JBR,
+`"/Applications/Android Studio.app/Contents/jbr/Contents/Home"`), writes the Android app's version
+to `Version.xcconfig`, not committed, see `Version.base.xcconfig`: `CFBundleShortVersionString` is the
+plain version (`0.9.0`), `CFBundleVersion` the Android `versionCode`, and the app settings show the
+`versionName` (`0.9.0-dev+<sha>`). Write it again after each commit: the build warns when it was
+written for another commit or is missing, and a Release build fails. The version itself is bumped
+with the Android app's, in `gradle/libs.versions.toml`, see [PUBLISHING.md](../PUBLISHING.md).
 `xcodegen generate` again after adding or removing a file. `xcrun devicectl list devices` gives
 the device's ID. A free Apple account's signing lasts 7 days, then the app needs installing again.
 
