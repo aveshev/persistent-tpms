@@ -92,7 +92,7 @@ internal object AlertsSettingsTags {
 
 @Preview
 @Composable
-private fun AlertsSettingsPreview() = AlertsSettings(
+internal fun AlertsSettingsPreview() = AlertsSettings(
     alertSound = SPEECH,
     onAlertSoundOn = {},
     openAlertSound = {},
@@ -102,7 +102,7 @@ private fun AlertsSettingsPreview() = AlertsSettings(
 
 @Preview
 @Composable
-private fun AlertsSettingsOffPreview() = AlertsSettings(
+internal fun AlertsSettingsOffPreview() = AlertsSettings(
     alertSound = NONE,
     onAlertSoundOn = {},
     openAlertSound = {},

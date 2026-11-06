@@ -37,7 +37,7 @@ internal fun OtherAppPersistentScanningAlert(
 
 @Preview
 @Composable
-private fun OtherAppPersistentScanningAlertPreview() = OtherAppPersistentScanningAlert(
+internal fun OtherAppPersistentScanningAlertPreview() = OtherAppPersistentScanningAlert(
     otherApp = "Persistent TPMS Lite",
     onSwitch = {},
     onCancel = {},

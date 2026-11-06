@@ -24,7 +24,7 @@ internal data class QrCodeSensor(
     val wheel: Vehicle.Kind.Location.Wheel
 ) : Parcelable
 
-@Suppress("MagicNumber")
+@Suppress("MagicNumber", "MaxLineLength")
 internal sealed interface QrCodeSensors : Set<QrCodeSensor>, Parcelable {
 
     @Parcelize
@@ -38,8 +38,11 @@ internal sealed interface QrCodeSensors : Set<QrCodeSensor>, Parcelable {
             third: QrCodeSensor,
             fourth: QrCodeSensor
         ) : this(setOf(first, second, third, fourth)) {
-            require(distinctBy { it.wheel }.size == 4) { throw DuplicateWheelLocation(map { it.wheel }) }
-            require(distinctBy { it.id }.size == 4) { throw DuplicateId(map { it.id }) }
+            // From the arguments: the set keeps one of 2 identical sensors, hiding that one is repeated
+            listOf(first, second, third, fourth).also { sensors ->
+                require(sensors.distinctBy { it.wheel }.size == 4) { throw DuplicateWheelLocation(sensors.map { it.wheel }) }
+                require(sensors.distinctBy { it.id }.size == 4) { throw DuplicateId(sensors.map { it.id }) }
+            }
         }
     }
 
@@ -49,8 +52,11 @@ internal sealed interface QrCodeSensors : Set<QrCodeSensor>, Parcelable {
         private val set: Set<QrCodeSensor>
     ) : QrCodeSensors, Set<QrCodeSensor> by set {
         constructor(first: QrCodeSensor, second: QrCodeSensor) : this(setOf(first, second)) {
-            require(distinctBy { it.wheel }.size == 2) { throw DuplicateWheelLocation(map { it.wheel }) }
-            require(distinctBy { it.id }.size == 2) { throw DuplicateId(map { it.id }) }
+            // From the arguments: the set keeps one of 2 identical sensors, hiding that one is repeated
+            listOf(first, second).also { sensors ->
+                require(sensors.distinctBy { it.wheel }.size == 2) { throw DuplicateWheelLocation(sensors.map { it.wheel }) }
+                require(sensors.distinctBy { it.id }.size == 2) { throw DuplicateId(sensors.map { it.id }) }
+            }
         }
     }
 

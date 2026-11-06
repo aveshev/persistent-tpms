@@ -140,16 +140,16 @@ internal object SilenceAlertsButtonTags {
 
 @Preview
 @Composable
-private fun SilenceAlertsPreview() = SilenceAlertsButton(State.Offer(isCritical = false), {}, {})
+internal fun SilenceAlertsPreview() = SilenceAlertsButton(State.Offer(isCritical = false), {}, {})
 
 @Preview
 @Composable
-private fun SilenceCriticalAlertsPreview() = SilenceAlertsButton(State.Offer(isCritical = true), {}, {})
+internal fun SilenceCriticalAlertsPreview() = SilenceAlertsButton(State.Offer(isCritical = true), {}, {})
 
 @Suppress("MagicNumber")
 @Preview
 @Composable
-private fun AlertsSilencedPreview() = SilenceAlertsButton(
+internal fun AlertsSilencedPreview() = SilenceAlertsButton(
     State.Silenced(isCritical = false, until = System.currentTimeMillis() + 8 * MILLIS_PER_MINUTE.toLong()),
     {},
     {},

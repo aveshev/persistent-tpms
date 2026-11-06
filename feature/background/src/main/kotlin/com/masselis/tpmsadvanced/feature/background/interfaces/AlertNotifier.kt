@@ -303,12 +303,15 @@ internal class AlertNotifier(
         .setWhen(requireNotNull(alerts.latest).timestamp.times(MILLIS_PER_SECOND).roundToLong())
         .setShowWhen(true)
         .setContentIntent(
-            Intent(Intent.ACTION_VIEW, "tpmsadvanced://vehicle/${vehicle.uuid}".toUri()).let {
-                TaskStackBuilder
-                    .create(appContext)
-                    .addNextIntentWithParentStack(it)
-                    .getPendingIntent(0, FLAG_IMMUTABLE)
-            }
+            Intent(Intent.ACTION_VIEW, "tpmsadvanced://vehicle/${vehicle.uuid}".toUri())
+                // Lite, Pro and TPMS Advanced all handle this scheme
+                .setPackage(appContext.packageName)
+                .let {
+                    TaskStackBuilder
+                        .create(appContext)
+                        .addNextIntentWithParentStack(it)
+                        .getPendingIntent(0, FLAG_IMMUTABLE)
+                }
         )
         .apply {
             action.level.snoozes.forEach { duration ->

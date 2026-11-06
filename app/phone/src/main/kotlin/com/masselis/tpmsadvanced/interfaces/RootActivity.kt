@@ -68,8 +68,9 @@ public class RootActivity : AppCompatActivity() {
         val expectedVehicle = intent
             ?.data
             ?.pathSegments
-            ?.first()
-            ?.let { UUID.fromString(it) }
+            ?.firstOrNull()
+            // Exported and browsable: any link can open this activity, with anything as its path
+            ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
             ?.takeIf { hasConsumedIntent.not() }
             ?.also { hasConsumedIntent = true }
 

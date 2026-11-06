@@ -68,7 +68,7 @@ private fun AlertSoundSettings(
 
 @Preview
 @Composable
-private fun AlertSoundSettingsPreview() = AlertSoundSettings(
+internal fun AlertSoundSettingsPreview() = AlertSoundSettings(
     alertSound = TONES,
     onAlertSound = {},
 )
