@@ -2,6 +2,7 @@ package com.masselis.tpmsadvanced.feature.main.interfaces.composable
 
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.BEKUBEE_KY
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.BEKUBEE_TC_TPMS
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.BEKUBEE_TPMS
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.PECHAM
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.SYSGRATION
@@ -11,9 +12,10 @@ import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.WICARLINK
 internal val SensorBrand.label: String
     get() = when (this) {
         PECHAM -> "Pecham"
-        // Two kinds of sensors, both from the HRTPMS app
+        // Several kinds of sensors, named after what they advertise
         BEKUBEE_KY -> "Bekubee KY"
         BEKUBEE_TPMS -> "Bekubee TPMS"
+        BEKUBEE_TC_TPMS -> "Bekubee TC.TPMS"
         WICARLINK -> "Wicarlink"
         SYSGRATION -> "Sysgration"
     }
