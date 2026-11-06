@@ -62,6 +62,17 @@ final class DecoderTests: XCTestCase {
         }
     }
 
+    /// Same bytes but the name: Pecham reads 145 as 0 psi, Bekubee KY 146
+    func testBekubeeKyReadsItsOwnPressureOffset() throws {
+        let first15 = [UInt8](Data(hex: "0303A52703084B5908FF801B1B02A5")!)
+        let ky = try XCTUnwrap(decode(Data(first15 + AdvertisingPacket.pechamCRCBytes(first15, brand: .bekubeeKy)).hex))
+        XCTAssertEqual(ky.brand, .bekubeeKy)
+        XCTAssertEqual(ky.pressure.convert(.psi), 53.1, accuracy: 0.01)
+        let pechamFirst15 = [UInt8](Data(hex: "0303A5270308425208FF801B1B02A5")!)
+        let pecham = try XCTUnwrap(decode(Data(pechamFirst15 + AdvertisingPacket.pechamCRCBytes(pechamFirst15)).hex))
+        XCTAssertEqual(pecham.pressure.convert(.psi), 53.2, accuracy: 0.01)
+    }
+
     func testWicarlinkPressureDropIsAnAlarm() throws {
         XCTAssertFalse(try XCTUnwrap(decode("0201060303B0FB12FFAC00C78952000D3800D510FF1100C42122")).isAlarm)
         XCTAssertTrue(try XCTUnwrap(decode("0201060303B0FB12FFAC00C67C53010D0400F010FF1100C42122")).isAlarm)

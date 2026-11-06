@@ -91,7 +91,8 @@ public struct AdvertisingPacket {
            a.count >= 17, Self.isValidPechamCRC(a, brand: brand) {
             let d = Array(a[10..<17])
             return reading(brand, addressId,
-                           .psi(Float((Int(d[3]) << 8 | Int(d[4])) - 145) / 10),
+                           // 145 at 0 psi for Pecham, 146 for Bekubee KY, like RawPecham.kt and RawBekubeeKy.kt
+                           .psi(Float((Int(d[3]) << 8 | Int(d[4])) - (brand == .pecham ? 145 : 146)) / 10),
                            Temperature(celsius: Float(Int8(bitPattern: d[2]))),
                            volts: Float(Int8(bitPattern: d[1])) / 10)
         }
