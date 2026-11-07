@@ -77,6 +77,7 @@
     <string name="background_scanning_is_suspended_whenever_any_of">Background scanning is suspended whenever any of the conditions below is true, even when an activate condition asks for it, so that no battery is spent while the vehicle is unlikely to be ridden. Scanning while the app is open is never affected.</string>
     <string name="background_scanning_is_suspended_while_any_of">Background scanning is suspended while any of the checked devices is connected: a home speaker, your office headset, etc. The devices paired with this phone are listed here.</string>
     <string name="background_scanning_is_waiting_for_bluetooth_to">Background scanning is waiting for Bluetooth to be turned on</string>
+    <string name="background_scanning_is_waiting_for_location_to">Background scanning is waiting for Location to be turned on, Android needs it for Bluetooth scans on this phone</string>
     <string name="background_scanning_listens_to_your_tyre_sensors">Background scanning listens to your tyre sensors whenever any of the conditions below is true, unless a suspend condition holds it back. Scanning while the app is open is never affected.</string>
     <string name="balanced_scanning">Balanced scanning</string>
     <string name="based_on_tpms_advanced">Based on TPMS Advanced</string>
@@ -350,6 +351,7 @@
     <string name="one_sensor_found">One sensor found</string>
     <string name="one_week">1 week</string>
     <string name="open">Open %1$s</string>
+    <string name="open_location_settings">Open Location settings</string>
     <string name="open_settings">Open settings</string>
     <string name="open_source_licenses">Open-source licenses</string>
     <string name="open_the_persistent_mode_settings">Open the persistent mode settings</string>
@@ -370,6 +372,7 @@
     <string name="persistent_tpms_need_you_to_approve_a">Persistent TPMS need you to approve a permission to scan the QR Code</string>
     <string name="persistent_tpms_needs_some_permission_to_continue">Persistent TPMS needs some permission to continue.\nTheses are required by the system in order to make BLE scan</string>
     <string name="persistent_tpms_needs_the_phone_s_bluetooth">Persistent TPMS needs the phone\'s Bluetooth to be enabled in order to listen to TPMS sensors.</string>
+    <string name="persistent_tpms_needs_the_phone_s_location">Persistent TPMS needs the phone\'s Location to be turned on in order to listen to TPMS sensors. This version of Android requires it for Bluetooth scans, your position isn\'t used.</string>
     <string name="phone_idle">Phone idle</string>
     <string name="plays_in_addition_to_the_red_and">Plays in addition to the warning and critical alerts\' notifications, and repeats while those alerts stay active: every 10 minutes for warnings, every 20 seconds at first for critical, then every 10 minutes.\n\nStopping or pausing monitoring stops the repeats too, until a new alerting sensor update is received.</string>
     <string name="point_the_camera_at_the_sensors_qr">Point the camera at the sensors\' QR code</string>

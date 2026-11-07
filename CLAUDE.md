@@ -114,7 +114,7 @@ The fork has its own version line, unrelated to upstream's: `app` in `gradle/lib
 - `release/0.9.0`: `0.9.0-beta.N`, code `900000 + N`, where N counts the branch's commits. This is what testers get.
 - anything else: `0.9.0-dev+<sha>`, code `900000`. Every such build shares the code, so it installs over another dev build, but not over a beta.
 
-The name is shown in the app settings. `./gradlew :app:phone:firebaseReleaseNotes` writes `app/phone/build/firebase/release-notes.txt` (version, branch, commit, database version) for `firebase appdistribution:distribute ... --release-notes-file`. Android refuses an install below the installed `versionCode`, which also keeps a tester's database from being opened by an older build.
+The name is shown in the app settings. The iOS app has the same version: `./gradlew writeIosVersion` writes it to `ios/Version.xcconfig` (gitignored, see `ios/Version.base.xcconfig`), with the plain version as `CFBundleShortVersionString`, the version code as `CFBundleVersion` and the name in the app settings; an Xcode build warns when it's missing or from another commit, and a Release build fails. `./gradlew :app:phone:firebaseReleaseNotes` writes `app/phone/build/firebase/release-notes.txt` (version, branch, commit, database version) for `firebase appdistribution:distribute ... --release-notes-file`. Android refuses an install below the installed `versionCode`, which also keeps a tester's database from being opened by an older build.
 
 ### Branching
 New feature/fix work always branches from `develop`, never `main` — before creating a new branch, run `git checkout develop && git pull` first. `main` only holds released code and is the source for hotfix branches (see Versioning above).

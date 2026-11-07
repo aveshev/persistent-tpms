@@ -76,6 +76,7 @@
     <string name="background_scanning_is_suspended_whenever_any_of">Фоновое сканирование приостанавливается, когда выполнено любое из условий ниже, даже если условие запуска требует сканировать, чтобы не тратить батарею, когда поездка маловероятна. На сканирование при открытом приложении это не влияет.</string>
     <string name="background_scanning_is_suspended_while_any_of">Фоновое сканирование приостанавливается, пока подключено любое из отмеченных устройств: домашняя колонка, рабочая гарнитура и т. п. Здесь показаны устройства, сопряжённые с этим телефоном.</string>
     <string name="background_scanning_is_waiting_for_bluetooth_to">Фоновое сканирование ждёт включения Bluetooth</string>
+    <string name="background_scanning_is_waiting_for_location_to">Фоновое сканирование ждёт включения геолокации: на этом телефоне Android требует её для сканирования Bluetooth</string>
     <string name="background_scanning_listens_to_your_tyre_sensors">Фоновое сканирование слушает датчики шин, когда выполнено любое из условий ниже, если его не приостанавливает условие приостановки. На сканирование при открытом приложении это не влияет.</string>
     <string name="balanced_scanning">Сбалансированное сканирование</string>
     <string name="based_on_tpms_advanced">Основано на TPMS Advanced</string>
@@ -349,6 +350,7 @@
     <string name="one_sensor_found">Найден один датчик</string>
     <string name="one_week">1 неделю</string>
     <string name="open">Открыть: %1$s</string>
+    <string name="open_location_settings">Открыть настройки геолокации</string>
     <string name="open_settings">Открыть настройки</string>
     <string name="open_source_licenses">Лицензии открытого ПО</string>
     <string name="open_the_persistent_mode_settings">Открыть настройки постоянного режима</string>
@@ -369,6 +371,7 @@
     <string name="persistent_tpms_need_you_to_approve_a">Persistent TPMS нужно ваше разрешение, чтобы сканировать QR-код</string>
     <string name="persistent_tpms_needs_some_permission_to_continue">Persistent TPMS нужны разрешения, чтобы продолжить.\nСистема требует их для сканирования BLE</string>
     <string name="persistent_tpms_needs_the_phone_s_bluetooth">Чтобы слушать датчики TPMS, в Persistent TPMS должен быть включён Bluetooth телефона.</string>
+    <string name="persistent_tpms_needs_the_phone_s_location">Чтобы слушать датчики TPMS, в Persistent TPMS должна быть включена геолокация телефона. Эта версия Android требует её для сканирования Bluetooth, ваше местоположение не используется.</string>
     <string name="phone_idle">Бездействие телефона</string>
     <string name="plays_in_addition_to_the_red_and">Звучит вместе с уведомлениями тревожных и критических оповещений и повторяется, пока они активны: каждые 10 минут для тревожных, для критических сначала каждые 20 секунд, затем каждые 10 минут.\n\nОстановка или пауза мониторинга также прекращает повторы, пока не придёт новое тревожное показание датчика.</string>
     <string name="point_the_camera_at_the_sensors_qr">Наведите камеру на QR-код датчиков</string>

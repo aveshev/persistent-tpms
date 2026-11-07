@@ -57,6 +57,8 @@ public class DemoLeScanner : BluetoothLeScanner {
 
     override val isBluetoothRequired: Boolean = false
 
+    override val isLocationRequired: Boolean = false
+
     public companion object {
         /**
          * No sensor advertises a spare, the demo shows this one's readings there (210 kPa, 18°C)
