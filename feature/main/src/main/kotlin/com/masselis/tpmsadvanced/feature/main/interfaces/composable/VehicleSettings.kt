@@ -1,3 +1,5 @@
+@file:Suppress("MaxLineLength")
+
 package com.masselis.tpmsadvanced.feature.main.interfaces.composable
 
 import androidx.compose.foundation.layout.Column
@@ -34,6 +36,9 @@ import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleBindings.Compan
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent.Factory.Companion.key
 import kotlinx.coroutines.delay
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
+import com.masselis.tpmsadvanced.core.common.localized
 
 /**
  * The vehicle's settings, the alerts being summarised here and edited on their own pages opened by
@@ -73,74 +78,73 @@ public fun VehicleSettings(
     val batteryKinds by viewModel.batteryKinds.collectAsState()
     var showRename by rememberSaveable { mutableStateOf(false) }
     Column(modifier) {
-        SettingsSectionHeader("Alert thresholds")
+        SettingsSectionHeader(stringResource(CommonR.string.alert_thresholds))
         SettingsGroup {
             fun ClosedFloatingPointRange<Pressure>.summary() =
                 "${start.numberString(pressureUnit)} – ${endInclusive.numberString(pressureUnit)} ${pressureUnit.symbol()}"
             TextSettingsItem(
-                headline = "Pressure",
+                headline = localized(CommonR.string.pressure),
                 supporting = listOfNotNull(
                     rearLow
                         ?.takeIf { separateRear }
                         ?.let { start -> rearHigh?.let { start..it } }
-                        ?.let { "Rear ${it.summary()}" },
+                        ?.let { localized(CommonR.string.rear_2, it.summary()) },
                     spareLow
                         ?.takeIf { separateSpare }
                         ?.let { start -> spareHigh?.let { start..it } }
-                        ?.let { "Spare ${it.summary()}" },
+                        ?.let { localized(CommonR.string.spare_2, it.summary()) },
                 )
                     .takeIf { it.isNotEmpty() }
-                    ?.let { listOf("Front ${(low..high).summary()}") + it }
+                    ?.let { listOf(localized(CommonR.string.front_2, (low..high).summary())) + it }
                     ?.joinToString(" · ")
                     ?: (low..high).summary(),
                 onClick = openPressure,
             )
             TextSettingsItem(
-                headline = "Temperature",
-                supporting = "Cold ${lowTemp.numberString(temperatureUnit)} · " +
-                    "Hot ${highTemp.numberString(temperatureUnit)} ${temperatureUnit.symbol()}",
+                headline = localized(CommonR.string.temperature),
+                supporting = localized(CommonR.string.cold_hot, lowTemp.numberString(temperatureUnit), highTemp.numberString(temperatureUnit), temperatureUnit.symbol()),
                 onClick = openTemperature,
             )
             TextSettingsItem(
-                headline = "Battery",
+                headline = localized(CommonR.string.battery),
                 // Like the battery page, both while nothing is known about the sensors
                 supporting = when {
                     batteryKinds.hasVoltage && batteryKinds.hasPercent.not() ->
-                        "Low voltage alarm ${lowBatteryVoltage.string()}"
+                        localized(CommonR.string.low_voltage_alarm_2, lowBatteryVoltage.string())
 
                     batteryKinds.hasPercent && batteryKinds.hasVoltage.not() ->
-                        "Low battery alarm $lowBatteryPercent%"
+                        localized(CommonR.string.low_battery_alarm_2, lowBatteryPercent)
 
-                    else -> "Low alarms ${lowBatteryVoltage.string()} · $lowBatteryPercent%"
+                    else -> localized(CommonR.string.low_alarms, lowBatteryVoltage.string(), lowBatteryPercent)
                 },
                 onClick = openBattery,
                 modifier = Modifier.testTag(VehicleSettingsTags.battery),
             )
         }
         if (backgroundSettings !== backgroundSettingsPlaceholder) {
-            SettingsSectionHeader("Background")
+            SettingsSectionHeader(localized(CommonR.string.background))
             backgroundSettings(component)
         }
-        SettingsSectionHeader("Sensors")
+        SettingsSectionHeader(localized(CommonR.string.sensors))
         SettingsGroup {
             TextSettingsItem(
-                headline = "Manage sensors",
-                supporting = "Move, calibrate, delete",
+                headline = localized(CommonR.string.manage_sensors),
+                supporting = localized(CommonR.string.move_calibrate_delete),
                 onClick = openManageSensors,
                 modifier = Modifier.testTag(VehicleSettingsTags.manageSensors),
             )
             TextSettingsItem(
-                headline = "Share sensors",
-                supporting = "Share with another phone via QR",
+                headline = localized(CommonR.string.share_sensors),
+                supporting = localized(CommonR.string.share_with_another_phone_via_qr),
                 onClick = openShareSensors,
                 modifier = Modifier.testTag(VehicleSettingsTags.shareSensors),
             )
             ClearBoundSensorsButton()
         }
-        SettingsSectionHeader("Vehicle")
+        SettingsSectionHeader(localized(CommonR.string.vehicle))
         SettingsGroup {
             TextSettingsItem(
-                headline = "Edit vehicle name",
+                headline = localized(CommonR.string.edit_vehicle_name),
                 onClick = { showRename = true },
             )
             DeleteVehicleButton()
@@ -168,7 +172,7 @@ private fun RenameVehicleDialog(
     val focusRequester = remember { FocusRequester() }
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        title = { Text("Vehicle name") },
+        title = { Text(stringResource(CommonR.string.vehicle_name)) },
         text = {
             OutlinedTextField(
                 value = text,
@@ -183,10 +187,10 @@ private fun RenameVehicleDialog(
             )
         },
         confirmButton = {
-            TextButton(onClick = { onRename(text.text) }, enabled = canRename) { Text("Rename") }
+            TextButton(onClick = { onRename(text.text) }, enabled = canRename) { Text(stringResource(CommonR.string.rename_2)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismissRequest) { Text("Cancel") }
+            TextButton(onClick = onDismissRequest) { Text(stringResource(CommonR.string.cancel)) }
         },
         modifier = modifier,
     )

@@ -52,6 +52,9 @@ import com.masselis.tpmsadvanced.feature.main.usecase.TyreIconStateFlow.State
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.seconds
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
+import com.masselis.tpmsadvanced.core.common.localized
 
 private val evaluator = ArgbEvaluator()
 
@@ -160,7 +163,7 @@ internal fun Tyre(
                         context.startActivity(Intent().apply { action = ACTION_BLUETOOTH_SETTINGS })
                     } catch (_: ActivityNotFoundException) {
                         scope.launch {
-                            snackbarHostState.showSnackbar("No bluetooth settings screen were found on your device, please disable bluetooth by yourself")
+                            snackbarHostState.showSnackbar(localized(CommonR.string.no_bluetooth_settings_screen_were_found_on))
                         }
                     }
                 },
@@ -186,22 +189,22 @@ private fun AlertButton(
     ) {
         Icon(
             painter = painterResource(R.drawable.alert_octagon),
-            contentDescription = "There is an issue to find the sensor",
+            contentDescription = stringResource(CommonR.string.there_is_an_issue_to_find_the),
             tint = MaterialTheme.colorScheme.error,
         )
     }
     if (showDialog)
         AlertDialog(
             text = {
-                Text("Persistent TPMS is unable to find your sensor, try to disable bluetooth or restart the app")
+                Text(stringResource(CommonR.string.persistent_tpms_is_unable_to_find_your))
             },
             confirmButton = {
                 Row {
                     TextButton(onClick = { disableBluetooth(); showDialog = false }) {
-                        Text("Disable Bluetooth")
+                        Text(stringResource(CommonR.string.disable_bluetooth))
                     }
                     TextButton(onClick = restartApp) {
-                        Text("Restart the app")
+                        Text(stringResource(CommonR.string.restart_the_app))
                     }
                 }
             },

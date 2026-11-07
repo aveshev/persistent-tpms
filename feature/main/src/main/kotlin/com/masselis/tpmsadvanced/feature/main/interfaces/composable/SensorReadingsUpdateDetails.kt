@@ -8,6 +8,8 @@ import com.masselis.tpmsadvanced.core.ui.SettingsGroup
 import com.masselis.tpmsadvanced.core.ui.SettingsIntro
 import com.masselis.tpmsadvanced.core.ui.SettingsSectionHeader
 import com.masselis.tpmsadvanced.core.ui.TextSettingsItem
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * The page opened from [TimeSinceUpdateDetails]: how often each sensor brand sends an update, and
@@ -18,25 +20,22 @@ import com.masselis.tpmsadvanced.core.ui.TextSettingsItem
 @Composable
 public fun SensorReadingsUpdateDetails(modifier: Modifier = Modifier): Unit = Column(modifier) {
     SettingsIntro(
-        "Sensors from different manufacturers differ in how often they send an update, and in whether they can tell that the wheel is rolling."
+        stringResource(CommonR.string.sensors_from_different_manufacturers_differ_in_how)
     )
-    SettingsSectionHeader("Known schedules")
+    SettingsSectionHeader(stringResource(CommonR.string.known_schedules))
     SettingsGroup {
         TextSettingsItem(
             headline = "WiCarLink",
-            supporting = "Every 5.5 minutes, whether the vehicle moves or not, and whenever pressure changes significantly. Reads the pressure in steps of 0.1 bar (about 1.5 psi): a tyre between two steps can read one step lower when cold, and the next one up once warm",
+            supporting = stringResource(CommonR.string.every_5_5_minutes_whether_the_vehicle),
         )
         TextSettingsItem(
             headline = "Pecham",
-            supporting = "Every minute while the wheel rotates. While stationary, only when the pressure is below ~22 psi, and in either case, whenever pressure changes significantly. Reads the pressure in steps of about 0.45 psi (3.1 kPa), shown rounded to 0.1 psi: a steady tyre can go back and forth by one step",
+            supporting = stringResource(CommonR.string.every_minute_while_the_wheel_rotates_while),
         )
     }
-    SettingsSectionHeader("When updates seem to be missing")
+    SettingsSectionHeader(stringResource(CommonR.string.when_updates_seem_to_be_missing))
     SettingsIntro(
-        "If the app does not show the sensor updating as often as you think it should, it could be due to the following reasons:\n\n" +
-            "1. The sensor is not sending any updates at all. You can verify that by briefly taking it off the wheel: it should sense 0 pressure, which should force an update, and the app should show an alert. If it does not, either the sensor itself or its battery may be dead.\n\n" +
-            "2. The sensor is sending updates, but they are not getting to the phone. Changing the phone's position relative to the wheel may help, and so may replacing the sensor's battery with a fresh one. In the worst case, you may need a different sensor brand.\n\n" +
-            "3. The sensor reacts to pressure changes, but fails to detect wheel rotation (if it has rotation detection). Swapping it with a sensor that reports regularly helps tell this apart from #2: if it still doesn't send updates from where the other one does, it's likely faulty and should be replaced. You can use \"Manage sensors\" in the vehicle settings to quickly move them between the wheels."
+        stringResource(CommonR.string.if_the_app_does_not_show_the)
     )
 }
 

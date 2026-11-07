@@ -27,6 +27,8 @@ import com.masselis.tpmsadvanced.feature.background.ioc.Bindings.Companion.Persi
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanSuspensionUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.rationale
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /** The page opened from the "Persistent scanning" item of [PersistentScanningSettings] */
 @Composable
@@ -71,14 +73,14 @@ private fun PersistentScanningDetails(
 ) = Column(modifier) {
     SettingsGroup(Modifier.padding(top = 16.dp)) {
         SwitchSettingsItem(
-            headline = "Persistent scanning",
+            headline = stringResource(CommonR.string.persistent_scanning),
             checked = persistentScanning,
             onCheckedChange = onPersistentScanning,
             modifier = Modifier.testTag(PersistentScanningSettingsTags.persistentScanningDetails),
         )
     }
     Text(
-        text = status.statusText("Current status: "),
+        text = status.statusText(stringResource(CommonR.string.current_status)),
         style = MaterialTheme.typography.titleMedium,
         modifier = Modifier
             .padding(start = 16.dp, end = 16.dp, top = 24.dp)
@@ -86,13 +88,10 @@ private fun PersistentScanningDetails(
     )
     when (status) {
         // The manual mode, which the app never explained anywhere else
-        null -> "Tyres can still be monitored without it: the app scans whenever it is open, and " +
-            "tapping the minimize button at the top of the main screen keeps scanning in the " +
-            "background, whatever the conditions, until stopped from its notification or the phone restarts"
+        null -> stringResource(CommonR.string.tyres_can_still_be_monitored_without_it)
 
         BellState.NeedsPermission ->
-            "Notifications or the unrestricted battery usage are missing, tap the bell on the main " +
-                "screen to grant them"
+            stringResource(CommonR.string.notifications_or_the_unrestricted_battery_usage_are)
 
         BellState.Active, BellState.Always, BellState.Suspended, BellState.Idle -> decision.rationale()
     }.let {
@@ -105,8 +104,8 @@ private fun PersistentScanningDetails(
     }
     SettingsGroup(Modifier.padding(top = 24.dp)) {
         TextSettingsItem(
-            headline = "Keep monitoring running on this phone",
-            supporting = "Some phones stop background apps on their own, see which settings prevent it",
+            headline = stringResource(CommonR.string.keep_monitoring_running_on_this_phone),
+            supporting = stringResource(CommonR.string.some_phones_stop_background_apps_on_their),
             onClick = onKeepAliveInstructions,
         )
     }

@@ -21,6 +21,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import kotlinx.parcelize.Parcelize
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import com.masselis.tpmsadvanced.core.common.localized
 
 internal class BackgroundViewModel(
     private val controller: MonitoringController,
@@ -58,7 +60,7 @@ internal class BackgroundViewModel(
             require(checkSelfPermission(appContext, POST_NOTIFICATIONS) == PERMISSION_GRANTED)
         // Throws when the system refuses the start, so the flash is only reached on success
         controller.start()
-        appContext.flash("Activated TPMS background monitoring")
+        appContext.flash(localized(CommonR.string.activated_monitoring))
         channel.send(Event.FinishActivity)
     }
 
@@ -67,7 +69,7 @@ internal class BackgroundViewModel(
         controller
             .stop()
             .takeIf { it }
-            ?.also { appContext.flash("Disabled TPMS background monitoring") }
+            ?.also { appContext.flash(localized(CommonR.string.disabled_tpms_background_monitoring)) }
     }
 
     private fun computeState(isServiceRunning: Boolean) =

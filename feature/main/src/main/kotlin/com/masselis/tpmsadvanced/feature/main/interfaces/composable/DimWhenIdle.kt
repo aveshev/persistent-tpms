@@ -72,6 +72,8 @@ import kotlin.math.roundToInt
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.delay
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * Lowers the screen's brightness over [content] once nothing happened for as long as the settings
@@ -333,7 +335,7 @@ private fun TurnedOff() = Surface(
     modifier = Modifier.testTag(DimWhenIdleTags.turnedOff),
 ) {
     Text(
-        text = "Screen was turned off by\n\"Block touches in a pocket\"",
+        text = stringResource(CommonR.string.screen_was_turned_off_by_block_touches),
         // In proportion to the size it's shown at
         style = MaterialTheme.typography.headlineSmall.copy(lineHeight = TURNED_OFF_LINE),
         textAlign = TextAlign.Center,
@@ -356,7 +358,7 @@ private fun BlockedTouches() {
         }
     }
     Text(
-        text = "Proximity sensor active\nTouches are blocked",
+        text = stringResource(CommonR.string.proximity_sensor_active_touches_are_blocked),
         color = Color.White,
         style = MaterialTheme.typography.titleLarge,
         textAlign = TextAlign.Center,

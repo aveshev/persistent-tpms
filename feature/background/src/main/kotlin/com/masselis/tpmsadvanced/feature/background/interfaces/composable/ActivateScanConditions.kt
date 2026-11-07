@@ -18,6 +18,8 @@ import com.masselis.tpmsadvanced.core.ui.SwitchSettingsItem
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.SettingsOnScreenEffect
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningSettingsViewModel
 import com.masselis.tpmsadvanced.feature.background.ioc.Bindings.Companion.PersistentScanningSettingsViewModel
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * The page opened from the "Activate scan conditions" item of [PersistentScanningSettings], the
@@ -121,12 +123,12 @@ private fun ActivateScanConditions(
 ) = Column(modifier) {
     @Suppress("MaxLineLength")
     SettingsIntro(
-        "Background scanning listens to your tyre sensors whenever any of the conditions below is true, unless a suspend condition holds it back. Scanning while the app is open is never affected."
+        stringResource(CommonR.string.background_scanning_listens_to_your_tyre_sensors)
     )
-    SettingsSectionHeader("Scan when")
+    SettingsSectionHeader(stringResource(CommonR.string.scan_when))
     SettingsGroup {
         SwitchNavigationSettingsItem(
-            headline = "Bluetooth device connected",
+            headline = stringResource(CommonR.string.bluetooth_device_connected),
             supporting = bluetoothSummary,
             checked = bluetooth,
             onCheckedChange = onBluetooth,
@@ -136,7 +138,7 @@ private fun ActivateScanConditions(
             modifier = Modifier.testTag(PersistentScanningSettingsTags.activateOnBluetooth),
         )
         SwitchNavigationSettingsItem(
-            headline = "Bluetooth beacon nearby",
+            headline = stringResource(CommonR.string.bluetooth_beacon_nearby),
             supporting = beaconSummary,
             checked = beacon,
             onCheckedChange = onBeacon,
@@ -146,31 +148,31 @@ private fun ActivateScanConditions(
             modifier = Modifier.testTag(PersistentScanningSettingsTags.activateOnBeacon),
         )
         SwitchSettingsItem(
-            headline = "Charging with a cable",
+            headline = stringResource(CommonR.string.charging_with_a_cable),
             checked = cable,
             onCheckedChange = onCable,
             modifier = Modifier.testTag(PersistentScanningSettingsTags.activateOnCable),
         )
         SwitchSettingsItem(
-            headline = "Charging wirelessly",
+            headline = stringResource(CommonR.string.charging_wirelessly),
             checked = wireless,
             onCheckedChange = onWireless,
             modifier = Modifier.testTag(PersistentScanningSettingsTags.activateOnWireless),
         )
         SwitchSettingsItem(
-            headline = "Android Auto is connected",
+            headline = stringResource(CommonR.string.android_auto_is_connected),
             checked = androidAuto,
             onCheckedChange = onAndroidAuto,
             modifier = Modifier.testTag(PersistentScanningSettingsTags.activateOnAndroidAuto),
         )
     }
-    SettingsSectionHeader("Afterwards")
+    SettingsSectionHeader(stringResource(CommonR.string.afterwards))
     SettingsGroup {
         SwitchNavigationSettingsItem(
-            headline = "Stay active",
+            headline = stringResource(CommonR.string.stay_active),
             supporting = listOf(
-                "For $stayActiveMinutes min after the last condition ends",
-                "For $stayActiveMinutes min",
+                stringResource(CommonR.string.for_min_after_the_last_condition_ends, stayActiveMinutes),
+                stringResource(CommonR.string.for_min, stayActiveMinutes),
             ).map(::AnnotatedString),
             checked = stayActive,
             // Only extends the conditions above, meaningless without any of them

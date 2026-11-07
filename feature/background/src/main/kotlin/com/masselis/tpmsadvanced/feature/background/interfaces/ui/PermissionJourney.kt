@@ -20,6 +20,8 @@ import androidx.lifecycle.Lifecycle.Event.ON_RESUME
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.masselis.tpmsadvanced.core.common.appContext
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /** The journey that gets the permissions a setting needs, see [rememberPermissionJourney] */
 internal class PermissionJourney(
@@ -166,12 +168,12 @@ private fun RationaleAlert(
         onDismissRequest = onDismissRequest,
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text(text = "Open settings")
+                Text(text = stringResource(CommonR.string.open_settings))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismissRequest) {
-                Text(text = "Cancel")
+                Text(text = stringResource(CommonR.string.cancel))
             }
         }
     )

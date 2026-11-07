@@ -6,6 +6,9 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalInspectionMode
 import app.cash.paparazzi.Paparazzi
 import com.masselis.tpmsadvanced.core.test.MainDispatcherRule
+import com.masselis.tpmsadvanced.core.test.mockLocalizedAsEnglish
+import io.mockk.unmockkAll
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -25,10 +28,14 @@ internal class ImportFromOtherAppTest {
 
     @Before
     fun setup() {
+        mockLocalizedAsEnglish()
         // The offers tell when the latest readings of each app are from
         Locale.setDefault(Locale.US)
         TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
     }
+
+    @After
+    fun tearDown() = unmockkAll()
 
     private fun snapshot(content: @Composable () -> Unit) = paparazzi.snapshot {
         CompositionLocalProvider(LocalInspectionMode provides true, content)

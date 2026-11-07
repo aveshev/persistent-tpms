@@ -1,3 +1,5 @@
+@file:Suppress("MaxLineLength")
+
 package com.masselis.tpmsadvanced.feature.main.interfaces.composable
 
 import android.annotation.SuppressLint
@@ -27,6 +29,8 @@ import com.masselis.tpmsadvanced.core.ui.rememberLocationState
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.PreconditionsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.PreconditionsViewModel
 import dev.zacsweers.metro.Assisted
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 @Composable
 public fun Preconditions(
@@ -55,11 +59,11 @@ internal fun InternalPreconditions(
             // Bluetooth scan permission is granted under "Nearby devices" on API 31+, but under
             // "Location" on older versions (see BluetoothLeScanner.missingPermission()) — match
             // whichever label the system's own Settings screen actually uses.
-            val permissionName = if (SDK_INT >= S) "Nearby devices" else "Location"
+            val permissionName = if (SDK_INT >= S) stringResource(CommonR.string.nearby_devices) else stringResource(CommonR.string.location)
             @Suppress("MaxLineLength")
             MissingPermission(
-                text = "Persistent TPMS needs some permission to continue.\nTheses are required by the system in order to make BLE scan",
-                refusedText = "This app requires \"$permissionName\" permission in order to scan for sensors, please enable it",
+                text = stringResource(CommonR.string.persistent_tpms_needs_some_permission_to_continue),
+                refusedText = stringResource(CommonR.string.this_app_requires_permission_in_order_to, permissionName),
                 permissionState = permissionState,
                 autoRequest = true,
                 modifier = modifier
@@ -103,7 +107,7 @@ private fun ChipIsOff(
     ) {
         Text(
             @Suppress("MaxLineLength")
-            "Persistent TPMS needs the phone's Bluetooth to be enabled in order to listen to TPMS sensors.",
+            stringResource(CommonR.string.persistent_tpms_needs_the_phone_s_bluetooth),
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth(0.7f)
@@ -112,7 +116,7 @@ private fun ChipIsOff(
         FilledTonalButton(onClick = {
             bluetoothState.askEnable()
         }) {
-            Text("Enable bluetooth")
+            Text(stringResource(CommonR.string.enable_bluetooth))
         }
     }
 }
@@ -129,14 +133,14 @@ private fun LocationIsOff(
     ) {
         Text(
             @Suppress("MaxLineLength")
-            "Persistent TPMS needs the phone's Location to be turned on in order to listen to TPMS sensors. This version of Android requires it for Bluetooth scans, your position isn't used.",
+            stringResource(CommonR.string.persistent_tpms_needs_the_phone_s_location),
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth(0.7f)
                 .padding(bottom = 8.dp)
         )
         FilledTonalButton(onClick = locationState::openSettings) {
-            Text("Open Location settings")
+            Text(stringResource(CommonR.string.open_location_settings))
         }
     }
 }

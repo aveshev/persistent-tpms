@@ -1,3 +1,5 @@
+@file:Suppress("MaxLineLength")
+
 package com.masselis.tpmsadvanced.interfaces.composable
 
 import android.text.format.DateUtils.FORMAT_ABBREV_MONTH
@@ -38,6 +40,9 @@ import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State.Offe
 import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State.Unreachable
 import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel.State.UpdateNeeded
 import com.masselis.tpmsadvanced.ioc.Bindings.Companion.ImportViewModel
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
+import com.masselis.tpmsadvanced.core.common.localized
 
 /** Offers to import the other version of the app's data (Lite or Pro) when the app opens */
 @Composable
@@ -57,11 +62,11 @@ internal fun ImportSettings(
 ) {
     val otherApp = remember { viewModel.otherAppLabel() } ?: return
     val state by viewModel.state.collectAsState()
-    SettingsSectionHeader("Data")
+    SettingsSectionHeader(stringResource(CommonR.string.data))
     SettingsGroup(modifier) {
         TextSettingsItem(
-            headline = "Import from $otherApp",
-            supporting = "Replaces this app's vehicles, sensors, readings and settings",
+            headline = stringResource(CommonR.string.import_from, otherApp),
+            supporting = stringResource(CommonR.string.replaces_this_app_s_vehicles_sensors_readings),
             onClick = viewModel::requestImport,
         )
     }
@@ -78,16 +83,16 @@ private fun ImportDialog(
     when (state) {
         Idle -> Unit
         is Offer -> AlertDialog(
-            title = { Text(text = "Import from ${state.otherApp}?") },
+            title = { Text(text = stringResource(CommonR.string.import_from_2, state.otherApp)) },
             text = { Text(text = state.text()) },
             onDismissRequest = onDismiss,
-            confirmButton = { TextButton(onClick = onConfirm) { Text(text = "Import") } },
+            confirmButton = { TextButton(onClick = onConfirm) { Text(text = stringResource(CommonR.string.text_import)) } },
             dismissButton = {
                 if (state.fromSettings) {
-                    TextButton(onClick = onDismiss) { Text(text = "Cancel") }
+                    TextButton(onClick = onDismiss) { Text(text = stringResource(CommonR.string.cancel)) }
                 } else {
                     // Back or a tap outside dismisses it until the next opening, see onDismissRequest
-                    TextButton(onClick = onNeverAsk) { Text(text = "Don't ask again") }
+                    TextButton(onClick = onNeverAsk) { Text(text = stringResource(CommonR.string.don_t_ask_again)) }
                 }
             },
         )
@@ -99,7 +104,7 @@ private fun ImportDialog(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     CircularProgressIndicator(Modifier.size(24.dp))
-                    Text(text = "Importing from ${state.otherApp}…")
+                    Text(text = stringResource(CommonR.string.importing_from, state.otherApp))
                 }
             },
             // Can't be stopped halfway, the app restarts once done
@@ -109,33 +114,32 @@ private fun ImportDialog(
         )
 
         is Imported -> ImportMessage(
-            title = "Imported from ${state.otherApp}",
-            text = "All vehicles, sensors, readings and settings (where applicable) have been copied here.",
+            title = stringResource(CommonR.string.imported_from, state.otherApp),
+            text = stringResource(CommonR.string.all_vehicles_sensors_readings_and_settings_where),
             onDismiss = onDismiss,
         )
 
         is UpdateNeeded -> ImportMessage(
-            title = "Update this app first",
-            text = "${state.otherApp} is a newer version, whose data this app can't read yet. Update " +
-                "this app, then import from its settings.",
+            title = stringResource(CommonR.string.update_this_app_first),
+            text = stringResource(CommonR.string.is_a_newer_version_whose_data_this, state.otherApp),
             onDismiss = onDismiss,
         )
 
         is Unreachable -> ImportMessage(
-            title = "Cannot import",
-            text = "${state.otherApp} didn't answer. Update it, then try again.",
+            title = stringResource(CommonR.string.cannot_import),
+            text = stringResource(CommonR.string.didn_t_answer_update_it_then_try, state.otherApp),
             onDismiss = onDismiss,
         )
 
         is NothingToImport -> ImportMessage(
-            title = "Nothing to import",
-            text = "${state.otherApp} has no sensors or readings yet.",
+            title = stringResource(CommonR.string.nothing_to_import),
+            text = stringResource(CommonR.string.has_no_sensors_or_readings_yet, state.otherApp),
             onDismiss = onDismiss,
         )
 
         is Failed -> ImportMessage(
-            title = "Import failed",
-            text = "The data of ${state.otherApp} couldn't be read. This app's data is unchanged.",
+            title = stringResource(CommonR.string.import_failed),
+            text = stringResource(CommonR.string.the_data_of_couldn_t_be_read, state.otherApp),
             onDismiss = onDismiss,
         )
     }
@@ -154,17 +158,15 @@ private fun Offer.text(): String = LocalContext.current.let { context ->
     @Suppress("MagicNumber")
     fun Double?.asDate() = this
         ?.let { formatDateTime(context, (it * 1000).toLong(), DATE_FLAGS) }
-        ?: "none"
+        ?: localized(CommonR.string.date_none)
     if (replacing) {
-        "Latest reading in $otherApp: ${theirLatestReading.asDate()}\n" +
-            "Latest reading here: ${ourLatestReading.asDate()}\n\n" +
-            "Importing replaces this app's vehicles, sensors, readings and settings with those of $otherApp."
+        localized(CommonR.string.latest_reading_in_latest_reading_here_importing, otherApp, theirLatestReading.asDate(), ourLatestReading.asDate())
     } else {
         theirLatestReading
-            ?.let { "$otherApp is installed on this phone, with its latest reading on ${it.asDate()}.\n\n" }
+            ?.let { localized(CommonR.string.other_app_installed, otherApp, it.asDate()) }
             .orEmpty() +
-            "Importing copies its vehicles, sensors, readings and settings into this app."
-    } + if (fromSettings) "" else " You can also import later, from the settings."
+            localized(CommonR.string.import_copies)
+    } + if (fromSettings) "" else localized(CommonR.string.import_later)
 }
 
 private const val DATE_FLAGS = FORMAT_SHOW_DATE or FORMAT_SHOW_TIME or FORMAT_SHOW_YEAR or FORMAT_ABBREV_MONTH

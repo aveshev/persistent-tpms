@@ -12,6 +12,8 @@ import androidx.car.app.model.ItemList
 import androidx.car.app.model.ListTemplate
 import androidx.car.app.model.Row
 import androidx.car.app.model.Template
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import com.masselis.tpmsadvanced.core.common.localized
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import java.util.UUID
 
@@ -37,7 +39,7 @@ internal class VehiclePickerScreen(
                     Header
                         .Builder()
                         .setStartHeaderAction(Action.BACK)
-                        .setTitle("Vehicles")
+                        .setTitle(localized(CommonR.string.vehicles))
                         .build()
                 )
                 .setSingleList(

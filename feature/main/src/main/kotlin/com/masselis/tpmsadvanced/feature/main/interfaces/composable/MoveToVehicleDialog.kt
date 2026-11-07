@@ -1,3 +1,5 @@
+@file:Suppress("MaxLineLength")
+
 package com.masselis.tpmsadvanced.feature.main.interfaces.composable
 
 import androidx.compose.foundation.layout.Column
@@ -22,6 +24,10 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location
 import com.masselis.tpmsadvanced.feature.main.R
 import com.masselis.tpmsadvanced.feature.main.usecase.SensorBindingUseCase.OtherVehicle
 import java.util.UUID
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
+import com.masselis.tpmsadvanced.core.common.localized
+import com.masselis.tpmsadvanced.core.common.localizedPlural
 
 /**
  * Picks which of the [otherVehicles] the sensor at [location] moves to. One with several wheels
@@ -57,13 +63,9 @@ internal fun MoveToVehicleDialog(
             onDismissRequest = onDismissRequest,
             title = {
                 Column {
-                    Text("Move to another vehicle")
+                    Text(stringResource(CommonR.string.move_to_another_vehicle))
                     Text(
-                        buildString {
-                            append("The ")
-                            appendLoc(location)
-                            append("'s sensor, with its calibration")
-                        },
+                        stringResource(CommonR.string.the_sensor_with_its_calibration, buildString { appendLoc(location) }),
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -76,9 +78,8 @@ internal fun MoveToVehicleDialog(
                             icon = { Icon(ImageVector.vectorResource(R.drawable.directions_car_24px), null) },
                             title = other.vehicle.name,
                             subtitle = when (val count = other.occupied.size) {
-                                0 -> "No sensors yet"
-                                1 -> "1 sensor"
-                                else -> "$count sensors"
+                                0 -> stringResource(CommonR.string.no_sensors_yet)
+                                else -> localizedPlural(CommonR.plurals.sensors, count, count)
                             },
                             onClick = {
                                 other.vehicle.kind.locations.singleOrNull()
@@ -97,7 +98,7 @@ internal fun MoveToVehicleDialog(
                 TextButton(
                     onClick = onDismissRequest,
                     modifier = Modifier.testTag(MoveToVehicleDialogTags.cancel),
-                ) { Text("Cancel") }
+                ) { Text(stringResource(CommonR.string.cancel)) }
             },
             modifier = Modifier.testTag(MoveToVehicleDialogTags.vehicleDialog),
         )
@@ -120,30 +121,22 @@ internal fun SwapOrReplaceDialog(
         onDismissRequest = onDismissRequest,
         title = {
             Text(
-                buildString {
-                    append(vehicleName)
-                    append("'s ")
-                    appendLoc(to)
-                    append(" already has a sensor")
-                }
+                stringResource(CommonR.string.vehicle_location_already_has_a_sensor, vehicleName, buildString { appendLoc(to) })
             )
         },
         text = {
             Column {
                 DialogOption(
                     icon = { Icon(ImageVector.vectorResource(R.drawable.swap_horizontal_24px), null) },
-                    title = "Swap them",
-                    subtitle = buildString {
-                        append("Its sensor comes to the other vehicle's ")
-                        appendLoc(from)
-                    },
+                    title = stringResource(CommonR.string.swap_them),
+                    subtitle = stringResource(CommonR.string.its_sensor_comes_to_the_other_vehicle, buildString { appendLoc(from) }),
                     onClick = { move(true) },
                     modifier = Modifier.testTag(MoveToVehicleDialogTags.swap),
                 )
                 DialogOption(
                     icon = { Icon(ImageVector.vectorResource(R.drawable.delete_24px), null) },
-                    title = "Replace it",
-                    subtitle = "Its sensor is removed from $vehicleName",
+                    title = stringResource(CommonR.string.replace_it),
+                    subtitle = stringResource(CommonR.string.its_sensor_is_removed_from, vehicleName),
                     onClick = { move(false) },
                     color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.testTag(MoveToVehicleDialogTags.replace),
@@ -151,25 +144,24 @@ internal fun SwapOrReplaceDialog(
             }
         },
         dismissButton = {
-            TextButton(onClick = back) { Text("Back") }
+            TextButton(onClick = back) { Text(stringResource(CommonR.string.back)) }
         },
         confirmButton = {
             TextButton(
                 onClick = onDismissRequest,
                 modifier = Modifier.testTag(MoveToVehicleDialogTags.cancel),
-            ) { Text("Cancel") }
+            ) { Text(stringResource(CommonR.string.cancel)) }
         },
         modifier = Modifier.testTag(MoveToVehicleDialogTags.askDialog),
     )
 }
 
 /** What the snackbar tells once a sensor went to [location] of [vehicle] */
-internal fun movedMessage(vehicle: Vehicle, location: Location, swap: Boolean): String = buildString {
-    append(if (swap) "Swapped with " else "Moved to ")
-    append(vehicle.name)
-    append("'s ")
-    appendLoc(location)
-}
+internal fun movedMessage(vehicle: Vehicle, location: Location, swap: Boolean): String = buildString { appendLoc(location) }
+    .let {
+        if (swap) localized(CommonR.string.swapped_with, vehicle.name, it)
+        else localized(CommonR.string.moved_to, vehicle.name, it)
+    }
 
 @Preview
 @Composable

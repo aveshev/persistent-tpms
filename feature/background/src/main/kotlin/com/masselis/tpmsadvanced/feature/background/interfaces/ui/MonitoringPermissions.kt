@@ -33,6 +33,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.masselis.tpmsadvanced.core.common.appContext
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * What a background monitoring service needs from the user: notifications allowed (and Bluetooth
@@ -260,22 +262,18 @@ private fun BatteryOptimizationAlert(
     AlertDialog(
         text = {
             Text(
-                text = "To keep monitoring your tyres reliably in the background, this app " +
-                        "needs to be exempted from battery optimization (sometimes labelled " +
-                        "\"unrestricted\" battery usage in your device's settings). Without " +
-                        "it, the system is likely to stop background monitoring shortly after " +
-                        "it starts."
+                text = stringResource(CommonR.string.to_keep_monitoring_your_tyres_reliably_in)
             )
         },
         onDismissRequest = onDismissRequest,
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text(text = "Open settings")
+                Text(text = stringResource(CommonR.string.open_settings))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismissRequest) {
-                Text(text = "Cancel")
+                Text(text = stringResource(CommonR.string.cancel))
             }
         }
     )
@@ -289,20 +287,18 @@ private fun NotificationPermissionAlert(
     AlertDialog(
         text = {
             Text(
-                text = "This app needs notifications enabled to alert you when a tyre goes " +
-                        "out of range while background monitoring is running. Please enable " +
-                        "notifications for this app to continue."
+                text = stringResource(CommonR.string.this_app_needs_notifications_enabled_to_alert)
             )
         },
         onDismissRequest = onDismissRequest,
         confirmButton = {
             TextButton(onClick = onConfirm) {
-                Text(text = "Open settings")
+                Text(text = stringResource(CommonR.string.open_settings))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismissRequest) {
-                Text(text = "Cancel")
+                Text(text = stringResource(CommonR.string.cancel))
             }
         }
     )
@@ -313,7 +309,7 @@ private fun ReadyToMonitorAlert(
     onConfirm: () -> Unit,
 ) {
     AlertDialog(
-        text = { Text(text = "All permissions granted, starting monitoring") },
+        text = { Text(text = stringResource(CommonR.string.all_permissions_granted_starting_monitoring)) },
         onDismissRequest = onConfirm,
         confirmButton = {
             TextButton(onClick = onConfirm) {

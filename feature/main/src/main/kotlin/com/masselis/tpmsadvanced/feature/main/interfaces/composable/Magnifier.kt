@@ -65,6 +65,8 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 import kotlinx.coroutines.delay
 import com.masselis.tpmsadvanced.core.ui.viewModel as keyedViewModel
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /** Where taps magnify, away from the edges of the vehicle's area and from its top bar */
 private val TAPS_PADDING = 16.dp
@@ -303,7 +305,7 @@ private fun CloseButton(duration: Duration, onClick: () -> Unit, modifier: Modif
         )
         Icon(
             imageVector = ImageVector.vectorResource(R.drawable.close_24px),
-            contentDescription = "Close",
+            contentDescription = stringResource(CommonR.string.close),
             modifier = Modifier.size(36.dp),
         )
     }

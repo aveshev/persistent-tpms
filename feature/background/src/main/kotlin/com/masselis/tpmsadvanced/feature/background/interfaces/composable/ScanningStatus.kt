@@ -16,6 +16,8 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.ui.MonitoringPerm
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.color
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningSettingsViewModel
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import com.masselis.tpmsadvanced.core.common.localized
 
 /**
  * The decision of persistent scanning, null while it is off or while the decision for having just
@@ -55,10 +57,10 @@ internal fun BellState?.statusText(prefix: String): AnnotatedString = buildAnnot
 
 internal val BellState?.label: String
     get() = when (this) {
-        null -> "Off"
-        BellState.NeedsPermission -> "Permissions missing"
-        BellState.Active -> "Active"
-        BellState.Always -> "Always"
-        BellState.Suspended -> "Suspended"
-        BellState.Idle -> "Idle"
+        null -> localized(CommonR.string.text_off)
+        BellState.NeedsPermission -> localized(CommonR.string.permissions_missing)
+        BellState.Active -> localized(CommonR.string.active)
+        BellState.Always -> localized(CommonR.string.always)
+        BellState.Suspended -> localized(CommonR.string.suspended)
+        BellState.Idle -> localized(CommonR.string.idle)
     }

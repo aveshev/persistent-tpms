@@ -23,6 +23,9 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.ui.SettingsOnScre
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningSettingsViewModel
 import com.masselis.tpmsadvanced.feature.background.ioc.Bindings.Companion.PersistentScanningSettingsViewModel
 import com.masselis.tpmsadvanced.feature.background.usecase.WifiConnectionUseCase
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
+import com.masselis.tpmsadvanced.core.common.localized
 
 /** The page opened from the "Suspend scan conditions" item of [PersistentScanningSettings] */
 @Composable
@@ -74,19 +77,19 @@ internal fun SuspendScanConditions(
     Column(modifier) {
         @Suppress("MaxLineLength")
         SettingsIntro(
-            "Background scanning is suspended whenever any of the conditions below is true, even when an activate condition asks for it, so that no battery is spent while the vehicle is unlikely to be ridden. Scanning while the app is open is never affected."
+            stringResource(CommonR.string.background_scanning_is_suspended_whenever_any_of)
         )
-        SettingsSectionHeader("Suspend scanning when (WiFi)")
+        SettingsSectionHeader(stringResource(CommonR.string.suspend_scanning_when_wifi))
         SettingsGroup {
             SwitchSettingsItem(
-                headline = "Connected to any WiFi",
+                headline = stringResource(CommonR.string.connected_to_any_wifi),
                 checked = suspendOnWifi,
                 onCheckedChange = { viewModel.suspendScanningOnWifi.value = it },
                 modifier = Modifier.testTag(PersistentScanningSettingsTags.suspendOnWifi),
             )
             SwitchNavigationSettingsItem(
-                headline = "...except some WiFis",
-                supporting = listOf(AnnotatedString("Car hotspot, garage, etc.")),
+                headline = stringResource(CommonR.string.except_some_wifis),
+                supporting = listOf(AnnotatedString(stringResource(CommonR.string.car_hotspot_garage_etc))),
                 checked = exceptionEnabled,
                 enabled = suspendOnWifi,
                 onClick = openExceptedWifis,
@@ -101,7 +104,7 @@ internal fun SuspendScanConditions(
             val granted = permissionState.allPermissionsGranted
             val ssid = (wifiState as? WifiConnectionUseCase.State.Connected)?.ssid?.takeIf { granted }
             SwitchSettingsItem(
-                headline = "Keep scanning on current WiFi:",
+                headline = stringResource(CommonR.string.keep_scanning_on_current_wifi),
                 supporting = currentWifiSummary(wifiState, granted),
                 checked = ssid != null && ssid in exceptedSsids,
                 enabled = suspendOnWifi && exceptionEnabled && ssid != null,
@@ -109,10 +112,10 @@ internal fun SuspendScanConditions(
                 modifier = Modifier.testTag(PersistentScanningSettingsTags.currentWifiException),
             )
         }
-        SettingsSectionHeader("Suspend scanning when (other)")
+        SettingsSectionHeader(stringResource(CommonR.string.suspend_scanning_when_other))
         SettingsGroup {
             SwitchNavigationSettingsItem(
-                headline = "Bluetooth device connected",
+                headline = stringResource(CommonR.string.bluetooth_device_connected),
                 supporting = bluetoothDevicesSummary(paired, bluetoothDevices),
                 checked = bluetooth,
                 onClick = openBluetoothDevices,
@@ -126,8 +129,8 @@ internal fun SuspendScanConditions(
                 modifier = Modifier.testTag(PersistentScanningSettingsTags.suspendOnBluetooth),
             )
             SwitchSettingsItem(
-                headline = "The phone is idle for a while",
-                supporting = "Screen off or locked, not charging, no movement",
+                headline = stringResource(CommonR.string.the_phone_is_idle_for_a_while),
+                supporting = stringResource(CommonR.string.screen_off_or_locked_not_charging_no),
                 checked = suspendInDoze,
                 onCheckedChange = { viewModel.suspendScanningInDoze.value = it },
                 modifier = Modifier.testTag(PersistentScanningSettingsTags.suspendInDoze),
@@ -141,14 +144,14 @@ private fun currentWifiSummary(
     granted: Boolean,
 ): String = when {
     // The WiFi name can't be read without it, so what's connected doesn't matter
-    granted.not() -> "Needs full location permission"
-    wifiState == null -> "Checking WiFi status..."
-    wifiState == WifiConnectionUseCase.State.Disconnected -> "Not connected to a WiFi"
+    granted.not() -> localized(CommonR.string.needs_full_location_permission)
+    wifiState == null -> localized(CommonR.string.checking_wifi_status)
+    wifiState == WifiConnectionUseCase.State.Disconnected -> localized(CommonR.string.not_connected_to_a_wifi)
     // Connected, but the system doesn't tell the name: permission granted, yet the Location
     // switch of the phone is off
     wifiState !is WifiConnectionUseCase.State.Connected || wifiState.ssid == null ->
-        "Turn on Location in phone settings"
-    else -> "${wifiState.ssid} (connected)"
+        localized(CommonR.string.turn_on_location_in_phone_settings)
+    else -> localized(CommonR.string.connected_3, wifiState.ssid)
 }
 
 @Preview

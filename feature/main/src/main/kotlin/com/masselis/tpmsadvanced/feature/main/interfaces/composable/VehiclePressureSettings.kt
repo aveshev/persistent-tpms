@@ -33,6 +33,8 @@ import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleBindings.Compan
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent.Factory.Companion.key
 import com.masselis.tpmsadvanced.feature.main.usecase.TyreIconStateFlow.State
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /** The page editing the pressure range the vehicle's tyres are expected to stay within */
 @Composable
@@ -97,24 +99,24 @@ private fun VehiclePressureSettings(
     onSeparateSpare: (Boolean) -> Unit = {},
 ) = Column(modifier) {
     TyreLegend(
-        text = "When a sensor reports pressure outside of the range set here, it will raise an alert and blink the affected tyre indicator in red. If it's more than 20% above the maximum, or more than 25% below the minimum, it will be a critical alert. Getting within 3% of the minimum or maximum will raise a warning.",
+        text = stringResource(CommonR.string.when_a_sensor_reports_pressure_outside_of),
         entries = listOf(
-            State.Normal.BlueToGreen(Fraction(1f)) to "In range",
-            State.Alerting() to "Out of range",
-            State.Alerting(isCritical = true) to "Critical",
+            State.Normal.BlueToGreen(Fraction(1f)) to stringResource(CommonR.string.in_range),
+            State.Alerting() to stringResource(CommonR.string.out_of_range),
+            State.Alerting(isCritical = true) to stringResource(CommonR.string.critical),
         ),
     )
     if (canSeparateRear || canSeparateSpare) SettingsGroup(Modifier.padding(top = 24.dp)) {
         if (canSeparateRear) SwitchSettingsItem(
-            headline = "Set rear pressure separately",
+            headline = stringResource(CommonR.string.set_rear_pressure_separately),
             // Static on purpose: the section headers below already show which state is active
-            supporting = "Turn on if the rear tyres need a different pressure than the front ones",
+            supporting = stringResource(CommonR.string.turn_on_if_the_rear_tyres_need),
             checked = rear != null,
             onCheckedChange = onSeparateRear,
         )
         if (canSeparateSpare) SwitchSettingsItem(
-            headline = "Set spare pressure separately",
-            supporting = "Turn on if the spare needs a different pressure than the front tyres",
+            headline = stringResource(CommonR.string.set_spare_pressure_separately),
+            supporting = stringResource(CommonR.string.turn_on_if_the_spare_needs_a),
             checked = spare != null,
             onCheckedChange = onSeparateSpare,
         )
@@ -122,7 +124,7 @@ private fun VehiclePressureSettings(
     // Every location the front range applies to: "Front, rear & spare", "Front & spare", "Front"…
     SettingsSectionHeader(
         listOfNotNull(
-            "Front",
+            stringResource(CommonR.string.front),
             "rear".takeIf { canSeparateRear && rear == null },
             "spare".takeIf { canSeparateSpare && spare == null },
         )
@@ -130,15 +132,15 @@ private fun VehiclePressureSettings(
             ?.let { names -> listOf(names.dropLast(1).joinToString(", "), names.last()) }
             ?.filter { it.isNotEmpty() }
             ?.joinToString(" & ")
-            ?: "Expected range"
+            ?: stringResource(CommonR.string.expected_range)
     )
     PressureRangeGroup(front, unit, onFront)
     rear?.also {
-        SettingsSectionHeader("Rear")
+        SettingsSectionHeader(stringResource(CommonR.string.rear))
         PressureRangeGroup(it, unit, onRear)
     }
     spare?.also {
-        SettingsSectionHeader("Spare")
+        SettingsSectionHeader(stringResource(CommonR.string.spare))
         PressureRangeGroup(it, unit, onSpare)
     }
 }
@@ -154,12 +156,12 @@ private fun PressureRangeGroup(
     var editing by rememberSaveable { mutableStateOf<PressureBound?>(null) }
     SettingsGroup(modifier) {
         TextSettingsItem(
-            headline = "Minimum",
+            headline = stringResource(CommonR.string.minimum_2),
             supporting = range.start.withSymbol(unit),
             onClick = { editing = MIN },
         )
         TextSettingsItem(
-            headline = "Maximum",
+            headline = stringResource(CommonR.string.maximum_2),
             supporting = range.endInclusive.withSymbol(unit),
             onClick = { editing = MAX },
         )
@@ -167,8 +169,8 @@ private fun PressureRangeGroup(
     editing?.also { bound ->
         NumberDialog(
             title = when (bound) {
-                MIN -> "Minimum pressure"
-                MAX -> "Maximum pressure"
+                MIN -> stringResource(CommonR.string.minimum_pressure)
+                MAX -> stringResource(CommonR.string.maximum_pressure)
             },
             value = when (bound) {
                 MIN -> range.start

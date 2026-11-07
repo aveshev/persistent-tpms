@@ -16,6 +16,8 @@ import com.masselis.tpmsadvanced.core.ui.SwitchSettingsItem
 import com.masselis.tpmsadvanced.core.ui.TextSettingsItem
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.TyreDisplaySettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.TyreDisplaySettingsViewModel
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /** The page opened from the "Time since last update" item of [ReadingsSettings] */
 @Composable
@@ -52,18 +54,18 @@ private fun TimeSinceUpdateDetails(
 ) = Column(modifier) {
     @Suppress("MaxLineLength")
     SettingsIntro(
-        "Most TPMS sensors send updates at regular time intervals while riding. However, in some cases the updates can get lost, because of signal obstruction, low sensor battery or other issues. Knowing when exactly the last update arrived from each sensor can help you diagnose these issues."
+        stringResource(CommonR.string.most_tpms_sensors_send_updates_at_regular)
     )
     SettingsGroup(Modifier.padding(top = 16.dp)) {
         TextSettingsItem(
-            headline = "Sensor readings update details",
-            supporting = "How often each sensor updates, and how to check a silent one",
+            headline = stringResource(CommonR.string.sensor_readings_update_details),
+            supporting = stringResource(CommonR.string.how_often_each_sensor_updates_and_how),
             onClick = openSensorReadingsUpdateDetails,
         )
     }
     SettingsGroup(Modifier.padding(top = 24.dp)) {
         SwitchSettingsItem(
-            headline = "Time since last update",
+            headline = stringResource(CommonR.string.time_since_last_update),
             checked = showTimeSinceUpdate,
             onCheckedChange = onShowTimeSinceUpdate,
             modifier = Modifier.testTag(TyreDisplaySettingsTags.timeSinceUpdateDetails),

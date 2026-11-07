@@ -4,6 +4,8 @@ import androidx.car.app.Screen
 import androidx.car.app.model.ItemList
 import androidx.car.app.model.ListTemplate
 import androidx.car.app.model.Row
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import com.masselis.tpmsadvanced.core.common.localized
 import com.masselis.tpmsadvanced.core.common.now as nowSeconds
 import com.masselis.tpmsadvanced.feature.androidauto.endpoint.ui.viewmodel.TabScreenViewModel.Speech
 import com.masselis.tpmsadvanced.feature.androidauto.endpoint.ui.viewmodel.TabScreenViewModel.State
@@ -34,7 +36,7 @@ internal fun VehicleTemplate(
                     .setImage(tab.vehicle.kind.icon(), Row.IMAGE_TYPE_SMALL)
                     .apply {
                         onChangeVehicle?.also { onClick ->
-                            addText("Change vehicle")
+                            addText(localized(CommonR.string.change_vehicle))
                             setBrowsable(true)
                             setOnClickListener(onClick)
                         }

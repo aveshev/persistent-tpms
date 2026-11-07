@@ -29,6 +29,8 @@ import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.DeleteVehicle
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleBindings.Companion.DeleteVehicleViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent.Factory.Companion.key
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /** A [SettingsGroup] item deleting the vehicle once confirmed, the last one cannot be */
 @Composable
@@ -41,10 +43,10 @@ internal fun DeleteVehicleButton(
     val state by viewModel.stateFlow.collectAsState()
     var showDeleteDialog by remember { mutableStateOf(false) }
     TextSettingsItem(
-        headline = "Delete vehicle",
+        headline = stringResource(CommonR.string.delete_vehicle),
         supporting = when (state) {
             is State.DeletableVehicle -> null
-            is State.NotDeletableVehicle -> "The only vehicle cannot be deleted"
+            is State.NotDeletableVehicle -> stringResource(CommonR.string.the_only_vehicle_cannot_be_deleted)
         },
         onClick = { showDeleteDialog = true },
         enabled = state is State.DeletableVehicle,
@@ -75,21 +77,21 @@ private fun DeleteVehicleDialog(
         text = {
             Text(
                 buildAnnotatedString {
-                    append("Do you really want to delete ")
+                    append(stringResource(CommonR.string.do_you_really_want_to_delete))
                     appendBold(vehicle.name)
-                    append("?\nThis action cannot be undone.")
+                    append(stringResource(CommonR.string.this_action_cannot_be_undone))
                 }
             )
         }, onDismissRequest = onDismissRequest, dismissButton = {
             TextButton(
                 onClick = onDismissRequest,
-                content = { Text("Cancel") },
+                content = { Text(stringResource(CommonR.string.cancel)) },
                 modifier = Modifier.testTag(cancel)
             )
         }, confirmButton = {
             TextButton(
                 onClick = onDelete,
-                content = { Text("Delete \"${vehicle.name}\"") },
+                content = { Text(stringResource(CommonR.string.delete, vehicle.name)) },
                 modifier = Modifier.testTag(delete)
             )
         }, modifier = modifier.testTag(DeleteVehicleButtonTags.Dialog.root)

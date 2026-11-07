@@ -1,3 +1,5 @@
+@file:Suppress("MaxLineLength")
+
 package com.masselis.tpmsadvanced.interfaces.composable
 
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.SensorCalibrationSettings
@@ -105,6 +107,8 @@ import com.masselis.tpmsadvanced.ioc.Bindings.Companion.HomeViewModel
 import com.masselis.tpmsadvanced.ioc.Bindings.Companion.VehicleHomeViewModel
 import kotlinx.coroutines.launch
 import java.util.UUID
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 @Composable
 internal fun Home(
@@ -562,7 +566,7 @@ internal fun VehicleHome(
                     Spotlight(
                         center = offsetToFocus!!,
                         radius = 50.dp.toPx(),
-                        text = AnnotatedString("Something new is waiting for you,\nTap this button to monitor your vehicle while the app is in background"),
+                        text = AnnotatedString(stringResource(CommonR.string.something_new_is_waiting_for_you_tap)),
                         textPadding = 8.dp.toPx(),
                         textStyle = TextStyle.Default.copy(
                             color = Color.White,
@@ -622,34 +626,34 @@ private fun TopAppBar(
                     overflow = TextOverflow.Ellipsis,
                 )
 
-                is Path.ManageSensors -> Text(text = "Manage sensors")
-                is Path.ShareSensors -> Text(text = "Share sensors")
-                is Path.MoveToVehicle -> Text(text = "Move to")
-                is Path.PressureSettings -> Text(text = "Pressure")
-                is Path.TemperatureSettings -> Text(text = "Temperature")
-                is Path.Calibration -> Text(text = "Calibrate sensor")
-                is Path.BatterySettings -> Text(text = "Battery")
-                is Path.PressureLoss -> Text(text = "Pressure loss")
-                is Path.AppSettings -> Text(text = "App settings")
-                is Path.TimeSinceUpdate -> Text(text = "Time since last update")
-                is Path.SensorReadingsUpdateDetails -> Text(text = "Sensor readings update details")
-                is Path.MagnifierDuration -> Text(text = "Tap to magnify")
-                is Path.DimDisplayDelay -> Text(text = "Dim when idle")
-                is Path.TextSize -> Text(text = "Sensor readings text size")
-                is Path.AlertSound -> Text(text = "Alert sound")
-                is Path.PersistentMode -> Text(text = "Persistent mode")
-                is Path.Debug -> Text(text = "Debug")
-                is Path.PersistentScanning -> Text(text = "Persistent scanning")
-                is Path.ActivateScanConditions -> Text(text = "Activate scan conditions")
-                is Path.StayActiveDuration -> Text(text = "Stay active")
-                is Path.SuspendScanConditions -> Text(text = "Suspend scan conditions")
-                is Path.ExceptedWifis -> Text(text = "Excepted WiFis")
+                is Path.ManageSensors -> Text(text = stringResource(CommonR.string.manage_sensors))
+                is Path.ShareSensors -> Text(text = stringResource(CommonR.string.share_sensors))
+                is Path.MoveToVehicle -> Text(text = stringResource(CommonR.string.move_to))
+                is Path.PressureSettings -> Text(text = stringResource(CommonR.string.pressure))
+                is Path.TemperatureSettings -> Text(text = stringResource(CommonR.string.temperature))
+                is Path.Calibration -> Text(text = stringResource(CommonR.string.calibrate_sensor))
+                is Path.BatterySettings -> Text(text = stringResource(CommonR.string.battery))
+                is Path.PressureLoss -> Text(text = stringResource(CommonR.string.pressure_loss))
+                is Path.AppSettings -> Text(text = stringResource(CommonR.string.app_settings))
+                is Path.TimeSinceUpdate -> Text(text = stringResource(CommonR.string.time_since_last_update))
+                is Path.SensorReadingsUpdateDetails -> Text(text = stringResource(CommonR.string.sensor_readings_update_details))
+                is Path.MagnifierDuration -> Text(text = stringResource(CommonR.string.tap_to_magnify))
+                is Path.DimDisplayDelay -> Text(text = stringResource(CommonR.string.dim_when_idle))
+                is Path.TextSize -> Text(text = stringResource(CommonR.string.sensor_readings_text_size))
+                is Path.AlertSound -> Text(text = stringResource(CommonR.string.alert_sound))
+                is Path.PersistentMode -> Text(text = stringResource(CommonR.string.persistent_mode))
+                is Path.Debug -> Text(text = stringResource(CommonR.string.debug))
+                is Path.PersistentScanning -> Text(text = stringResource(CommonR.string.persistent_scanning))
+                is Path.ActivateScanConditions -> Text(text = stringResource(CommonR.string.activate_scan_conditions))
+                is Path.StayActiveDuration -> Text(text = stringResource(CommonR.string.stay_active))
+                is Path.SuspendScanConditions -> Text(text = stringResource(CommonR.string.suspend_scan_conditions))
+                is Path.ExceptedWifis -> Text(text = stringResource(CommonR.string.excepted_wifis))
                 is Path.ActivateBluetoothDevices,
-                is Path.SuspendBluetoothDevices -> Text(text = "Bluetooth devices")
-                is Path.Beacons -> Text(text = "Bluetooth beacons")
-                is Path.BeaconScan -> Text(text = "Add a beacon")
-                is Path.Licenses -> Text(text = "Open-source licenses")
-                is Path.BluetoothAssign -> Text(text = "Assign via Bluetooth")
+                is Path.SuspendBluetoothDevices -> Text(text = stringResource(CommonR.string.bluetooth_devices))
+                is Path.Beacons -> Text(text = stringResource(CommonR.string.bluetooth_beacons))
+                is Path.BeaconScan -> Text(text = stringResource(CommonR.string.add_a_beacon))
+                is Path.Licenses -> Text(text = stringResource(CommonR.string.open_source_licenses))
+                is Path.BluetoothAssign -> Text(text = stringResource(CommonR.string.assign_via_bluetooth))
                 is Path.QrCode, null -> {}
             }
         },
@@ -758,7 +762,7 @@ private fun HomeActions(
         ) {
             Icon(
                 ImageVector.vectorResource(R.drawable.more_vert_24px),
-                contentDescription = "Show more options",
+                contentDescription = stringResource(CommonR.string.show_more_options),
             )
         }
         DropdownMenu(
@@ -767,7 +771,7 @@ private fun HomeActions(
             modifier = Modifier.testTag(HomeTags.Overflow.root)
         ) {
             DropdownMenuItem(
-                text = { Text("Vehicle settings") },
+                text = { Text(stringResource(CommonR.string.vehicle_settings)) },
                 leadingIcon = {
                     Icon(ImageVector.vectorResource(R.drawable.car_gear_24px), contentDescription = null)
                 },
@@ -785,7 +789,7 @@ private fun HomeActions(
                 modifier = Modifier.testTag(HomeTags.Overflow.persistentScanning)
             )
             DropdownMenuItem(
-                text = { Text("App settings") },
+                text = { Text(stringResource(CommonR.string.app_settings)) },
                 leadingIcon = {
                     Icon(ImageVector.vectorResource(R.drawable.settings_24px), contentDescription = null)
                 },
@@ -819,7 +823,7 @@ private fun WicarlinkSupportAlert(
 ) {
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        title = { Text("New sensor support!") },
+        title = { Text(stringResource(CommonR.string.new_sensor_support)) },
         text = {
             Row(
                 verticalAlignment = Alignment.CenterVertically
@@ -830,21 +834,20 @@ private fun WicarlinkSupportAlert(
                 ) {
                     Image(
                         bitmap = ImageBitmap.imageResource(id = R.drawable.lytpms_icon),
-                        contentDescription = "LTPMS Icon app",
+                        contentDescription = stringResource(CommonR.string.ltpms_icon_app),
                     )
                 }
 
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "Sensors manufactured by \"Wicarlink\" shown within their app \"LYTPMS\" are now " +
-                            "supported by Persistent TPMS",
+                    stringResource(CommonR.string.sensors_manufactured_by_wicarlink_shown_within_their),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
         },
         confirmButton = {
             TextButton(onClick = onDismissRequest) {
-                Text("I want more !")
+                Text(stringResource(CommonR.string.i_want_more))
             }
         },
         modifier = modifier,
@@ -858,7 +861,7 @@ private fun AndroidAutoSupportAlert(
 ) {
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        title = { Text("Great news !") },
+        title = { Text(stringResource(CommonR.string.great_news)) },
         text = {
             Row(
                 verticalAlignment = Alignment.CenterVertically
@@ -875,8 +878,7 @@ private fun AndroidAutoSupportAlert(
 
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "Android auto is now fully supported! Connect this device to your car radio and " +
-                            "open Persistent TPMS",
+                    stringResource(CommonR.string.android_auto_is_now_fully_supported_connect),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -918,7 +920,7 @@ private fun BackButton() {
         content = {
             Icon(
                 imageVector = ImageVector.vectorResource(R.drawable.arrow_back_24px),
-                contentDescription = "Go back"
+                contentDescription = stringResource(CommonR.string.go_back)
             )
         },
         modifier = Modifier.testTag(backButton)

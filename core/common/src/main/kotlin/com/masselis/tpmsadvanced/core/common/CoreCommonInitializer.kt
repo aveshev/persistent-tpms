@@ -18,6 +18,7 @@ public val appContext: Context get() = privateContext
 public class CoreCommonInitializer : AppGraphReadyInitializer<Context> {
     override fun create(context: Context): Context {
         privateContext = context
+        AppLanguage.applyAtStartup()
         // Clears the default list of writers (logcat output is used by default)
         Logger.setLogWriters(emptyList())
         if (DEBUG.not()) {

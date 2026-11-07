@@ -29,6 +29,7 @@ public object AppSnapshot {
      */
     private val preferences = listOf(
         "APP",
+        "LANGUAGE",
         "UNITS",
         "com.masselis.tpmsadvanced.data.vehicle.interfaces.ScannerDatabase",
     )

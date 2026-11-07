@@ -1,3 +1,5 @@
+@file:Suppress("MaxLineLength")
+
 package com.masselis.tpmsadvanced.feature.main.interfaces.composable
 
 import androidx.compose.runtime.Composable
@@ -21,6 +23,10 @@ import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.Theme.SYSTEM
 import com.masselis.tpmsadvanced.feature.main.R
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.TyreDisplaySettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.TyreDisplaySettingsViewModel
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import com.masselis.tpmsadvanced.core.common.localized
+import androidx.compose.ui.res.stringResource
+import com.masselis.tpmsadvanced.core.common.localizedPlural
 
 /**
  * The "Display" group of the app settings, about the app and its main screen as a whole, see
@@ -91,15 +97,15 @@ private fun DisplaySettings(
     modifier: Modifier = Modifier,
 ) = SettingsGroup(modifier) {
     SegmentedSettingsItem(
-        headline = "Theme",
+        headline = stringResource(CommonR.string.theme),
         options = Theme.entries,
         selected = theme,
         onSelect = onTheme,
         label = {
             when (it) {
-                SYSTEM -> "System"
-                LIGHT -> "Light"
-                DARK -> "Dark"
+                SYSTEM -> localized(CommonR.string.system)
+                LIGHT -> localized(CommonR.string.light)
+                DARK -> localized(CommonR.string.dark)
             }
         },
         icon = {
@@ -112,23 +118,23 @@ private fun DisplaySettings(
         modifier = Modifier.testTag(TyreDisplaySettingsTags.theme),
     )
     SwitchNavigationSettingsItem(
-        headline = "Dim when idle",
-        supporting = listOf(AnnotatedString("after ${dimDisplaySeconds.asDimDelay()}")),
+        headline = stringResource(CommonR.string.dim_when_idle),
+        supporting = listOf(AnnotatedString(stringResource(CommonR.string.after, dimDisplaySeconds.asDimDelay()))),
         checked = dimDisplay,
         onCheckedChange = onDimDisplay,
         onClick = openDimDisplay,
         modifier = Modifier.testTag(TyreDisplaySettingsTags.dimDisplay),
     )
     SwitchNavigationSettingsItem(
-        headline = "Tap to magnify",
-        supporting = listOf(AnnotatedString("for $magnifierSeconds seconds")),
+        headline = stringResource(CommonR.string.tap_to_magnify),
+        supporting = listOf(AnnotatedString(stringResource(CommonR.string.for_duration, localizedPlural(CommonR.plurals.seconds, magnifierSeconds, magnifierSeconds)))),
         checked = magnifier,
         onCheckedChange = onMagnifier,
         onClick = openMagnifier,
         modifier = Modifier.testTag(TyreDisplaySettingsTags.magnifier),
     )
     TextSettingsItem(
-        headline = "Sensor readings text size",
+        headline = stringResource(CommonR.string.sensor_readings_text_size),
         supporting = readoutTextScale.textSizeLabel,
         onClick = openTextSize,
         modifier = Modifier.testTag(TyreDisplaySettingsTags.textSize),

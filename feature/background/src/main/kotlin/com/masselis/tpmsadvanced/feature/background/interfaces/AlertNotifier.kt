@@ -1,3 +1,5 @@
+@file:Suppress("MaxLineLength")
+
 package com.masselis.tpmsadvanced.feature.background.interfaces
 
 import android.annotation.SuppressLint
@@ -57,6 +59,8 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeMark
 import kotlin.time.TimeSource
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import com.masselis.tpmsadvanced.core.common.localized
 
 /**
  * Posts a notification per vehicle, tyre and class of alert, separate from the monitor service's,
@@ -111,16 +115,16 @@ internal class AlertNotifier(
                     .Builder(level.channel, if (level == CRIMSON) IMPORTANCE_MAX else IMPORTANCE_HIGH)
                     .setName(
                         when (level) {
-                            AMBER -> "Tyre warnings"
-                            RED -> "Tyre alerts"
-                            CRIMSON -> "Critical tyre alerts"
+                            AMBER -> localized(CommonR.string.tyre_warnings)
+                            RED -> localized(CommonR.string.tyre_alerts)
+                            CRIMSON -> localized(CommonR.string.critical_tyre_alerts)
                         }
                     )
                     .setDescription(
                         when (level) {
-                            AMBER -> "To address when convenient"
-                            RED -> "To address at the earliest possibility, ride on with caution"
-                            CRIMSON -> "To fix before riding on"
+                            AMBER -> localized(CommonR.string.to_address_when_convenient)
+                            RED -> localized(CommonR.string.to_address_at_the_earliest_possibility_ride)
+                            CRIMSON -> localized(CommonR.string.to_fix_before_riding_on)
                         }
                     )
                     .build()
@@ -311,7 +315,7 @@ internal class AlertNotifier(
         )
         .apply {
             action.level.snoozes.forEach { duration ->
-                addAction(0, "Dismiss ${duration.label}", snooze(tag, alertClass, action.level, duration))
+                addAction(0, localized(CommonR.string.dismiss, duration.label), snooze(tag, alertClass, action.level, duration))
             }
         }
         // Swiping it away dismisses it for the shorter period
@@ -338,21 +342,21 @@ internal class AlertNotifier(
     private fun Update.title(alertClass: AlertClass, level: AlertLevel) = when (alertClass) {
         PRESSURE -> isLowPressure.let { isLow ->
             when (level) {
-                AMBER -> if (isLow) "Pressure getting low" else "Pressure getting high"
-                RED -> if (isLow) "Pressure low" else "Pressure high"
-                CRIMSON -> if (isLow) "Pressure critically low" else "Pressure critically high"
+                AMBER -> if (isLow) localized(CommonR.string.pressure_getting_low) else localized(CommonR.string.pressure_getting_high)
+                RED -> if (isLow) localized(CommonR.string.pressure_low) else localized(CommonR.string.pressure_high)
+                CRIMSON -> if (isLow) localized(CommonR.string.pressure_critically_low) else localized(CommonR.string.pressure_critically_high)
             }
         }
 
         TEMPERATURE -> when (level) {
-            AMBER -> "Tyre getting hot"
-            RED -> "Tyre hot"
-            CRIMSON -> "Tyre critically hot"
+            AMBER -> localized(CommonR.string.tyre_getting_hot)
+            RED -> localized(CommonR.string.tyre_hot)
+            CRIMSON -> localized(CommonR.string.tyre_critically_hot)
         }
 
-        BATTERY -> if (level == AMBER) "Sensor battery getting low" else "Sensor battery low"
-        PRESSURE_LOSS -> "Losing pressure"
-        SENSOR_ALARM -> "May be leaking"
+        BATTERY -> if (level == AMBER) localized(CommonR.string.sensor_battery_getting_low) else localized(CommonR.string.sensor_battery_low)
+        PRESSURE_LOSS -> localized(CommonR.string.losing_pressure)
+        SENSOR_ALARM -> localized(CommonR.string.may_be_leaking)
     }
 
     private fun Update.text(alertClass: AlertClass, now: TyreAtmosphere?): String = buildString {
@@ -373,37 +377,37 @@ internal class AlertNotifier(
         val reading = requireNotNull(alerts.latest)
         val pressureUnit = unitPreferences.pressure.value
         // "21.0 psi (now 22.4 psi)": the newer reading the main screen already shows
-        val values = value(alertClass, reading) + (now?.let { " (now ${value(alertClass, it)})" } ?: "")
+        val values = value(alertClass, reading) + (now?.let { localized(CommonR.string.now, value(alertClass, it)) } ?: "")
         return when (alertClass) {
             PRESSURE -> buildString {
                 append("$values, ")
                 append(
-                    if (isLowPressure) "min ${thresholds.lowPressure.string(pressureUnit)}"
-                    else "max ${thresholds.highPressure.string(pressureUnit)}"
+                    if (isLowPressure) localized(CommonR.string.minimum, thresholds.lowPressure.string(pressureUnit))
+                    else localized(CommonR.string.maximum, thresholds.highPressure.string(pressureUnit))
                 )
                 // Not notified on their own then, see action()
                 if (alerts.foldsLeaks) {
                     loss?.also { append(", ${it.summary(pressureUnit)}") }
-                    if (SENSOR_ALARM in alerts.levels) append(", sensor alarm")
+                    if (SENSOR_ALARM in alerts.levels) append(localized(CommonR.string.sensor_alarm))
                 }
             }
 
-            TEMPERATURE -> "$values, hot from ${thresholds.highTemp.string(unitPreferences.temperature.value)}"
+            TEMPERATURE -> localized(CommonR.string.hot_from, values, thresholds.highTemp.string(unitPreferences.temperature.value))
 
             BATTERY -> reading
                 .batteryVoltage
-                ?.let { "$values, alarm at ${thresholds.lowBatteryVoltage.alarmAt(reading.temperature).string()}" }
-                ?: "$values, alarm at ${thresholds.lowBatteryPercent}%"
+                ?.let { localized(CommonR.string.alarm_at, values, thresholds.lowBatteryVoltage.alarmAt(reading.temperature).string()) }
+                ?: localized(CommonR.string.alarm_at_2, values, thresholds.lowBatteryPercent)
             PRESSURE_LOSS -> loss
-                ?.let { "${it.summary(pressureUnit)}, now ${reading.pressure.string(pressureUnit)}" }
+                ?.let { localized(CommonR.string.now_2, it.summary(pressureUnit), reading.pressure.string(pressureUnit)) }
                 ?: reading.pressure.string(pressureUnit)
 
-            SENSOR_ALARM -> "the sensor raised its own alarm, at ${reading.pressure.string(pressureUnit)}"
+            SENSOR_ALARM -> localized(CommonR.string.the_sensor_raised_its_own_alarm_at, reading.pressure.string(pressureUnit))
         }
     }
 
     private fun PressureLoss.summary(unit: PressureUnit) =
-        "down ${drop.string(unit)} in ${((until - since) / SECONDS_PER_MINUTE).roundToLong().coerceAtLeast(1)} min"
+        localized(CommonR.string.loss_summary, drop.string(unit), ((until - since) / SECONDS_PER_MINUTE).roundToLong().coerceAtLeast(1))
 
     /** Which side of the range the pressure alerts for, the closer one */
     private val Update.isLowPressure
@@ -528,10 +532,10 @@ internal class AlertNotifier(
 
         private val Duration.label
             get() = when {
-                this < 1.days -> "$inWholeMinutes min"
-                this == 1.days -> "1 day"
-                this == 7.days -> "1 week"
-                else -> "$inWholeDays days"
+                this < 1.days -> localized(CommonR.string.n_min, inWholeMinutes)
+                this == 1.days -> localized(CommonR.string.one_day)
+                this == 7.days -> localized(CommonR.string.one_week)
+                else -> localized(CommonR.string.n_days, inWholeDays)
             }
     }
 }

@@ -23,6 +23,8 @@ import com.masselis.tpmsadvanced.feature.qrcode.interfaces.QrCodeResultViewModel
 import com.masselis.tpmsadvanced.feature.qrcode.ioc.Bindings.Companion.QrCodeResultViewModel
 import com.masselis.tpmsadvanced.feature.qrcode.model.QrCodeResult
 import java.util.UUID
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * What [result], a scanned QR code, leads to on the vehicle [vehicleUuid] it was scanned for, at
@@ -58,48 +60,48 @@ public fun QrCodeResultDialog(
                             .singleOrNull()
                             ?.takeIf { it.brand == WICARLINK }
                             ?.also { sensor ->
-                                append("Assign the Wicarlink sensor ")
+                                append(stringResource(CommonR.string.qr_assign_wicarlink))
                                 appendBold(sensor.id.asSensorId(sensor.brand))
-                                append(" to the ")
-                                if (sensor.location == Location.Single) append("wheel")
+                                append(stringResource(CommonR.string.qr_to_the))
+                                if (sensor.location == Location.Single) append(stringResource(CommonR.string.loc_wheel))
                                 else appendBold(buildString { appendLoc(sensor.location) })
-                                append(" of ")
+                                append(stringResource(CommonR.string.qr_of))
                             }
-                            ?: append("Assign the ${state.sensors.size} Sysgration sensors from this QR to ")
+                            ?: append(stringResource(CommonR.string.qr_assign_sysgration, state.sensors.size))
                         appendBold(state.vehicle.name)
                         append("?")
                         state.reassigns?.also { (vehicle, location) ->
                             append("\n\n⚠️ ")
-                            append(if (state.sensors.size == 1) "This sensor is" else "One of these sensors is")
-                            append(" already assigned to the ")
-                            if (location == Location.Single) append("wheel")
+                            append(if (state.sensors.size == 1) stringResource(CommonR.string.qr_this_sensor) else stringResource(CommonR.string.qr_one_of))
+                            append(stringResource(CommonR.string.qr_already_assigned))
+                            if (location == Location.Single) append(stringResource(CommonR.string.loc_wheel))
                             else appendBold(buildString { appendLoc(location) })
-                            append(" of ")
+                            append(stringResource(CommonR.string.qr_of))
                             appendBold(vehicle.name)
-                            append(", it will be reassigned")
+                            append(stringResource(CommonR.string.qr_reassigned))
                         }
-                        if (state.overwrites) append("\n\n⚠️ Warning: this will overwrite already assigned sensors")
+                        if (state.overwrites) append(stringResource(CommonR.string.qr_overwrite))
                     }
                 )
             },
             // Answering yes is confirmation enough, the assigned sensors show on the vehicle
             confirmButton = {
                 TextButton(onClick = { viewModel.bind(); onDismiss() }) {
-                    Text(text = if (state.reassigns != null) "Reassign" else "Yes")
+                    Text(text = if (state.reassigns != null) stringResource(CommonR.string.reassign) else stringResource(CommonR.string.text_yes))
                 }
             },
-            dismissButton = { TextButton(onClick = onDismiss) { Text(text = "Cancel") } },
+            dismissButton = { TextButton(onClick = onDismiss) { Text(text = stringResource(CommonR.string.cancel)) } },
         )
 
         is State.TooManySensors -> AlertDialog(
             onDismissRequest = onDismiss,
-            title = { Text("Too many sensors") },
+            title = { Text(stringResource(CommonR.string.too_many_sensors)) },
             text = {
                 Text(
                     buildAnnotatedString {
-                        append("This QR lists ${state.count} sensors, but ")
+                        append(stringResource(CommonR.string.qr_lists, state.count))
                         appendBold(state.vehicle.name)
-                        append(" only needs ${state.vehicle.kind.locations.size}.\nPlease assign via Bluetooth instead.")
+                        append(stringResource(CommonR.string.qr_only_needs, state.vehicle.kind.locations.size))
                     }
                 )
             },
@@ -108,7 +110,7 @@ public fun QrCodeResultDialog(
 
         State.Unreadable -> AlertDialog(
             onDismissRequest = onDismiss,
-            text = { Text("Error reading QR, please assign via Bluetooth instead") },
+            text = { Text(stringResource(CommonR.string.error_reading_qr_please_assign_via_bluetooth)) },
             confirmButton = { TextButton(onClick = onDismiss) { Text(text = "OK") } },
         )
 
@@ -116,13 +118,13 @@ public fun QrCodeResultDialog(
 
         is State.AskShared -> AlertDialog(
             onDismissRequest = onDismiss,
-            title = { Text("Shared sensors") },
+            title = { Text(stringResource(CommonR.string.shared_sensors)) },
             text = {
                 Text(
                     buildAnnotatedString {
-                        append("Assign the sensors of ")
+                        append(stringResource(CommonR.string.qr_assign_sensors_of))
                         appendBold(state.from)
-                        append(" to ")
+                        append(stringResource(CommonR.string.qr_to))
                         appendBold(state.vehicle.name)
                         append("?\n")
                         state.sensors.forEach { shared ->
@@ -131,47 +133,47 @@ public fun QrCodeResultDialog(
                             append(": ")
                             appendBold(shared.sensor.id.asSensorId(shared.sensor.brand))
                             append(" ${shared.sensor.brand.label}")
-                            if (shared.calibration.adjusts) append(", calibrated")
+                            if (shared.calibration.adjusts) append(stringResource(CommonR.string.calibrated))
                         }
                         state.reassigns.forEach { (id, assigned) ->
                             append("\n\n⚠️ ")
                             appendBold(id.asSensorId(state.sensors.first { it.sensor.id == id }.sensor.brand))
-                            append(" is assigned to the ")
-                            if (assigned.location == Location.Single) append("wheel")
+                            append(stringResource(CommonR.string.qr_is_assigned))
+                            if (assigned.location == Location.Single) append(stringResource(CommonR.string.loc_wheel))
                             else appendBold(buildString { appendLoc(assigned.location) })
-                            append(" of ")
+                            append(stringResource(CommonR.string.qr_of))
                             appendBold(assigned.vehicle.name)
-                            append(", it will be reassigned")
+                            append(stringResource(CommonR.string.qr_reassigned))
                         }
-                        if (state.overwrites) append("\n\n⚠️ Warning: this will overwrite already assigned sensors")
+                        if (state.overwrites) append(stringResource(CommonR.string.qr_overwrite))
                         if (state.skipped.isNotEmpty()) {
-                            append("\n\nNot assigned, ")
+                            append(stringResource(CommonR.string.qr_not_assigned))
                             appendBold(state.vehicle.name)
-                            append(" has no ")
-                            append(state.skipped.joinToString(" or ") { buildString { appendLoc(it.sensor.location) } })
+                            append(stringResource(CommonR.string.qr_has_no))
+                            append(state.skipped.joinToString(stringResource(CommonR.string.qr_or)) { buildString { appendLoc(it.sensor.location) } })
                         }
                     }
                 )
             },
             confirmButton = {
                 TextButton(onClick = { viewModel.bind(); onDismiss() }) {
-                    Text(text = if (state.reassigns.isNotEmpty()) "Reassign" else "Assign")
+                    Text(text = if (state.reassigns.isNotEmpty()) stringResource(CommonR.string.reassign) else stringResource(CommonR.string.assign))
                 }
             },
-            dismissButton = { TextButton(onClick = onDismiss) { Text(text = "Cancel") } },
+            dismissButton = { TextButton(onClick = onDismiss) { Text(text = stringResource(CommonR.string.cancel)) } },
         )
 
         is State.NoSharedSensorFits -> AlertDialog(
             onDismissRequest = onDismiss,
-            title = { Text("Shared sensors") },
+            title = { Text(stringResource(CommonR.string.shared_sensors)) },
             text = {
                 Text(
                     buildAnnotatedString {
-                        append("None of the sensors of ")
+                        append(stringResource(CommonR.string.qr_none_of))
                         appendBold(state.shared.name)
-                        append(" is on a wheel ")
+                        append(stringResource(CommonR.string.qr_on_a_wheel))
                         appendBold(state.vehicle.name)
-                        append(" has.")
+                        append(stringResource(CommonR.string.qr_has))
                     }
                 )
             },
@@ -180,13 +182,13 @@ public fun QrCodeResultDialog(
 
         State.SharedByNewerApp -> AlertDialog(
             onDismissRequest = onDismiss,
-            text = { Text("These sensors were shared by a newer version of the app, please update it to read them") },
+            text = { Text(stringResource(CommonR.string.these_sensors_were_shared_by_a_newer)) },
             confirmButton = { TextButton(onClick = onDismiss) { Text(text = "OK") } },
         )
 
         State.SharedUnreadable -> AlertDialog(
             onDismissRequest = onDismiss,
-            text = { Text("Error reading the shared sensors, please scan the code again") },
+            text = { Text(stringResource(CommonR.string.error_reading_the_shared_sensors_please_scan)) },
             confirmButton = { TextButton(onClick = onDismiss) { Text(text = "OK") } },
         )
     }
@@ -214,11 +216,11 @@ private fun UnusableAlert(
         text = {
             Text(
                 buildString {
-                    append("Detected inconsistency with the QR Code")
+                    append(stringResource(CommonR.string.detected_inconsistency_with_the_qr_code))
                     when (result) {
                         is QrCodeResult.DuplicateWheelLocation -> {
-                            append("\n\n⚠️ Filled QR Code contains different sensors associated to the same wheel, ")
-                            append(if (result.wheels.size == 1) "duplication:" else "duplications:")
+                            append(stringResource(CommonR.string.qr_dup_wheel))
+                            append(if (result.wheels.size == 1) stringResource(CommonR.string.qr_duplication) else stringResource(CommonR.string.qr_duplications))
                             result.wheels.forEach { location ->
                                 append("\n   · ")
                                 appendLoc(location)
@@ -226,7 +228,7 @@ private fun UnusableAlert(
                         }
 
                         is QrCodeResult.DuplicateId ->
-                            append("\n\n⚠️ Filled QR Code contains the same sensor id multiple time")
+                            append(stringResource(CommonR.string.qr_dup_id))
 
                         is QrCodeResult.Sensors,
                         is QrCodeResult.Wicarlink,
@@ -238,7 +240,7 @@ private fun UnusableAlert(
             )
         },
         onDismissRequest = onDismiss,
-        dismissButton = { TextButton(onClick = { onDismiss(); scanBluetooth() }) { Text(text = "Scan via Bluetooth") } },
+        dismissButton = { TextButton(onClick = { onDismiss(); scanBluetooth() }) { Text(text = stringResource(CommonR.string.scan_via_bluetooth)) } },
         confirmButton = { TextButton(onClick = onDismiss) { Text(text = "OK") } },
     )
 }

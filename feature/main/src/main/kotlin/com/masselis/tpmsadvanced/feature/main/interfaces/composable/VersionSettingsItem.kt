@@ -13,6 +13,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.masselis.tpmsadvanced.core.ui.TextSettingsItem
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.DebugSettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.DebugSettingsViewModel
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * The app's version, in the "About" group of the app settings. Tapping it 10 times in a row shows
@@ -35,7 +37,7 @@ internal fun VersionSettingsItem(
     // The countdown replaces its previous message rather than queuing after it
     var toast by remember { mutableStateOf<Toast?>(null) }
     TextSettingsItem(
-        headline = "Version",
+        headline = stringResource(CommonR.string.version),
         supporting = versionName,
         onClick = {
             viewModel.onVersionTap()?.also { message ->

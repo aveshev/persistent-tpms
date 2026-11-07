@@ -12,6 +12,7 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import androidx.core.content.getSystemService
 import co.touchlab.kermit.Logger
+import com.masselis.tpmsadvanced.core.common.AppLanguage
 import com.masselis.tpmsadvanced.core.common.appContext
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.AlertSound.NONE
@@ -123,12 +124,12 @@ internal class AlertSpeaker(
     private data class Repeated(val alertClass: AlertClass, val crimsonUntil: TimeMark?) {
         val isCrimson get() = crimsonUntil != null
         val isCrimsonLoop get() = crimsonUntil?.hasNotPassedNow() == true
-        val phrase get() = if (isCrimson) "${alertClass.phrase} critical" else alertClass.phrase
+        fun phrase(isRussian: Boolean) = alertClass.phrase(isCrimson, isRussian)
     }
 
     /** A red alert, or a crimson one which the loops can't repeat, by the tag of its notification */
     private data class Announcement(val tag: String, val alertClass: AlertClass, val isCrimson: Boolean) {
-        val phrase get() = if (isCrimson) "${alertClass.phrase} critical" else alertClass.phrase
+        fun phrase(isRussian: Boolean) = alertClass.phrase(isCrimson, isRussian)
     }
 
     private val queue = MutableStateFlow(Queue())
@@ -269,7 +270,7 @@ internal class AlertSpeaker(
                 .collectLatest { sound ->
                     when (sound) {
                         null -> Unit
-                        SPEECH -> textToSpeech().collect { tts -> Voice { text, usage -> tts.say(text, usage) }.speakQueue() }
+                        SPEECH -> textToSpeech().collect { tts -> Voice { text, usage -> tts.say(text, usage) }.speakQueue(tts.speaksRussian()) }
                         // The usage tells the crimson phrases apart
                         TONES -> Voice { _, usage -> playTones(usage) }.speakQueue()
                         // Only vibrating, the queue being emptied once the vibration is off too
@@ -285,14 +286,14 @@ internal class AlertSpeaker(
     }
 
     @Suppress("NestedBlockDepth", "CyclomaticComplexMethod", "LongMethod", "MaxLineLength")
-    private suspend fun Voice.speakQueue() {
+    private suspend fun Voice.speakQueue(isRussian: Boolean = false) {
         while (true) {
             // A crimson alert leaving its loop enters the reminders
             queue.update { it.scheduled() }
             val current = queue.value
             when {
                 current.announcements.isNotEmpty() -> current.announcements.first().let { announcement ->
-                    val phrase = announcement.phrase
+                    val phrase = announcement.phrase(isRussian)
                     awaitNotificationSound(current.sounded)
                     // Unless it was dismissed meanwhile
                     if (announcement in queue.value.announcements) sayToTheEnd(
@@ -301,11 +302,11 @@ internal class AlertSpeaker(
                     ) { queue ->
                         queue.copy(
                             // Along with the others waiting which would say the same
-                            announcements = queue.announcements.filter { it.phrase != phrase },
+                            announcements = queue.announcements.filter { it.phrase(isRussian) != phrase },
                             // Said everything the reminders would, which start over
                             nextReminder = queue
                                 .reminders
-                                .takeIf { reminders -> reminders.isNotEmpty() && reminders.all { it.phrase == phrase } }
+                                .takeIf { reminders -> reminders.isNotEmpty() && reminders.all { it.phrase(isRussian) == phrase } }
                                 ?.let { timeSource.markNow() + REMINDER_PERIOD }
                                 ?: queue.nextReminder,
                         )
@@ -320,7 +321,7 @@ internal class AlertSpeaker(
                         .value
                         .crimson
                         .takeIf { it.isNotEmpty() }
-                        ?.let { crimson -> sayToTheEnd(crimson.spoken(), USAGE_ALARM) }
+                        ?.let { crimson -> sayToTheEnd(crimson.spoken(isRussian), USAGE_ALARM) }
                 }
 
                 current.nextReminder?.hasPassedNow() == true -> {
@@ -332,7 +333,7 @@ internal class AlertSpeaker(
                         .takeIf { it.isNotEmpty() }
                         ?.let { reminders ->
                             sayToTheEnd(
-                                reminders.spoken(),
+                                reminders.spoken(isRussian),
                                 if (reminders.any(Repeated::isCrimson)) USAGE_ALARM else USAGE_ASSISTANCE_NAVIGATION_GUIDANCE,
                             )
                         }
@@ -353,9 +354,9 @@ internal class AlertSpeaker(
     }
 
     /** Every phrase once, the crimson ones first, the whole said twice */
-    private fun List<Repeated>.spoken() = this
+    private fun List<Repeated>.spoken(isRussian: Boolean) = this
         .sortedBy { it.isCrimson.not() }
-        .map(Repeated::phrase)
+        .map { it.phrase(isRussian) }
         .distinct()
         .joinToString(", ")
         .let { "$it. $it." }
@@ -461,6 +462,11 @@ internal class AlertSpeaker(
                 continuation.resume(Unit)
         }
 
+    /** Russian when that's the app's language and the engine has it, staying in English otherwise */
+    private fun TextToSpeech.speaksRussian(): Boolean =
+        AppLanguage.current.value.locale.language == RUSSIAN.language &&
+            setLanguage(RUSSIAN) >= TextToSpeech.LANG_AVAILABLE
+
     /** The default engine once it is ready, shut down when the collection ends */
     private fun textToSpeech(): Flow<TextToSpeech> = callbackFlow {
         val status = CompletableDeferred<Int>()
@@ -468,7 +474,7 @@ internal class AlertSpeaker(
         launch {
             if (status.await() == TextToSpeech.SUCCESS) tts
                 .apply {
-                    // The phrases are English, while the engine follows the phone's language
+                    // English until speaksRussian says otherwise, while the engine follows the phone's language
                     setLanguage(Locale.US)
                         .takeIf { it < TextToSpeech.LANG_AVAILABLE }
                         ?.also { logger.w { "English is not available ($it), spoken in the default language" } }
@@ -488,13 +494,24 @@ internal class AlertSpeaker(
         val SPOKEN = setOf(PRESSURE, TEMPERATURE, BATTERY)
 
         /** Short on purpose: they say what to look for, the screen says the rest */
-        val AlertClass.phrase
-            get() = when (this) {
+        @Suppress("CyclomaticComplexMethod")
+        fun AlertClass.phrase(isCrimson: Boolean, isRussian: Boolean) = when {
+            isRussian -> when (this) {
+                PRESSURE -> if (isCrimson) "Критическое давление в шине" else "Давление в шине"
+                TEMPERATURE -> if (isCrimson) "Критический перегрев шины" else "Перегрев шины"
+                BATTERY -> if (isCrimson) "Критический заряд батареи в сенсоре" else "Батарея в сенсоре"
+                PRESSURE_LOSS, SENSOR_ALARM -> error("$this is never said")
+            }
+
+            else -> when (this) {
                 PRESSURE -> "Tyre pressure"
                 TEMPERATURE -> "Tyre hot"
                 BATTERY -> "Sensor battery"
                 PRESSURE_LOSS, SENSOR_ALARM -> error("$this is never said")
-            }
+            }.let { if (isCrimson) "$it critical" else it }
+        }
+
+        val RUSSIAN: Locale = Locale.forLanguageTag("ru")
 
         /** How long a notification's sound can take to start after it's posted */
         val SOUND_START = 1.5.seconds

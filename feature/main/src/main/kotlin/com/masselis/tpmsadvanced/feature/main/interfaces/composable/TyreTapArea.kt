@@ -47,6 +47,8 @@ import com.masselis.tpmsadvanced.feature.main.ioc.tyre.TyreComponent.Companion.T
 import com.masselis.tpmsadvanced.feature.main.ioc.tyre.TyreComponent.Companion.keyed
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
 import kotlinx.coroutines.launch
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /** How far a location's outline reaches past its tyre and readout */
 internal val OUTLINE_OUTSET = 6.dp
@@ -214,9 +216,9 @@ internal fun TyreTapArea(
         text = {
             Text(
                 buildString {
-                    append("Remove the sensor from the ")
+                    append(stringResource(CommonR.string.remove_the_sensor_from_the))
                     appendLoc(location)
-                    append("?\nThis cannot be undone.")
+                    append(stringResource(CommonR.string.this_cannot_be_undone))
                 }
             )
         },
@@ -224,13 +226,13 @@ internal fun TyreTapArea(
             TextButton(
                 onClick = { confirmDelete = false },
                 modifier = Modifier.testTag(TyreTapAreaTags.cancelDelete),
-            ) { Text("Cancel") }
+            ) { Text(stringResource(CommonR.string.cancel)) }
         },
         confirmButton = {
             TextButton(
                 onClick = { viewModel.delete(); confirmDelete = false },
                 modifier = Modifier.testTag(TyreTapAreaTags.confirmDelete),
-            ) { Text("Remove") }
+            ) { Text(stringResource(CommonR.string.remove_4)) }
         },
         modifier = Modifier.testTag(TyreTapAreaTags.deleteDialog),
     )
@@ -292,7 +294,7 @@ private fun ManageSensorDialog(
             Column {
                 Text(buildString { appendLoc(location, withType = false, capitalized = true) })
                 Text(
-                    "Type: ${sensor.brand.label}",
+                    stringResource(CommonR.string.type, sensor.brand.label),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.testTag(TyreTapAreaTags.brand),
@@ -308,32 +310,32 @@ private fun ManageSensorDialog(
             Column {
                 DialogOption(
                     icon = { Icon(ImageVector.vectorResource(R.drawable.swap_horizontal_24px), null) },
-                    title = "Move/swap",
-                    subtitle = "Assign this sensor to another wheel",
+                    title = stringResource(CommonR.string.move_swap),
+                    subtitle = stringResource(CommonR.string.assign_this_sensor_to_another_wheel),
                     onClick = move,
                     isEnabled = canMove,
                     modifier = Modifier.testTag(TyreTapAreaTags.move),
                 )
                 DialogOption(
                     icon = { Icon(ImageVector.vectorResource(R.drawable.directions_car_24px), null) },
-                    title = "Move to another vehicle",
-                    subtitle = "Assign this sensor to a wheel of another vehicle",
+                    title = stringResource(CommonR.string.move_to_another_vehicle),
+                    subtitle = stringResource(CommonR.string.assign_this_sensor_to_a_wheel_of),
                     onClick = moveToVehicle,
                     isEnabled = canMoveToVehicle,
                     modifier = Modifier.testTag(TyreTapAreaTags.moveToVehicle),
                 )
                 DialogOption(
                     icon = { Icon(ImageVector.vectorResource(R.drawable.tune_24px), null) },
-                    title = "Calibrate",
-                    subtitle = "Correct this sensor's pressure readings",
+                    title = stringResource(CommonR.string.calibrate),
+                    subtitle = stringResource(CommonR.string.correct_this_sensor_s_pressure_readings),
                     onClick = calibrate,
                     modifier = Modifier.testTag(TyreTapAreaTags.calibrate),
                 )
                 DialogOption(
                     icon = { Icon(ImageVector.vectorResource(R.drawable.delete_24px), null) },
-                    title = "Delete",
+                    title = stringResource(CommonR.string.delete_2),
                     subtitle = buildString {
-                        append("Remove this sensor from the ")
+                        append(stringResource(CommonR.string.remove_this_sensor_from_the))
                         appendLoc(location)
                     },
                     onClick = delete,
@@ -346,7 +348,7 @@ private fun ManageSensorDialog(
             TextButton(
                 onClick = onDismissRequest,
                 modifier = Modifier.testTag(TyreTapAreaTags.manageCancel),
-            ) { Text("Cancel") }
+            ) { Text(stringResource(CommonR.string.cancel)) }
         },
         modifier = modifier.testTag(TyreTapAreaTags.manageDialog),
     )
