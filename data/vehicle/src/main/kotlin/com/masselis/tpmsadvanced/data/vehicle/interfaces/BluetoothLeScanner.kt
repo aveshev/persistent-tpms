@@ -13,7 +13,7 @@ public interface BluetoothLeScanner {
 
     /**
      * Why a scan ended. The scans start over by themselves after anything that can go away
-     * (Bluetooth turned off, a start refused for a while), telling it in [tyreScanStatus]: only
+     * (Bluetooth or Location turned off, a start refused for a while), telling it in [tyreScanStatus]: only
      * this one ends them.
      */
     public sealed interface Failure {
@@ -36,6 +36,9 @@ public interface BluetoothLeScanner {
 
         /** Bluetooth is off, the scan starts again once it's turned on */
         public data object WaitingForBluetooth : ScanStatus
+
+        /** Location is off where scans need it, see [isLocationRequired]: it starts again once it's turned on */
+        public data object WaitingForLocation : ScanStatus
 
         /**
          * The system refused the scan for a [reason] that can go away, it's started again shortly.
@@ -98,6 +101,13 @@ public interface BluetoothLeScanner {
     public fun missingPermission(): List<String>
 
     public val isBluetoothRequired: Boolean
+
+    /**
+     * Whether a scan needs the phone's Location on. Where it does and Location is off, the system
+     * runs the scan but delivers nothing, without any error. Only up to Android 11: from Android 12
+     * the manifest declares `BLUETOOTH_SCAN` as `neverForLocation`, which waives it.
+     */
+    public val isLocationRequired: Boolean
 
     public companion object {
         /**

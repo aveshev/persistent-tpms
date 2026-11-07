@@ -6,7 +6,9 @@ import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.Scan
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.Retrying
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.Scanning
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.WaitingForBluetooth
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.WaitingForLocation
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.impl.BluetoothLeScannerImpl.BluetoothOff
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.impl.BluetoothLeScannerImpl.LocationOff
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -24,7 +26,8 @@ import kotlin.time.TimeSource
 
 /**
  * Starts a scan over after a failure that can go away, telling what it does to [onStatus]: once
- * [isBluetoothOn] after Bluetooth was turned off, and after a delay for a start the system refused,
+ * [isBluetoothOn] after Bluetooth was turned off, once [isLocationOn] after Location was turned off,
+ * and after a delay for a start the system refused,
  * longer after each one in a row up to [MAX_RETRY_DELAY]. A scan that ran for [RETRY_DELAY_RESET]
  * before failing waits the shortest delay again. Only a phone that can't scan, and failures besides
  * the scan's, end it.
@@ -34,6 +37,7 @@ import kotlin.time.TimeSource
  */
 internal fun <T> Flow<T>.recovering(
     isBluetoothOn: Flow<Boolean>,
+    isLocationOn: Flow<Boolean>,
     timeSource: TimeSource = TimeSource.Monotonic,
     onStatus: (ScanStatus) -> Unit,
 ): Flow<T> = channelFlow {
@@ -60,6 +64,14 @@ internal fun <T> Flow<T>.recovering(
                     onStatus(WaitingForBluetooth)
                     logger.i { "Scan stopped by Bluetooth being off, waiting for it" }
                     isBluetoothOn.first { it }
+                    retryDelay = FIRST_RETRY_DELAY
+                }
+
+                cause is LocationOff -> {
+                    failingSince = null
+                    onStatus(WaitingForLocation)
+                    logger.i { "Scan stopped by Location being off, waiting for it" }
+                    isLocationOn.first { it }
                     retryDelay = FIRST_RETRY_DELAY
                 }
 
