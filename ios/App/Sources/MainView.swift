@@ -62,6 +62,13 @@ struct MainView: View {
                 Demo.checkLayouts()
                 #endif
             }
+            // A notification invites to read the tyres, not to go back to what was left open
+            .onReceive(monitor.showMainScreen) {
+                selected = nil
+                assigning = nil
+                magnified = nil
+                sheet = nil
+            }
             .sheet(item: $selected) { location in
                 if let vehicle = monitor.current {
                     TyreDetailView(vehicle: vehicle, location: location, monitor: monitor, settings: settings)

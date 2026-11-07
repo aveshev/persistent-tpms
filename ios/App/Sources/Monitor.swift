@@ -3,6 +3,7 @@ import CoreBluetooth
 import Foundation
 import TPMSCore
 import UIKit
+import UserNotifications
 
 /// The app's state: the vehicles, their sensors and tyres, the sensors around, and what the scan
 /// receives, stored and alerted on. Everything runs on the main thread.
@@ -45,11 +46,16 @@ final class Monitor: ObservableObject {
 
     /// Every sensor heard, bound or not, for assigning one by Bluetooth
     let heard = PassthroughSubject<SensorReading, Never>()
+    /// Closes whatever is open over the main screen
+    let showMainScreen = PassthroughSubject<Void, Never>()
+    private var beaconsHeard = [UUID: Date]()
+    private var reevaluation: DispatchWorkItem?
 
     let settings = Settings()
     let speaker = AlertSpeaker()
     private let scanner = Scanner()
     private let notifier = Notifier()
+    let ride: RidePrompts
     private var database: Database?
     private var burst = BurstFilter()
 
@@ -58,7 +64,9 @@ final class Monitor: ObservableObject {
 
     var current: Vehicle? { vehicles.first(where: \.isCurrent) ?? vehicles.first }
 
-    private init() {}
+    private init() {
+        ride = RidePrompts(settings: settings, notifier: notifier)
+    }
 
     /// A red or critical tyre alert going on, of a vehicle. Android's stops with a reading lowering it
     /// or with it dismissed. Nothing dismisses one here and every tyre shows its latest reading,
@@ -77,6 +85,7 @@ final class Monitor: ObservableObject {
     func start() {
         guard database == nil else { return }
         speaker.configure(settings: settings)
+        notifier.speaker = speaker
         if Demo.isOn {
             do {
                 let database = try Database()
@@ -109,17 +118,35 @@ final class Monitor: ObservableObject {
         }
         scanner.onState = { [weak self] in self?.bluetooth = $0 }
         scanner.onAdvertisement = { [weak self] in self?.received($0, from: $1, rssi: $2) }
-        scanner.start()
+        scanner.onBeaconHeard = { [weak self] beacon, rssi, needsConfirming in
+            if rssi != RideTriggers.noRssi, rssi >= RideTriggers.minRssi { self?.beaconsHeard[beacon] = Date() }
+            self?.ride.beaconHeard(rssi: rssi, needsConfirming: needsConfirming)
+        }
+        scanner.onBeaconStillThere = { [weak self] beacon in
+            self?.beaconsHeard[beacon] = Date()
+            self?.ride.beaconStillThere()
+        }
+        rideLog("started")
+        appIsActive(UIApplication.shared.applicationState == .active)
     }
 
     /// The app went to the background or came back
     func appIsActive(_ isActive: Bool) {
         if Demo.isOn { return }
-        if isActive || (settings.backgroundMonitoring && sensors.isEmpty == false) {
-            scanner.start()
-        } else {
-            scanner.stop()
-            // No reading could clear their alerts any more
+        rideLog(isActive ? "app open" : "app left")
+        if isActive { ride.appOpened() }
+        let listensToSensors = isActive || (settings.backgroundMonitoring && sensors.isEmpty == false)
+        // The beacons wake the app whatever Persistent scanning says, its readings then still not
+        // coming in with the sensors left out of the scan
+        let beacons = settings.rideNotification && settings.rideBeacon ? settings.rideBeaconDevices : []
+        scanner.setBeacons(beacons)
+        scanner.start(services: beacons
+            .filter { $0.wake == .service }
+            .flatMap(\.services)
+            .map { CBUUID(string: $0) }
+            .reduce(listensToSensors ? Scanner.services : []) { $0.contains($1) ? $0 : $0 + [$1] }, isActive: isActive)
+        // No reading could clear their alerts any more
+        if listensToSensors == false {
             speaker.stopAll()
             ongoing = OngoingAlerts()
         }
@@ -195,6 +222,7 @@ final class Monitor: ObservableObject {
     }
 
     private func received(_ packet: AdvertisingPacket, from peripheral: UUID, rssi: Int) {
+        ride.removeIfStale()
         let now = Date()
         guard burst.isNew(peripheral: peripheral.uuidString, advertisement: packet.bytes, at: now.timeIntervalSince1970),
               // Pecham and Bekubee KY carry no ID: this iPhone's identifier for them stands for one
@@ -207,6 +235,7 @@ final class Monitor: ObservableObject {
         guard let sensor = sensors.first(where: { $0.id == reading.sensorId && $0.brand == reading.brand }),
               let vehicle = vehicles.first(where: { $0.id == sensor.vehicleId })
         else { return }
+        ride.sensorHeard(vehicle: vehicle.id, rssi: rssi)
         record(reading, vehicle: vehicle, location: sensor.location)
     }
 
@@ -236,10 +265,7 @@ final class Monitor: ObservableObject {
         tyre.alerts = tyre.alerts.next(reading, vehicle.thresholds(location), warnedLoss(tyre))
         tyres[key] = tyre
         ongoing = ongoing.next(OngoingAlerts.Tyre(vehicleId: vehicle.id, location: location), levels: tyre.alerts.notifiable, at: reading.timestamp)
-        speaker.update(tag: "\(vehicle.id)-\(location.code)", levels: tyre.alerts.notifiable)
-        if settings.alerts {
-            notifier.update(vehicle: vehicle, location: location, alerts: tyre.alerts, loss: warnedLoss(tyre), settings: settings)
-        }
+        notifier.update(Notifier.Update(vehicle: vehicle, location: location, alerts: tyre.alerts, loss: warnedLoss(tyre), settings: settings, isPosted: settings.alerts))
     }
 
     /// The pressure loss, only once its warning is turned on in the settings
@@ -257,6 +283,24 @@ final class Monitor: ObservableObject {
                 try database.unbind(vehicleId: vehicle.id, location: sensor.location)
             }
         }
+        reevaluateSoon(vehicle)
+    }
+
+    /// Once the thresholds settle: the tyres' latest readings under them, see Notifier.reevaluate
+    private func reevaluateSoon(_ vehicle: Vehicle) {
+        reevaluation?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, let vehicle = vehicles.first(where: { $0.id == vehicle.id }) else { return }
+            for location in vehicle.kind.locations {
+                let key = TyreKey(vehicleId: vehicle.id, location: location)
+                guard var tyre = tyres[key], let latest = tyre.alerts.latest else { continue }
+                tyre.alerts = tyre.alerts.next(latest, vehicle.thresholds(location), warnedLoss(tyre))
+                tyres[key] = tyre
+                notifier.reevaluate(Notifier.Update(vehicle: vehicle, location: location, alerts: tyre.alerts, loss: warnedLoss(tyre), settings: settings, isPosted: settings.alerts))
+            }
+        }
+        reevaluation = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1, execute: work)
     }
 
     /// Saves a change to the vehicle right away, like the Android app's settings pages
@@ -274,6 +318,18 @@ final class Monitor: ObservableObject {
 
     func setCurrent(_ vehicle: Vehicle) {
         perform { try $0.setCurrent(vehicle.id) }
+    }
+
+    /// A notification dismissed for a while stops being said. Tapped, it opens the main screen, on the
+    /// vehicle of its thread when it has one, which a tyre's alert does.
+    func answered(_ response: UNNotificationResponse) {
+        if let tag = notifier.snooze(response) {
+            speaker.stop(tag: tag)
+        } else if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
+            let id = UUID(uuidString: response.notification.request.content.threadIdentifier)
+            vehicles.first { $0.id == id && $0.isCurrent == false }.map(setCurrent)
+            showMainScreen.send()
+        }
     }
 
     func delete(_ vehicle: Vehicle) {
@@ -328,13 +384,13 @@ final class Monitor: ObservableObject {
 
     func unassignAll(_ vehicle: Vehicle) {
         perform { try $0.unbindAll(vehicleId: vehicle.id) }
-        vehicle.kind.locations.forEach { notifier.clear(vehicle: vehicle, location: $0) }
+        vehicle.kind.locations.forEach { clearAlerts(vehicle, $0) }
     }
 
     /// Moves sensors around the vehicle, with their readings, see MoveChain
     func move(_ vehicle: Vehicle, _ moves: [MoveChain.Move]) {
         perform { try $0.move(vehicleId: vehicle.id, moves: moves) }
-        moves.flatMap { [$0.from, $0.to] }.forEach { notifier.clear(vehicle: vehicle, location: $0) }
+        moves.flatMap { [$0.from, $0.to] }.forEach { clearAlerts(vehicle, $0) }
     }
 
     /// Moves the sensor at [location] to [target] of [toVehicle]. The sensor already there comes to
@@ -399,6 +455,119 @@ final class Monitor: ObservableObject {
             settings.alerts = false
             notifier.clearAll()
         }
+    }
+
+    /// Asks for the permission to notify when turned on. Refused, it stays off. The first time, this
+    /// also turns on the trigger needing no setup.
+    func setRideNotification(_ enabled: Bool) {
+        guard enabled else {
+            settings.rideNotification = false
+            ride.forgetSensors()
+            ride.forgetBeacon()
+            appIsActive(UIApplication.shared.applicationState == .active)
+            return
+        }
+        notifier.requestAuthorization { [weak self] granted in
+            guard let self else { return }
+            guard granted else {
+                // Stays new, and the switch goes back
+                settings.objectWillChange.send()
+                return
+            }
+            if settings.isRideNotificationNew { settings.rideSensors = true }
+            settings.rideNotification = true
+            appIsActive(UIApplication.shared.applicationState == .active)
+        }
+    }
+
+    /// Asks for the permission to notify when turned on. Refused, it stays off.
+    func setRideSensors(_ enabled: Bool) {
+        guard enabled else {
+            settings.rideSensors = false
+            ride.forgetSensors()
+            return
+        }
+        notifier.requestAuthorization { [weak self] granted in self?.settings.rideSensors = granted }
+    }
+
+    func setRideBeacon(_ enabled: Bool) {
+        guard enabled else {
+            settings.rideBeacon = false
+            ride.forgetBeacon()
+            appIsActive(UIApplication.shared.applicationState == .active)
+            return
+        }
+        notifier.requestAuthorization { [weak self] granted in
+            guard let self else { return }
+            settings.rideBeacon = granted
+            appIsActive(UIApplication.shared.applicationState == .active)
+        }
+    }
+
+    /// Adds the device as a beacon, once
+    func addRideBeacon(_ beacon: RideBeacon) {
+        guard settings.rideBeaconDevices.contains(where: { $0.id == beacon.id }) == false else { return }
+        setRideBeacons(settings.rideBeaconDevices + [beacon])
+    }
+
+    func removeRideBeacons(_ ids: Set<UUID>) {
+        setRideBeacons(settings.rideBeaconDevices.filter { ids.contains($0.id) == false })
+    }
+
+    /// A blank [label] removes the user's name, the advertised one is shown again
+    func renameRideBeacon(_ id: UUID, _ label: String) {
+        let trimmed = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        settings.rideBeaconDevices = settings.rideBeaconDevices.map { beacon in
+            var beacon = beacon
+            if beacon.id == id { beacon.label = trimmed.isEmpty ? nil : trimmed }
+            return beacon
+        }
+    }
+
+    /// The beacons all count as one for the notification: adding one while another is nearby isn't
+    /// coming back, only having none left starts over
+    private func setRideBeacons(_ beacons: [RideBeacon]) {
+        settings.rideBeaconDevices = beacons
+        if beacons.isEmpty { ride.forgetBeacon() }
+        appIsActive(UIApplication.shared.applicationState == .active)
+    }
+
+    /// Without any beacon to look for it could never fire: same as turning it off
+    func disableRideBeaconIfNone() {
+        if settings.rideBeaconDevices.isEmpty, settings.rideBeacon { setRideBeacon(false) }
+    }
+
+    /// When the background scan last heard this beacon loud enough, kept in memory for the settings
+    func beaconHeard(_ id: UUID) -> Date? {
+        beaconsHeard[id]
+    }
+
+    func setRideShortcut(_ enabled: Bool) {
+        guard enabled else {
+            settings.rideShortcut = false
+            return
+        }
+        notifier.requestAuthorization { [weak self] granted in self?.settings.rideShortcut = granted }
+    }
+
+    /// The Shortcuts action. The app may have just been launched for it, in the background.
+    @MainActor
+    func goingForARide() async {
+        start()
+        appIsActive(UIApplication.shared.applicationState == .active)
+        await ride.shortcutRan()
+        // The scan only starts once Bluetooth says it's on: returning before that may get the app
+        // suspended first. Limited, Bluetooth may have nothing to say here (the demo).
+        var waited = 0
+        while bluetooth == .unknown, waited < 30 {
+            try? await Task.sleep(for: .milliseconds(100))
+            waited += 1
+        }
+        rideLog("shortcut done, Bluetooth \(bluetooth.rawValue) after \(waited * 100) ms")
+    }
+
+    func isNotificationDenied(_ completion: @escaping (Bool) -> Void) {
+        notifier.isDenied(completion)
     }
 
     /// A reading as if it had been heard, for the demo
