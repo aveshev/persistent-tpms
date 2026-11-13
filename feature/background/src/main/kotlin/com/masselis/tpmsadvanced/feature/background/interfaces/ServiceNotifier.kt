@@ -77,6 +77,7 @@ internal class ServiceNotifier(
     vehicleListUseCase: VehicleListUseCase,
     scanPolicyUseCase: ScanPolicyUseCase,
     tyreScanStatus: Flow<ScanStatus?>,
+    rideNotifier: RideNotifier,
 ) {
     private val logger = Logger.withTag("ServiceNotifier")
     private val notificationManager = NotificationManagerCompat.from(appContext)
@@ -115,7 +116,11 @@ internal class ServiceNotifier(
                             .flatMap { vehicle ->
                                 VehicleComponent(vehicle).let { component ->
                                     vehicle.kind.locations.map {
-                                        component.TyreComponent(it).tyreAtmosphereUseCase.listen()
+                                        component
+                                            .TyreComponent(it)
+                                            .tyreAtmosphereUseCase
+                                            .listen()
+                                            .onEach { atmosphere -> rideNotifier.sensorHeard(vehicle.uuid, atmosphere) }
                                     }
                                 }
                             }
