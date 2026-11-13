@@ -40,7 +40,7 @@ internal class AdvertisingPacket(val bytes: ByteArray) {
         ?: RawWicarlink(this)
         ?: RawBekubeeTpms(this)
         ?: RawSysgration(this)
-        ?: RawBekubeeTcTpms(this)
+        ?: RawTcTpms(this)
 
     /**
      * The status bytes: shown for debugging, since what most of their bits mean is unknown. Only
@@ -59,7 +59,7 @@ internal class AdvertisingPacket(val bytes: ByteArray) {
         name == "TPMS" -> manufacturer?.let { (companyId) -> listOf((companyId and 0xFF).toUByte()) }
 
         // The first manufacturer data byte: 0x01 after the pressure rose, 0x02 after it fell, 0x00 steady
-        name == RawBekubeeTcTpms.NAME -> manufacturer?.let { (companyId) -> listOf((companyId and 0xFF).toUByte()) }
+        name == RawTcTpms.NAME -> manufacturer?.let { (companyId) -> listOf((companyId and 0xFF).toUByte()) }
 
         // The alarm byte, 0x01 being the only known value
         manufacturer?.second?.let { it.size > 15 && it[1] == 0xEA.toByte() && it[2] == 0xCA.toByte() } == true ->

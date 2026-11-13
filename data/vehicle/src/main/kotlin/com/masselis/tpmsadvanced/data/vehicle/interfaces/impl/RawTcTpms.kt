@@ -2,16 +2,18 @@ package com.masselis.tpmsadvanced.data.vehicle.interfaces.impl
 
 import android.os.ParcelUuid
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.psi
-import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.BEKUBEE_TC_TPMS
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.TC_TPMS
 import com.masselis.tpmsadvanced.data.vehicle.model.Temperature.CREATOR.celsius
 import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import com.masselis.tpmsadvanced.data.vehicle.model.Voltage.CREATOR.volts
 import java.util.UUID.fromString
 
 /**
- * An AOOCCI sensor of the Bekubee family, advertising as "TC.TPMS" with the service UUID 0xA828
- * (the "TPMS" one of [RawBekubeeTpms] uses 0xA827). Reverse engineered from nRF Connect captures of
- * one sensor at 0, about 23 and about 53 psi:
+ * A sensor advertising as "TC.TPMS" with the service UUID 0xA828, named after that: bought from
+ * Essgoo, it looks like an AOOCCI one, and no app of the brands it resembles reads it (Bekubee's
+ * SYTPMS only reads Pecham's "BR" and an "LD" sensor). Its service UUID is next to Bekubee TPMS's
+ * 0xA827, see [RawBekubeeTpms]. Reverse engineered from nRF Connect captures of one sensor at 0,
+ * about 23 and about 53 psi:
  *
  * `080854432E54504D53 0CFF 01 1E 20 017A 34300710809C 030328A8`
  *
@@ -25,12 +27,12 @@ import java.util.UUID.fromString
  * as [RawBekubeeKy].
  */
 @Suppress("MagicNumber")
-internal class RawBekubeeTcTpms private constructor(
+internal class RawTcTpms private constructor(
     private val companyId: Int,
     private val data: ByteArray,
 ) : Raw {
 
-    override val brand = BEKUBEE_TC_TPMS
+    override val brand = TC_TPMS
 
     // The last 3 bytes of the Bluetooth address the advertisement carries, the 3 first ones being
     // the vendor's. Read from the advertisement rather than the address the scan reports, so it
@@ -69,10 +71,10 @@ internal class RawBekubeeTcTpms private constructor(
 
         private const val MANUFACTURER_DATA_LENGTH = 9
 
-        operator fun invoke(packet: AdvertisingPacket): RawBekubeeTcTpms? = packet
+        operator fun invoke(packet: AdvertisingPacket): RawTcTpms? = packet
             .takeIf { it.name == NAME && 0xA828 in it.serviceUuids16 }
             ?.manufacturer
             ?.takeIf { (_, data) -> data.size >= MANUFACTURER_DATA_LENGTH }
-            ?.let { (companyId, data) -> RawBekubeeTcTpms(companyId, data) }
+            ?.let { (companyId, data) -> RawTcTpms(companyId, data) }
     }
 }

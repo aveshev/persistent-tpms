@@ -11,7 +11,7 @@ import UIKit
 final class Scanner: NSObject, CBCentralManagerDelegate {
 
     /// Pecham and Bekubee KY (0x27A5), Wicarlink and Sysgration (0xFBB0), Bekubee TPMS (0xA827),
-    /// Bekubee TC.TPMS (0xA828)
+    /// TC.TPMS (0xA828)
     static let services = ["27A5", "FBB0", "A827", "A828"].map { CBUUID(string: $0) }
 
     var onAdvertisement: ((_ packet: AdvertisingPacket, _ peripheral: UUID, _ rssi: Int) -> Void)?
