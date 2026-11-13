@@ -16,10 +16,13 @@ import com.masselis.tpmsadvanced.core.common.now
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
 import com.masselis.tpmsadvanced.data.vehicle.model.TyreAtmosphere
 import com.masselis.tpmsadvanced.feature.background.R
-import com.masselis.tpmsadvanced.feature.background.usecase.BluetoothDevicesUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.RideTriggers
-import com.masselis.tpmsadvanced.feature.background.usecase.RideTriggers.Companion.BEACON
-import com.masselis.tpmsadvanced.feature.background.usecase.RideTriggers.Companion.BLUETOOTH
+import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision
+import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.ANDROID_AUTO
+import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.BEACON
+import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.BLUETOOTH
+import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.CABLE
+import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.WIRELESS
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -51,20 +54,18 @@ import kotlin.time.Duration.Companion.seconds
  * app is what makes every reading reach it. Android can't open the app from the background, hence
  * a notification.
  *
- * A trigger fires when heard after [AppPreferences.rideAbsentMinutesInUse] away: a bound sensor of a
- * vehicle (each vehicle on its own), one of the activate condition's Bluetooth devices connecting,
- * or one of its beacons coming nearby. The devices and the beacons are only watched while the
- * service monitors, the sensors are heard by its scan: the whole notification needs persistent
+ * A trigger fires when heard after [AppPreferences.rideAbsentMinutesInUse] away: one of the persistent
+ * scan's activate conditions starting the scan (each condition on its own), or a bound sensor of a
+ * vehicle heard by the service's scan (each vehicle on its own, which also covers scanning without
+ * any condition). Only watched while the service monitors: the notification needs persistent
  * scanning. Nothing while the app is open, which also removes it, nor in demo mode. Everything runs
  * on [scope], which must run one thing at a time.
  */
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalCoroutinesApi::class)
-@Suppress("LongParameterList")
 internal class RideNotifier(
     private val appPreferences: AppPreferences,
-    nearbyBeacons: Flow<Map<String, Int>>,
-    bluetoothDevicesUseCase: BluetoothDevicesUseCase,
+    decision: Flow<ScanDecision>,
     private val isDemo: StateFlow<Boolean>,
     isAppVisible: Flow<Boolean>,
     isMonitoring: Flow<Boolean>,
@@ -101,41 +102,24 @@ internal class RideNotifier(
             .onEach { notificationManager.cancel(NOTIFICATION_ID) }
             .launchIn(scope)
 
-        // A trigger turned off and on again starts over
-        appPreferences.rideOnSensor
-            .filter { it.not() }
-            .onEach { triggers = triggers.forgetSensors() }
-            .launchIn(scope)
-        appPreferences.rideOnBeacon
-            .filter { it.not() }
-            .onEach { triggers = triggers.forget(BEACON) }
-            .launchIn(scope)
-        appPreferences.rideOnBluetooth
-            .filter { it.not() }
-            .onEach { triggers = triggers.forget(BLUETOOTH) }
-            .launchIn(scope)
-
-        isMonitoring
+        combine(isMonitoring, appPreferences.rideNotification, Boolean::and)
             .distinctUntilChanged()
-            .flatMapLatest { monitoring ->
-                if (monitoring.not()) emptyFlow()
-                else merge(
-                    appPreferences.rideOnBeacon
-                        .watching(appPreferences.beacons.map { it.isNotEmpty() }) {
-                            // Starts a scan of its own while the activate condition doesn't look
-                            // for the beacons
-                            nearbyBeacons.map { it.isNotEmpty() }
-                        }
-                        .presence(BEACON),
-                    appPreferences.rideOnBluetooth
-                        .watching(appPreferences.activateBluetoothDevices.map { it.isNotEmpty() }) {
-                            combine(
-                                appPreferences.activateBluetoothDevices,
-                                bluetoothDevicesUseCase.connected,
-                            ) { selected, connected -> connected.any { it.address in selected } }
-                        }
-                        .presence(BLUETOOTH),
-                )
+            .flatMapLatest { watching ->
+                if (watching.not()) emptyFlow()
+                else decision
+                    // Suspended, the conditions fulfilled meanwhile aren't known: they count once
+                    // the suspension ends, scanning then
+                    .map { (it as? ScanDecision.Active)?.causes.orEmpty() }
+                    .let { causes ->
+                        CONDITIONS
+                            .map { condition ->
+                                causes
+                                    .map { condition in it }
+                                    .distinctUntilChanged()
+                                    .presence(RideTriggers.condition(condition))
+                            }
+                            .merge()
+                    }
             }
             .launchIn(scope)
     }
@@ -146,20 +130,12 @@ internal class RideNotifier(
      */
     fun sensorHeard(vehicle: UUID, atmosphere: TyreAtmosphere) {
         scope.launch {
-            if ((appPreferences.rideNotification.value && appPreferences.rideOnSensor.value).not()) return@launch
+            if (appPreferences.rideNotification.value.not()) return@launch
             if ((now() - atmosphere.timestamp).seconds > RECENT) return@launch
             if (atmosphere.rssi?.let(RideTriggers::isHeard) != true) return@launch
             heard(RideTriggers.sensors(vehicle))
         }
     }
-
-    /** What [present] says about the trigger while it and the notification are on, and [canWatch] */
-    private fun Flow<Boolean>.watching(canWatch: Flow<Boolean>, present: () -> Flow<Boolean>): Flow<Boolean> =
-        combine(appPreferences.rideNotification, this, canWatch) { notification, trigger, can ->
-            notification && trigger && can
-        }
-            .distinctUntilChanged()
-            .flatMapLatest { if (it) present().distinctUntilChanged() else emptyFlow() }
 
     /**
      * Heard when it becomes present, and every [STILL_THERE] while it stays so, so that the stored
@@ -253,6 +229,8 @@ internal class RideNotifier(
         const val NOTIFICATION_ID = 0x52494445 // "RIDE"
         const val LAST_HEARD = "LAST_HEARD"
         const val LAST_FIRED = "LAST_FIRED"
+        /** What starts the scan because the vehicle is near, unlike "always", "stay active" or the button */
+        val CONDITIONS = listOf(CABLE, WIRELESS, ANDROID_AUTO, BLUETOOTH, BEACON)
         val RECENT = 1.minutes
         val STILL_THERE = 1.minutes
     }

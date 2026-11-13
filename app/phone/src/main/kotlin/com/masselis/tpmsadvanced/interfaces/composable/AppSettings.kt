@@ -174,11 +174,7 @@ internal fun PersistentModeSettings(
                 .testTag(persistentScanning),
         )
     }
-    RideNotificationSettings(
-        openBluetoothDevices = openBluetoothDevices,
-        openBeacons = openBeacons,
-        modifier = Modifier.testTag(rideNotification),
-    )
+    RideNotificationSettings(Modifier.testTag(rideNotification))
 }
 
 @Composable

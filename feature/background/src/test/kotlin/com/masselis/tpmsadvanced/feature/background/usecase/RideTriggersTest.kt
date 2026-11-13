@@ -1,11 +1,10 @@
 package com.masselis.tpmsadvanced.feature.background.usecase
 
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.Advertisement.Companion.RSSI_UNAVAILABLE
-import com.masselis.tpmsadvanced.feature.background.usecase.RideTriggers.Companion.BEACON
-import com.masselis.tpmsadvanced.feature.background.usecase.RideTriggers.Companion.BLUETOOTH
+import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.BEACON
+import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.BLUETOOTH
 import org.junit.Test
 import java.util.UUID
-import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
@@ -63,7 +62,7 @@ internal class RideTriggersTest {
                 val at = start + 50.minutes.inWholeMilliseconds
                 assertTrue(triggers.isBack(bike, at, absent))
                 assertFalse(triggers.isBack(car, at, absent))
-                assertTrue(triggers.isBack(BEACON, at, absent))
+                assertTrue(triggers.isBack(RideTriggers.condition(BEACON), at, absent))
             }
     }
 
@@ -118,19 +117,17 @@ internal class RideTriggersTest {
     }
 
     @Test
-    fun `forgotten trigger starts over`() {
-        val vehicle = RideTriggers.sensors(UUID.randomUUID())
-        val next = start + 1
+    fun `each condition has its own absence`() {
+        val beacon = RideTriggers.condition(BEACON)
+        val bluetooth = RideTriggers.condition(BLUETOOTH)
+        // A beacon at home heard all day doesn't hide the Bluetooth device coming back
         RideTriggers()
-            .heard(vehicle, start)
-            .heard(BEACON, start)
-            .heard(BLUETOOTH, start)
-            .forgetSensors()
-            .also { assertTrue(it.isBack(vehicle, next, absent)) }
-            .also { assertFalse(it.isBack(BEACON, next, absent)) }
-            .forget(BEACON)
-            .also { assertTrue(it.isBack(BEACON, next, absent)) }
-            .also { assertFalse(it.isBack(BLUETOOTH, next, absent)) }
-            .also { assertEquals(setOf(BLUETOOTH), it.lastHeard.keys) }
+            .heard(bluetooth, start)
+            .heard(beacon, start + 45.minutes.inWholeMilliseconds)
+            .let { triggers ->
+                val at = start + 50.minutes.inWholeMilliseconds
+                assertTrue(triggers.isBack(bluetooth, at, absent))
+                assertFalse(triggers.isBack(beacon, at, absent))
+            }
     }
 }

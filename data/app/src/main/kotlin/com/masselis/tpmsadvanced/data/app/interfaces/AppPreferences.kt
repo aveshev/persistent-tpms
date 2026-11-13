@@ -256,21 +256,13 @@ public class AppPreferences internal constructor(
     /**
      * The "Going for a ride?" notification, inviting to open the app when back near a vehicle: the
      * open app hears every reading, background scans are throttled. Off until turned on, like on
-     * iOS. Its triggers below keep their state while it's off.
+     * iOS. Fires on the activate conditions of persistent scanning, and on a bound sensor heard.
      */
     public val rideNotification: MutableStateFlow<Boolean> = sharedPreferences.booleanFlow("RIDE_NOTIFICATION", false)
 
-    /** A bound sensor of a vehicle heard after a long gap, each vehicle on its own */
-    public val rideOnSensor: MutableStateFlow<Boolean> = sharedPreferences.booleanFlow("RIDE_ON_SENSOR", true)
-
-    /** One of the [activateBluetoothDevices] connecting after a long gap */
-    public val rideOnBluetooth: MutableStateFlow<Boolean> = sharedPreferences.booleanFlow("RIDE_ON_BLUETOOTH", false)
-
-    /** One of the [beacons] coming nearby after a long gap */
-    public val rideOnBeacon: MutableStateFlow<Boolean> = sharedPreferences.booleanFlow("RIDE_ON_BEACON", false)
 
     /**
-     * How long a ride trigger must stay unheard before hearing it again sends the notification, a
+     * How long a ride notification's trigger must stay unheard before hearing it again sends the notification, a
      * debug option for trying it
      */
     public val rideAbsentMinutes: MutableStateFlow<Int> =

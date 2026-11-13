@@ -297,12 +297,10 @@ public interface Bindings {
     private fun rideNotifier(
         appPreferences: AppPreferences,
         scanPolicyUseCase: ScanPolicyUseCase,
-        bluetoothDevicesUseCase: BluetoothDevicesUseCase,
         demoOrBleScannerUseCase: DemoOrBleScannerUseCase,
     ): RideNotifier = RideNotifier(
         appPreferences,
-        scanPolicyUseCase.nearbyBeacons,
-        bluetoothDevicesUseCase,
+        scanPolicyUseCase.decision,
         demoOrBleScannerUseCase.isDemo,
         isAppVisibleFlow,
         MonitorService.isMonitoring,
@@ -312,8 +310,7 @@ public interface Bindings {
     @Provides
     private fun rideNotificationSettingsViewModel(
         appPreferences: AppPreferences,
-        bluetoothDevicesUseCase: BluetoothDevicesUseCase,
-    ): RideNotificationSettingsViewModel = RideNotificationSettingsViewModel(appPreferences, bluetoothDevicesUseCase)
+    ): RideNotificationSettingsViewModel = RideNotificationSettingsViewModel(appPreferences)
 
     @Provides
     private fun persistentScanningViewModel(
