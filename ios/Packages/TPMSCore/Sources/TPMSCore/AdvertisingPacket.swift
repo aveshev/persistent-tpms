@@ -117,7 +117,7 @@ public struct AdvertisingPacket {
                            volts: Float(d[0]) * 0.01 + 1.22)
         }
 
-        // TC.TPMS, bought from Essgoo, see RawTcTpms.kt. The manufacturer data's first 2 bytes
+        // TC.TPMS, bought from Essgoo (also sold as EKIY), see RawTcTpms.kt. The manufacturer data's first 2 bytes
         // are a status byte (0x01 after the pressure rose, 0x02 after it fell, 0x00 steady) and the
         // battery in decivolts, then come °C, the pressure (absolute, in
         // 0.1 psi, 146 at 0 psi) and the sensor's address, whose last 3 bytes are its ID

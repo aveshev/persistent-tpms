@@ -10,8 +10,9 @@ import java.util.UUID.fromString
 
 /**
  * A sensor advertising as "TC.TPMS" with the service UUID 0xA828, named after that: bought from
- * Essgoo, it looks like an AOOCCI one, and no app of the brands it resembles reads it (Bekubee's
- * SYTPMS only reads Pecham's "BR" and an "LD" sensor). Its service UUID is next to Bekubee TPMS's
+ * Essgoo, a visually identical set is sold as EKIY (the two brands share some displays too), it
+ * looks like an AOOCCI one, and no app of the brands it resembles reads it (Bekubee's SYTPMS only
+ * reads Pecham's "BR" and an "LD" sensor). Its service UUID is next to Bekubee TPMS's
  * 0xA827, see [RawBekubeeTpms]. Reverse engineered from nRF Connect captures of one sensor at 0,
  * about 23 and about 53 psi:
  *
@@ -21,6 +22,13 @@ import java.util.UUID.fromString
  * in decivolts. The status byte follows the pressure's last change: 0x01 after it rose, 0x02 after
  * it fell, 0x00 once steady (seen mounted on a tyre). Shown for debugging only, no alarm is read
  * from it.
+ *
+ * It sends on its own clock, every 300 s (300.1 s measured, drifting a few seconds a day), with the
+ * same reading even when nothing changed. A change of about 1.5 psi or more since its last packet is
+ * sent at once, off that clock, with 0x01 or 0x02: within minutes of a ride starting, and every 10 s
+ * while a tyre is deflated. A week of two sensors received on a Pixel 7 showed no 10 minute mode:
+ * every gap between readings is a multiple of 300 s, and unchanged readings are sent too, so a
+ * missed slot is most likely a lost packet rather than one the sensor skipped.
  *
  * Then come the temperature in °C, the pressure and the sensor's Bluetooth address. The pressure is
  * absolute, in steps of 0.1 psi, reading 146 (14.6 psi, the atmosphere) at 0 psi, the same encoding
