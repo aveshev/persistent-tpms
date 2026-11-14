@@ -66,6 +66,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.NavGraphBuilder
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -187,14 +189,15 @@ internal fun VehicleHome(
                 // leaving doesn't move
                 AnimatedVisibility(visible = barPath != null, enter = fadeIn(), exit = fadeOut()) {
                     lastBarPath?.also {
-                        TopAppBar(
-                            path = it,
-                            manualBackgroundButtonModifier = manualBackgroundButtonModifier,
-                        )
+                        TopAppBar(path = it)
                     }
                 }
             },
             content = { paddingValues ->
+                // Without the top bar's room, for a screen never shown with it, see topBar
+                val withoutBar = Modifier
+                    .windowInsetsPadding(ScaffoldDefaults.contentWindowInsets)
+                    .fillMaxSize()
                 NavHost(
                     navController = navController,
                     startDestination = "${Path.Home(vehicleComponent.vehicle.uuid)}"
@@ -205,26 +208,20 @@ internal fun VehicleHome(
                     val vehicleUuid = vehicleComponent.vehicle.uuid
                     // A location is told in a route by its index in these
                     val locations = vehicleComponent.vehicle.kind.locations.toList()
-                    composable(route = "${Path.Home(vehicleComponent.vehicle.uuid)}") {
+                    composable(Path.Home(vehicleUuid)) {
                         // The bell tells the status here, nothing to hear
                         QuietScanStatusAnnouncementsEffect()
                         val alerts = alertingVehicles()
                         DimWhenIdle(isAlerting = alerts.isNotEmpty()) { isDimmed ->
                             CurrentVehicle(
                                 snackbarHostState = snackbarHostState,
-                                // Without the top bar's room, it's never shown with its own, see topBar
-                                modifier = Modifier
-                                    .windowInsetsPadding(ScaffoldDefaults.contentWindowInsets)
-                                    .fillMaxSize(),
+                                // It draws its own top bar, see topBar
+                                modifier = withoutBar,
                                 // Never both: an alert to silence keeps the screen bright
                                 overlay = { if (isDimmed) DimmedNotice() else SilenceAlertsButton() },
-                                scanQrCode = {
-                                    navController.navigate("${Path.QrCode(vehicleUuid, locations.indexOf(it))}")
-                                },
+                                scanQrCode = { navController.navigate(Path.QrCode(vehicleUuid, locations.indexOf(it))) },
                                 scanBluetooth = {
-                                    navController.navigate(
-                                        "${Path.BluetoothAssign(vehicleUuid, locations.indexOf(it))}"
-                                    )
+                                    navController.navigate(Path.BluetoothAssign(vehicleUuid, locations.indexOf(it)))
                                 },
                                 navigationIcon = { DetectedActivitiesIndicator() },
                                 title = {
@@ -239,56 +236,35 @@ internal fun VehicleHome(
                             )
                         }
                     }
-                    composable("${Path.Settings(vehicleComponent.vehicle.uuid)}") {
+                    composable(Path.Settings(vehicleUuid)) {
                         Settings(
-                            openPressure = {
-                                navController.navigate("${Path.PressureSettings(vehicleComponent.vehicle.uuid)}")
-                            },
-                            openTemperature = {
-                                navController.navigate("${Path.TemperatureSettings(vehicleComponent.vehicle.uuid)}")
-                            },
-                            openBattery = {
-                                navController.navigate("${Path.BatterySettings(vehicleComponent.vehicle.uuid)}")
-                            },
-                            openManageSensors = {
-                                navController.navigate("${Path.ManageSensors(vehicleComponent.vehicle.uuid)}")
-                            },
-                            openShareSensors = { navController.navigate("${Path.ShareSensors(vehicleUuid)}") },
+                            openPressure = { navController.navigate(Path.PressureSettings(vehicleUuid)) },
+                            openTemperature = { navController.navigate(Path.TemperatureSettings(vehicleUuid)) },
+                            openBattery = { navController.navigate(Path.BatterySettings(vehicleUuid)) },
+                            openManageSensors = { navController.navigate(Path.ManageSensors(vehicleUuid)) },
+                            openShareSensors = { navController.navigate(Path.ShareSensors(vehicleUuid)) },
                             modifier = modifier
                         )
                     }
-                    composable("${Path.ManageSensors(vehicleComponent.vehicle.uuid)}") {
+                    composable(Path.ManageSensors(vehicleUuid)) {
                         ManageSensors(
                             snackbarHostState = snackbarHostState,
-                            scanQrCode = {
-                                navController.navigate("${Path.QrCode(vehicleUuid, locations.indexOf(it))}")
-                            },
+                            scanQrCode = { navController.navigate(Path.QrCode(vehicleUuid, locations.indexOf(it))) },
                             scanBluetooth = {
-                                navController.navigate("${Path.BluetoothAssign(vehicleUuid, locations.indexOf(it))}")
+                                navController.navigate(Path.BluetoothAssign(vehicleUuid, locations.indexOf(it)))
                             },
-                            calibrate = { navController.navigate("${Path.Calibration(vehicleUuid, it)}") },
+                            calibrate = { navController.navigate(Path.Calibration(vehicleUuid, it)) },
                             moveToVehicle = { location, toVehicle ->
-                                navController.navigate(
-                                    "${Path.MoveToVehicle(vehicleUuid, locations.indexOf(location), toVehicle)}"
-                                )
+                                navController.navigate(Path.MoveToVehicle(vehicleUuid, locations.indexOf(location), toVehicle))
                             },
-                            // Like the main screen, without the room of a bar it won't have: the
+                            // Like the main screen in a wide window, where it has no bar: the
                             // vehicle is then sized once, not again when the bar's gone, see topBar
-                            modifier = if (isWideWindow()) {
-                                Modifier
-                                    .windowInsetsPadding(ScaffoldDefaults.contentWindowInsets)
-                                    .fillMaxSize()
-                            } else {
-                                modifier
-                            },
+                            modifier = if (isWideWindow()) withoutBar else modifier,
                             navigationIcon = { BackButton() },
                         )
                     }
-                    composable("${Path.ShareSensors(vehicleUuid)}") {
-                        ShareSensors(
-                            vehicleUuid = vehicleUuid,
-                            modifier = modifier
-                        )
+                    composable(Path.ShareSensors(vehicleUuid)) {
+                        ShareSensors(vehicleUuid = vehicleUuid, modifier = modifier)
                     }
                     composable(
                         route = Path.MoveToVehicle.route(vehicleUuid),
@@ -308,21 +284,11 @@ internal fun VehicleHome(
                             },
                             onCancel = { navController.popBackStack() },
                             // Like Manage sensors, see there
-                            modifier = if (isWideWindow()) {
-                                Modifier
-                                    .windowInsetsPadding(ScaffoldDefaults.contentWindowInsets)
-                                    .fillMaxSize()
-                            } else {
-                                modifier
-                            },
+                            modifier = if (isWideWindow()) withoutBar else modifier,
                             navigationIcon = { BackButton() },
                         )
                     }
-                    composable("${Path.PressureSettings(vehicleComponent.vehicle.uuid)}") {
-                        PressureSettings(
-                            modifier = modifier
-                        )
-                    }
+                    composable(Path.PressureSettings(vehicleUuid)) { PressureSettings(modifier = modifier) }
                     composable(
                         route = Path.Calibration.route(vehicleUuid),
                         arguments = listOf(navArgument("sensorId") { type = NavType.IntType }),
@@ -334,180 +300,74 @@ internal fun VehicleHome(
                             modifier = modifier
                         )
                     }
-                    composable("${Path.TemperatureSettings(vehicleComponent.vehicle.uuid)}") {
-                        TemperatureSettings(
-                            modifier = modifier
-                        )
-                    }
-                    composable("${Path.BatterySettings(vehicleComponent.vehicle.uuid)}") {
-                        BatterySettings(
-                            modifier = modifier
-                        )
-                    }
-                    composable("${Path.AppSettings}") {
+                    composable(Path.TemperatureSettings(vehicleUuid)) { TemperatureSettings(modifier = modifier) }
+                    composable(Path.BatterySettings(vehicleUuid)) { BatterySettings(modifier = modifier) }
+                    composable(Path.AppSettings) {
                         AppSettings(
-                            openTimeSinceUpdate = {
-                                navController.navigate("${Path.TimeSinceUpdate}")
-                            },
-                            openMagnifier = {
-                                navController.navigate("${Path.MagnifierDuration}")
-                            },
-                            openDimDisplay = {
-                                navController.navigate("${Path.DimDisplayDelay}")
-                            },
-                            openTextSize = {
-                                navController.navigate("${Path.TextSize}")
-                            },
-                            openAlertSound = {
-                                navController.navigate("${Path.AlertSound}")
-                            },
-                            openPersistentMode = {
-                                navController.navigate("${Path.PersistentMode}")
-                            },
-                            openDebug = {
-                                navController.navigate("${Path.Debug}")
-                            },
-                            openPressureLoss = {
-                                navController.navigate("${Path.PressureLoss}")
-                            },
-                            openLicenses = {
-                                navController.navigate("${Path.Licenses}")
-                            },
+                            openTimeSinceUpdate = { navController.navigate(Path.TimeSinceUpdate) },
+                            openMagnifier = { navController.navigate(Path.MagnifierDuration) },
+                            openDimDisplay = { navController.navigate(Path.DimDisplayDelay) },
+                            openTextSize = { navController.navigate(Path.TextSize) },
+                            openAlertSound = { navController.navigate(Path.AlertSound) },
+                            openPersistentMode = { navController.navigate(Path.PersistentMode) },
+                            openDebug = { navController.navigate(Path.Debug) },
+                            openPressureLoss = { navController.navigate(Path.PressureLoss) },
+                            openLicenses = { navController.navigate(Path.Licenses) },
                             modifier = modifier,
                         )
                     }
-                    composable("${Path.PersistentMode}") {
+                    composable(Path.PersistentMode) {
                         PersistentModeSettings(
-                            openPersistentScanning = {
-                                navController.navigate("${Path.PersistentScanning}")
-                            },
-                            openActivateScanConditions = {
-                                navController.navigate("${Path.ActivateScanConditions}")
-                            },
-                            openSuspendScanConditions = {
-                                navController.navigate("${Path.SuspendScanConditions}")
-                            },
-                            openBluetoothDevices = {
-                                navController.navigate("${Path.ActivateBluetoothDevices}")
-                            },
-                            openBeacons = {
-                                navController.navigate("${Path.Beacons}")
-                            },
-                            openStayActiveDuration = {
-                                navController.navigate("${Path.StayActiveDuration}")
-                            },
+                            openPersistentScanning = { navController.navigate(Path.PersistentScanning) },
+                            openActivateScanConditions = { navController.navigate(Path.ActivateScanConditions) },
+                            openSuspendScanConditions = { navController.navigate(Path.SuspendScanConditions) },
+                            openBluetoothDevices = { navController.navigate(Path.ActivateBluetoothDevices) },
+                            openBeacons = { navController.navigate(Path.Beacons) },
+                            openStayActiveDuration = { navController.navigate(Path.StayActiveDuration) },
                             modifier = modifier,
                         )
                     }
-                    composable("${Path.Licenses}") {
-                        Licenses(
-                            modifier = modifier
-                        )
-                    }
-                    composable("${Path.Debug}") {
-                        DebugSettingsPage(
-                            modifier = modifier
-                        )
-                    }
-                    composable("${Path.PressureLoss}") {
-                        PressureLossSettingsPage(
-                            modifier = modifier
-                        )
-                    }
-                    composable("${Path.AlertSound}") {
-                        AlertSoundSettingsPage(
-                            modifier = modifier
-                        )
-                    }
-                    composable("${Path.TimeSinceUpdate}") {
+                    composable(Path.Licenses) { Licenses(modifier = modifier) }
+                    composable(Path.Debug) { DebugSettingsPage(modifier = modifier) }
+                    composable(Path.PressureLoss) { PressureLossSettingsPage(modifier = modifier) }
+                    composable(Path.AlertSound) { AlertSoundSettingsPage(modifier = modifier) }
+                    composable(Path.TimeSinceUpdate) {
                         TimeSinceUpdateSettings(
-                            openSensorReadingsUpdateDetails = {
-                                navController.navigate("${Path.SensorReadingsUpdateDetails}")
-                            },
+                            openSensorReadingsUpdateDetails = { navController.navigate(Path.SensorReadingsUpdateDetails) },
                             modifier = modifier
                         )
                     }
-                    composable("${Path.SensorReadingsUpdateDetails}") {
-                        SensorReadingsUpdateDetailsSettings(modifier = modifier)
-                    }
-                    composable("${Path.MagnifierDuration}") {
-                        MagnifierDurationSettings(
-                            modifier = modifier
-                        )
-                    }
-                    composable("${Path.DimDisplayDelay}") {
-                        DimDisplayDelaySettings(
-                            modifier = modifier
-                        )
-                    }
-                    composable("${Path.TextSize}") {
-                        TextSizeSettings(
-                            modifier = modifier
-                        )
-                    }
-                    composable("${Path.PersistentScanning}") {
-                        PersistentScanningDetailsSettings(
-                            modifier = modifier
-                        )
-                    }
-                    composable("${Path.ActivateScanConditions}") {
+                    composable(Path.SensorReadingsUpdateDetails) { SensorReadingsUpdateDetailsSettings(modifier = modifier) }
+                    composable(Path.MagnifierDuration) { MagnifierDurationSettings(modifier = modifier) }
+                    composable(Path.DimDisplayDelay) { DimDisplayDelaySettings(modifier = modifier) }
+                    composable(Path.TextSize) { TextSizeSettings(modifier = modifier) }
+                    composable(Path.PersistentScanning) { PersistentScanningDetailsSettings(modifier = modifier) }
+                    composable(Path.ActivateScanConditions) {
                         ActivateScanConditionsSettings(
-                            openStayActiveDuration = {
-                                navController.navigate("${Path.StayActiveDuration}")
-                            },
-                            openBluetoothDevices = {
-                                navController.navigate("${Path.ActivateBluetoothDevices}")
-                            },
-                            openBeacons = {
-                                navController.navigate("${Path.Beacons}")
-                            },
+                            openStayActiveDuration = { navController.navigate(Path.StayActiveDuration) },
+                            openBluetoothDevices = { navController.navigate(Path.ActivateBluetoothDevices) },
+                            openBeacons = { navController.navigate(Path.Beacons) },
                             modifier = modifier
                         )
                     }
-                    composable("${Path.StayActiveDuration}") {
-                        StayActiveDurationSettings(
-                            modifier = modifier
-                        )
-                    }
-                    composable("${Path.SuspendScanConditions}") {
+                    composable(Path.StayActiveDuration) { StayActiveDurationSettings(modifier = modifier) }
+                    composable(Path.SuspendScanConditions) {
                         SuspendScanConditionsSettings(
-                            openExceptedWifis = {
-                                navController.navigate("${Path.ExceptedWifis}")
-                            },
-                            openBluetoothDevices = {
-                                navController.navigate("${Path.SuspendBluetoothDevices}")
-                            },
+                            openExceptedWifis = { navController.navigate(Path.ExceptedWifis) },
+                            openBluetoothDevices = { navController.navigate(Path.SuspendBluetoothDevices) },
                             modifier = modifier
                         )
                     }
-                    composable("${Path.ExceptedWifis}") {
-                        ExceptedWifisSettings(
-                            modifier = modifier
-                        )
-                    }
-                    composable("${Path.ActivateBluetoothDevices}") {
-                        ActivateBluetoothDevicesSettings(
-                            modifier = modifier
-                        )
-                    }
-                    composable("${Path.SuspendBluetoothDevices}") {
-                        SuspendBluetoothDevicesSettings(
-                            modifier = modifier
-                        )
-                    }
-                    composable("${Path.Beacons}") {
+                    composable(Path.ExceptedWifis) { ExceptedWifisSettings(modifier = modifier) }
+                    composable(Path.ActivateBluetoothDevices) { ActivateBluetoothDevicesSettings(modifier = modifier) }
+                    composable(Path.SuspendBluetoothDevices) { SuspendBluetoothDevicesSettings(modifier = modifier) }
+                    composable(Path.Beacons) {
                         BeaconsSettings(
-                            openBeaconScan = {
-                                navController.navigate("${Path.BeaconScan}")
-                            },
+                            openBeaconScan = { navController.navigate(Path.BeaconScan) },
                             modifier = modifier
                         )
                     }
-                    composable("${Path.BeaconScan}") {
-                        BeaconScanSettings(
-                            modifier = modifier
-                        )
-                    }
+                    composable(Path.BeaconScan) { BeaconScanSettings(modifier = modifier) }
                     composable(
                         route = Path.QrCode.route(vehicleUuid),
                         arguments = listOf(navArgument("location") { type = NavType.IntType }),
@@ -550,7 +410,7 @@ internal fun VehicleHome(
                 result = result,
                 scan = qrCodeScan,
                 scanBluetooth = {
-                    navController.navigate("${Path.BluetoothAssign(vehicleComponent.vehicle.uuid, qrCodeLocation)}")
+                    navController.navigate(Path.BluetoothAssign(vehicleComponent.vehicle.uuid, qrCodeLocation))
                 },
                 onDismiss = { qrCodeResult = null },
             )
@@ -603,137 +463,26 @@ internal fun VehicleHome(
     }
 }
 
+/** The bar of every page but the main screen, which draws its own, see [CurrentVehicle] */
 @OptIn(ExperimentalMaterial3Api::class)
-@Suppress("LongMethod", "CyclomaticComplexMethod")
 @Composable
 private fun TopAppBar(
     path: Path,
     modifier: Modifier = Modifier,
-    manualBackgroundButtonModifier: Modifier = Modifier
 ) {
-    val currentPath: Path? = path
     CenterAlignedTopAppBar(
         title = {
-            when (currentPath) {
-                is Path.Home -> CurrentVehicleDropdown(
-                    modifier = Modifier.testTag(carListDropdownMenu),
-                    alerts = alertingVehicles(),
-                )
-
+            when (path) {
                 is Path.Settings -> Text(
                     text = LocalVehicleComponent.current.vehicleStateFlow.collectAsState().value.name,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
 
-                is Path.ManageSensors -> Text(text = stringResource(CommonR.string.manage_sensors))
-                is Path.ShareSensors -> Text(text = stringResource(CommonR.string.share_sensors))
-                is Path.MoveToVehicle -> Text(text = stringResource(CommonR.string.move_to))
-                is Path.PressureSettings -> Text(text = stringResource(CommonR.string.pressure))
-                is Path.TemperatureSettings -> Text(text = stringResource(CommonR.string.temperature))
-                is Path.Calibration -> Text(text = stringResource(CommonR.string.calibrate_sensor))
-                is Path.BatterySettings -> Text(text = stringResource(CommonR.string.battery))
-                is Path.PressureLoss -> Text(text = stringResource(CommonR.string.pressure_loss))
-                is Path.AppSettings -> Text(text = stringResource(CommonR.string.app_settings))
-                is Path.TimeSinceUpdate -> Text(text = stringResource(CommonR.string.time_since_last_update))
-                is Path.SensorReadingsUpdateDetails -> Text(text = stringResource(CommonR.string.sensor_readings_update_details))
-                is Path.MagnifierDuration -> Text(text = stringResource(CommonR.string.tap_to_magnify))
-                is Path.DimDisplayDelay -> Text(text = stringResource(CommonR.string.dim_when_idle))
-                is Path.TextSize -> Text(text = stringResource(CommonR.string.sensor_readings_text_size))
-                is Path.AlertSound -> Text(text = stringResource(CommonR.string.alert_sound))
-                is Path.PersistentMode -> Text(text = stringResource(CommonR.string.persistent_mode))
-                is Path.Debug -> Text(text = stringResource(CommonR.string.debug))
-                is Path.PersistentScanning -> Text(text = stringResource(CommonR.string.persistent_scanning))
-                is Path.ActivateScanConditions -> Text(text = stringResource(CommonR.string.activate_scan_conditions))
-                is Path.StayActiveDuration -> Text(text = stringResource(CommonR.string.stay_active))
-                is Path.SuspendScanConditions -> Text(text = stringResource(CommonR.string.suspend_scan_conditions))
-                is Path.ExceptedWifis -> Text(text = stringResource(CommonR.string.excepted_wifis))
-                is Path.ActivateBluetoothDevices,
-                is Path.SuspendBluetoothDevices -> Text(text = stringResource(CommonR.string.bluetooth_devices))
-                is Path.Beacons -> Text(text = stringResource(CommonR.string.bluetooth_beacons))
-                is Path.BeaconScan -> Text(text = stringResource(CommonR.string.add_a_beacon))
-                is Path.Licenses -> Text(text = stringResource(CommonR.string.open_source_licenses))
-                is Path.BluetoothAssign -> Text(text = stringResource(CommonR.string.assign_via_bluetooth))
-                is Path.QrCode, null -> {}
+                else -> path.title?.let { Text(text = stringResource(it)) }
             }
         },
-        navigationIcon = {
-            when (currentPath) {
-                is Path.Settings,
-                is Path.ManageSensors,
-                is Path.ShareSensors,
-                is Path.MoveToVehicle,
-                is Path.PressureSettings,
-                is Path.TemperatureSettings,
-                is Path.Calibration,
-                is Path.BatterySettings,
-                is Path.PressureLoss,
-                is Path.AppSettings,
-                is Path.TimeSinceUpdate,
-                is Path.SensorReadingsUpdateDetails,
-                is Path.MagnifierDuration,
-                is Path.DimDisplayDelay,
-                is Path.TextSize,
-                is Path.AlertSound,
-                is Path.PersistentMode,
-                is Path.Debug,
-                is Path.PersistentScanning,
-                is Path.ActivateScanConditions,
-                is Path.StayActiveDuration,
-                is Path.SuspendScanConditions,
-                is Path.ExceptedWifis,
-                is Path.ActivateBluetoothDevices,
-                is Path.SuspendBluetoothDevices,
-                is Path.Beacons,
-                is Path.BeaconScan,
-                is Path.Licenses,
-                is Path.QrCode,
-                is Path.BluetoothAssign -> BackButton()
-
-                // What the phone detects it is doing, when asked for in the debug settings
-                is Path.Home -> DetectedActivitiesIndicator()
-
-                null -> {}
-            }
-        },
-        actions = {
-            when (currentPath) {
-                is Path.Home ->
-                    HomeActions(currentPath.vehicleUUID, manualBackgroundButtonModifier)
-
-                is Path.Settings,
-                is Path.ManageSensors,
-                is Path.ShareSensors,
-                is Path.MoveToVehicle,
-                is Path.PressureSettings,
-                is Path.TemperatureSettings,
-                is Path.Calibration,
-                is Path.BatterySettings,
-                is Path.PressureLoss,
-                is Path.AppSettings,
-                is Path.TimeSinceUpdate,
-                is Path.SensorReadingsUpdateDetails,
-                is Path.MagnifierDuration,
-                is Path.DimDisplayDelay,
-                is Path.TextSize,
-                is Path.AlertSound,
-                is Path.PersistentMode,
-                is Path.Debug,
-                is Path.PersistentScanning,
-                is Path.ActivateScanConditions,
-                is Path.StayActiveDuration,
-                is Path.SuspendScanConditions,
-                is Path.ExceptedWifis,
-                is Path.ActivateBluetoothDevices,
-                is Path.SuspendBluetoothDevices,
-                is Path.Beacons,
-                is Path.BeaconScan,
-                is Path.Licenses,
-                is Path.QrCode,
-                is Path.BluetoothAssign,
-                null -> {}
-            }
-        },
+        navigationIcon = { BackButton() },
         modifier = modifier
     )
 }
@@ -777,14 +526,14 @@ private fun HomeActions(
                 },
                 onClick = {
                     showMenu = false
-                    navController.navigate("${Path.Settings(vehicleUuid)}")
+                    navController.navigate(Path.Settings(vehicleUuid))
                 },
                 modifier = Modifier.testTag(HomeTags.Overflow.settings)
             )
             PersistentScanningMenuItem(
                 onClick = {
                     showMenu = false
-                    navController.navigate("${Path.PersistentMode}")
+                    navController.navigate(Path.PersistentMode)
                 },
                 modifier = Modifier.testTag(HomeTags.Overflow.persistentScanning)
             )
@@ -795,7 +544,7 @@ private fun HomeActions(
                 },
                 onClick = {
                     showMenu = false
-                    navController.navigate("${Path.AppSettings}")
+                    navController.navigate(Path.AppSettings)
                 },
                 modifier = Modifier.testTag(HomeTags.Overflow.appSettings)
             )
@@ -926,3 +675,9 @@ private fun BackButton() {
         modifier = Modifier.testTag(backButton)
     )
 }
+
+private fun NavController.navigate(path: Path) = navigate("$path")
+
+/** The page at [path], which has no arguments */
+private fun NavGraphBuilder.composable(path: Path, content: @Composable () -> Unit) =
+    composable("$path") { content() }

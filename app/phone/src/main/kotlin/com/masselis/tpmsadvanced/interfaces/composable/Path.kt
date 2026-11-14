@@ -1,9 +1,45 @@
 package com.masselis.tpmsadvanced.interfaces.composable
 
+import androidx.annotation.StringRes
 import java.util.UUID
+import com.masselis.tpmsadvanced.core.common.R as CommonR
 
 @Suppress("MemberVisibilityCanBePrivate")
 internal sealed interface Path {
+
+    /** Its top bar's title, none where it isn't a fixed text */
+    @get:StringRes
+    val title: Int?
+        get() = when (this) {
+            is Home, is Settings, is QrCode -> null
+            is ManageSensors -> CommonR.string.manage_sensors
+            is ShareSensors -> CommonR.string.share_sensors
+            is MoveToVehicle -> CommonR.string.move_to
+            is PressureSettings -> CommonR.string.pressure
+            is TemperatureSettings -> CommonR.string.temperature
+            is Calibration -> CommonR.string.calibrate_sensor
+            is BatterySettings -> CommonR.string.battery
+            is PressureLoss -> CommonR.string.pressure_loss
+            is AppSettings -> CommonR.string.app_settings
+            is TimeSinceUpdate -> CommonR.string.time_since_last_update
+            is SensorReadingsUpdateDetails -> CommonR.string.sensor_readings_update_details
+            is MagnifierDuration -> CommonR.string.tap_to_magnify
+            is DimDisplayDelay -> CommonR.string.dim_when_idle
+            is TextSize -> CommonR.string.sensor_readings_text_size
+            is AlertSound -> CommonR.string.alert_sound
+            is PersistentMode -> CommonR.string.persistent_mode
+            is Debug -> CommonR.string.debug
+            is PersistentScanning -> CommonR.string.persistent_scanning
+            is ActivateScanConditions -> CommonR.string.activate_scan_conditions
+            is StayActiveDuration -> CommonR.string.stay_active
+            is SuspendScanConditions -> CommonR.string.suspend_scan_conditions
+            is ExceptedWifis -> CommonR.string.excepted_wifis
+            is ActivateBluetoothDevices, is SuspendBluetoothDevices -> CommonR.string.bluetooth_devices
+            is Beacons -> CommonR.string.bluetooth_beacons
+            is BeaconScan -> CommonR.string.add_a_beacon
+            is Licenses -> CommonR.string.open_source_licenses
+            is BluetoothAssign -> CommonR.string.assign_via_bluetooth
+        }
 
     @JvmInline
     value class Home(val vehicleUUID: UUID) : Path {
