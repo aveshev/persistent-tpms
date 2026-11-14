@@ -96,7 +96,8 @@ internal class RideNotifier(
                 .build()
         )
 
-        // The notification did its job, or is pointless now
+        // The notification did its job, or is pointless now: the open app scans at full rate,
+        // whether it was opened from the notification or not
         isVisible
             .filter { it }
             .onEach { notificationManager.cancel(NOTIFICATION_ID) }

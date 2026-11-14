@@ -22,7 +22,8 @@ internal class MonitorService : LifecycleService() {
         // Persistent scanning runs this service: the process is alive whenever there is a status
         // to announce. A single instance for the process, which outlives the service to say "off".
         Bindings.featureBackgroundInternal.scanStatusAnnouncer()
-        // Watches the ride notification's triggers while the service monitors
+        // Watches the ride notification's triggers while the service monitors, created at the
+        // app's start already
         Bindings.featureBackgroundInternal.rideNotifier()
     }
 
