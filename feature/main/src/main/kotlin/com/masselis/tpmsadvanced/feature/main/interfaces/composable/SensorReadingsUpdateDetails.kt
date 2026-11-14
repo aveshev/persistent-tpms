@@ -30,6 +30,10 @@ public fun SensorReadingsUpdateDetails(modifier: Modifier = Modifier): Unit = Co
             headline = "Pecham",
             supporting = "Every minute while the wheel rotates. While stationary, only when the pressure is below ~22 psi, and in either case, whenever pressure changes significantly. Reads the pressure in steps of about 0.45 psi (3.1 kPa), shown rounded to 0.1 psi: a steady tyre can go back and forth by one step",
         )
+        TextSettingsItem(
+            headline = "TC.TPMS",
+            supporting = "Every 5 minutes, whether the vehicle moves or not, and at once when the pressure changes by about 1.5 psi. Reads the pressure in steps of 0.1 psi",
+        )
     }
     SettingsSectionHeader("When updates seem to be missing")
     SettingsIntro(

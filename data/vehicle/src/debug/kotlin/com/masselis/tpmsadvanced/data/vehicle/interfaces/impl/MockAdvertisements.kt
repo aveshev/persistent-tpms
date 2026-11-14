@@ -68,7 +68,7 @@ private val logger = Logger.withTag("MockAdvertisements")
  * adb shell am broadcast -a com.masselis.tpmsadvanced.MOCK_ADVERTISEMENT -p com.aveshev.persistenttpms.pro \
  *     --es brand pecham --ef kpa 230 --ef celsius 21 --ei battery 30
  * ```
- * - `brand`: pecham, bekubee_ky, wicarlink, bekubee_tpms, bekubee_tc_tpms or sysgration. `kpa` is required,
+ * - `brand`: pecham, bekubee_ky, wicarlink, bekubee_tpms, tc_tpms or sysgration. `kpa` is required,
  *   `celsius` (20), `battery` (a healthy value) and `id` (0x123400) are optional.
  * - Sysgration only: `wheel` (FL, FR, RL or RR, default FL). Sysgration and Wicarlink only:
  *   `alarm` (`--ez`, default false).
