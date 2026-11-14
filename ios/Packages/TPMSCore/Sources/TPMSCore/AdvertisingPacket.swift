@@ -40,7 +40,7 @@ public struct AdvertisingPacket {
             // Pecham and Bekubee KY: "0303A527" "03084252" "08FF..."
             uuidList + shortName + mfg
         } else if uuids.contains(0xA827) || uuids.contains(0xA828) {
-            // Bekubee TPMS: "050854504D53" "0CFF..." "030327A8", Bekubee TC.TPMS the same with
+            // Bekubee TPMS: "050854504D53" "0CFF..." "030327A8", TC.TPMS the same with
             // "080854432E54504D53" and "030328A8"
             shortName + mfg + uuidList
         } else {
@@ -117,13 +117,13 @@ public struct AdvertisingPacket {
                            volts: Float(d[0]) * 0.01 + 1.22)
         }
 
-        // Bekubee TC.TPMS (AOOCCI), see RawBekubeeTcTpms.kt. The manufacturer data's first 2 bytes
+        // TC.TPMS, bought from Essgoo (also sold as EKIY), see RawTcTpms.kt. The manufacturer data's first 2 bytes
         // are a status byte (0x01 after the pressure rose, 0x02 after it fell, 0x00 steady) and the
         // battery in decivolts, then come °C, the pressure (absolute, in
         // 0.1 psi, 146 at 0 psi) and the sensor's address, whose last 3 bytes are its ID
         if name == "TC.TPMS", serviceUUIDs16.contains(0xA828), let m = manufacturer, m.data.count >= 9 {
             let d = [UInt8](m.data)
-            return reading(.bekubeeTcTpms, Int(d[6]) << 16 | Int(d[7]) << 8 | Int(d[8]),
+            return reading(.tcTpms, Int(d[6]) << 16 | Int(d[7]) << 8 | Int(d[8]),
                            .psi(Float((Int(d[1]) << 8 | Int(d[2])) - 146) / 10),
                            Temperature(celsius: Float(Int8(bitPattern: d[0]))),
                            volts: Float(m.companyId >> 8 & 0xFF) / 10)

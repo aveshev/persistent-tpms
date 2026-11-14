@@ -12,7 +12,7 @@ import UIKit
 final class Scanner: NSObject, CBCentralManagerDelegate, CBPeripheralDelegate {
 
     /// Pecham and Bekubee KY (0x27A5), Wicarlink and Sysgration (0xFBB0), Bekubee TPMS (0xA827),
-    /// Bekubee TC.TPMS (0xA828)
+    /// TC.TPMS (0xA828)
     static let services = ["27A5", "FBB0", "A827", "A828"].map { CBUUID(string: $0) }
 
     /// How long a beacon's report holds off the next one in the background. iOS suspends an app about

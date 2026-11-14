@@ -89,10 +89,10 @@ final class DecoderTests: XCTestCase {
         XCTAssertEqual(unplugged.pressure.kpa, 0)
     }
 
-    /// nRF Connect captures of one AOOCCI sensor, address 34:30:07:10:80:9C, see BekubeeTcTpmsTest.kt
-    func testBekubeeTcTpms() throws {
+    /// nRF Connect captures of one TC.TPMS sensor bought from Essgoo, address 34:30:07:10:80:9C, see TcTpmsTest.kt
+    func testTcTpms() throws {
         let off = try XCTUnwrap(decode("080854432E54504D530CFF021E1E009234300710809C030328A8"))
-        XCTAssertEqual(off.brand, .bekubeeTcTpms)
+        XCTAssertEqual(off.brand, .tcTpms)
         XCTAssertEqual(off.sensorId, 0x10809C)
         XCTAssertEqual(off.pressure.convert(.psi), 0, accuracy: 0.01)
         XCTAssertEqual(off.temperature.celsius, 30)
@@ -146,7 +146,7 @@ final class DecoderTests: XCTestCase {
 
         let tcTpms = AdvertisingPacket(name: "TC.TPMS", serviceUUIDs: ["A828"], manufacturerData: Data(hex: "011E1E02A034300710809C")!)
         XCTAssertEqual(tcTpms.bytes.hex, "080854432E54504D530CFF011E1E02A034300710809C030328A8")
-        XCTAssertEqual(tcTpms.decode()?.brand, .bekubeeTcTpms)
+        XCTAssertEqual(tcTpms.decode()?.brand, .tcTpms)
     }
 
     func testJavaHashCode() {
