@@ -27,6 +27,8 @@ public interface Bindings {
 
     @Suppress("FunctionName")
     public companion object : Bindings by appGraph as Bindings {
-        internal fun ShortcutUseCase() = featureShortcutInternal.shortcutUseCase
+        // Its caller drops the result: the type makes a provider returned without being called a
+        // compile error
+        internal fun ShortcutUseCase(): ShortcutUseCase = featureShortcutInternal.shortcutUseCase()
     }
 }

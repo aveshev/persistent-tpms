@@ -15,4 +15,6 @@ dependencies {
     implementation(project(":data:app"))
 
     implementation(project(":core:common"))
+
+    testImplementation(project(":core:test"))
 }

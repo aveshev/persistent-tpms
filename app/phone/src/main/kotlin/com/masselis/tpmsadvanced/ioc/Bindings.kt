@@ -8,6 +8,7 @@ import com.masselis.tpmsadvanced.data.app.interfaces.AppSnapshot
 import com.masselis.tpmsadvanced.data.app.interfaces.OtherApp
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.DatabaseExport
 import com.masselis.tpmsadvanced.feature.background.interfaces.stopMonitoring
+import com.masselis.tpmsadvanced.feature.main.usecase.CurrentVehicleUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.NoveltyUseCase
 import com.masselis.tpmsadvanced.interfaces.viewmodel.HomeViewModel
 import com.masselis.tpmsadvanced.interfaces.viewmodel.ImportViewModel
@@ -57,6 +58,7 @@ public interface Bindings {
         internal val vehicleHomeViewModel: () -> VehicleHomeViewModel,
         internal val importViewModel: () -> ImportViewModel,
         internal val appPreferences: AppPreferences,
+        internal val currentVehicleUseCase: CurrentVehicleUseCase,
     )
 
     public companion object : Bindings by appGraph as Bindings {
@@ -64,5 +66,6 @@ public interface Bindings {
         internal fun VehicleHomeViewModel() = appPhoneInternal.vehicleHomeViewModel()
         internal fun ImportViewModel() = appPhoneInternal.importViewModel()
         internal val appPreferences = appPhoneInternal.appPreferences
+        internal val currentVehicleUseCase = appPhoneInternal.currentVehicleUseCase
     }
 }
