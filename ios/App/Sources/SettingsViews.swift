@@ -6,8 +6,6 @@ struct AppSettingsView: View {
     @ObservedObject var monitor: Monitor
     @ObservedObject var settings: Settings
     @Environment(\.dismiss) private var dismiss
-    @State private var importing = false
-    @State private var importError: String?
     @State private var versionTaps = 0
     @State private var versionMessage: String?
 
@@ -89,16 +87,6 @@ struct AppSettingsView: View {
                         SettingsRow("Persistent mode", "Persistent scanning")
                     }
                 }
-                Section {
-                    Button("Import a database") { importing = true }
-                    if let importError {
-                        Text(importError).foregroundStyle(Theme.error)
-                    }
-                } header: {
-                    Text("Import")
-                } footer: {
-                    Text("Replaces everything with a database exported by Persistent TPMS on Android (debug settings, export database). Pecham and Bekubee KY sensors need assigning again: they carry no ID, and Android tells them apart by their Bluetooth address, which iOS doesn't give.")
-                }
                 about
                 Section("Misc") {
                     Toggle(isOn: Binding(get: { settings.demoMode }, set: { monitor.setDemoMode($0) })) {
@@ -116,14 +104,6 @@ struct AppSettingsView: View {
                     } label: {
                         SettingsRow("Pressure loss", "Experimental\(settings.pressureLoss ? ", on" : "")")
                     }
-                }
-            }
-            .fileImporter(isPresented: $importing, allowedContentTypes: [.data]) { result in
-                do {
-                    try monitor.importDatabase(from: result.get())
-                    dismiss()
-                } catch {
-                    importError = "Couldn't import it: \(error.localizedDescription)"
                 }
             }
             .navigationTitle("App settings")
