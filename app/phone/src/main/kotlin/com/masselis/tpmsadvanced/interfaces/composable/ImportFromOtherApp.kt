@@ -172,7 +172,7 @@ private const val DATE_FLAGS = FORMAT_SHOW_DATE or FORMAT_SHOW_TIME or FORMAT_SH
 @Preview
 @Composable
 @Suppress("MagicNumber")
-private fun EmptyAppOfferPreview() = ImportDialog(
+internal fun EmptyAppOfferPreview() = ImportDialog(
     Offer("Persistent TPMS Lite", 1_792_400_000.0, null, replacing = false, fromSettings = false),
     {},
     {},
@@ -181,7 +181,7 @@ private fun EmptyAppOfferPreview() = ImportDialog(
 @Preview
 @Composable
 @Suppress("MagicNumber")
-private fun ReplacingOfferPreview() = ImportDialog(
+internal fun ReplacingOfferPreview() = ImportDialog(
     Offer("Persistent TPMS", 1_792_400_000.0, 1_791_000_000.0, replacing = true, fromSettings = true),
     {},
     {},

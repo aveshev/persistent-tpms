@@ -39,8 +39,9 @@ public struct AdvertisingPacket {
         let bytes: Data = if uuids.contains(0x27A5) {
             // Pecham and Bekubee KY: "0303A527" "03084252" "08FF..."
             uuidList + shortName + mfg
-        } else if uuids.contains(0xA827) {
-            // Bekubee TPMS: "050854504D53" "0CFF..." "030327A8"
+        } else if uuids.contains(0xA827) || uuids.contains(0xA828) {
+            // Bekubee TPMS: "050854504D53" "0CFF..." "030327A8", Bekubee TC.TPMS the same with
+            // "080854432E54504D53" and "030328A8"
             shortName + mfg + uuidList
         } else {
             // Wicarlink and Sysgration: "020106" "0303B0FB" "12FF..."
@@ -90,7 +91,8 @@ public struct AdvertisingPacket {
            a.count >= 17, Self.isValidPechamCRC(a, brand: brand) {
             let d = Array(a[10..<17])
             return reading(brand, addressId,
-                           .psi(Float((Int(d[3]) << 8 | Int(d[4])) - 145) / 10),
+                           // 145 at 0 psi for Pecham, 146 for Bekubee KY, like RawPecham.kt and RawBekubeeKy.kt
+                           .psi(Float((Int(d[3]) << 8 | Int(d[4])) - (brand == .pecham ? 145 : 146)) / 10),
                            Temperature(celsius: Float(Int8(bitPattern: d[2]))),
                            volts: Float(Int8(bitPattern: d[1])) / 10)
         }
@@ -113,6 +115,18 @@ public struct AdvertisingPacket {
                            Pressure(kpa: Float((Int(d[2]) << 8 | Int(d[3])) - 100)),
                            Temperature(celsius: Float(Int(d[1]) - 50)),
                            volts: Float(d[0]) * 0.01 + 1.22)
+        }
+
+        // Bekubee TC.TPMS (AOOCCI), see RawBekubeeTcTpms.kt. The manufacturer data's first 2 bytes
+        // are a status byte (0x01 after the pressure rose, 0x02 after it fell, 0x00 steady) and the
+        // battery in decivolts, then come °C, the pressure (absolute, in
+        // 0.1 psi, 146 at 0 psi) and the sensor's address, whose last 3 bytes are its ID
+        if name == "TC.TPMS", serviceUUIDs16.contains(0xA828), let m = manufacturer, m.data.count >= 9 {
+            let d = [UInt8](m.data)
+            return reading(.bekubeeTcTpms, Int(d[6]) << 16 | Int(d[7]) << 8 | Int(d[8]),
+                           .psi(Float((Int(d[1]) << 8 | Int(d[2])) - 146) / 10),
+                           Temperature(celsius: Float(Int8(bitPattern: d[0]))),
+                           volts: Float(m.companyId >> 8 & 0xFF) / 10)
         }
 
         // Sysgration: location, EA CA, ID, pressure, temperature, battery and alarm
@@ -140,6 +154,8 @@ public struct AdvertisingPacket {
         let a = [UInt8](bytes)
         if name == "BR" || name == "KY" { return a.count > 10 ? [a[10]] : nil }
         if name == "TPMS" { return manufacturer.map { [UInt8($0.companyId & 0xFF)] } }
+        // 0x01 after the pressure rose, 0x02 after it fell, 0x00 steady
+        if name == "TC.TPMS" { return manufacturer.map { [UInt8($0.companyId & 0xFF)] } }
         if let m = manufacturer?.data, m.count > 15, m[m.startIndex + 1] == 0xEA, m[m.startIndex + 2] == 0xCA {
             return [m[m.startIndex + 15]]
         }

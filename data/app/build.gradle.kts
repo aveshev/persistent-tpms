@@ -20,4 +20,8 @@ android {
 
 dependencies {
     implementation(project(":core:ui"))
+
+    testImplementation(project(":core:test"))
+    // android.jar only stubs org.json, which AppPreferences and AppSnapshot read and write with
+    testImplementation(libs.org.json)
 }

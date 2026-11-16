@@ -12,7 +12,7 @@
 
 ## How to build
 
-Run `git@github.com:VincentMasselis/TPMS-advanced.git` on your machine then `./gradlew build`. You
+Run `git clone git@github.com:aveshev/persistent-tpms.git` on your machine then `./gradlew build`. You
 don't need the secrets keys to run this project, the Gradle configuration works without them.
 
 ## How to try with Android Auto

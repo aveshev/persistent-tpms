@@ -1,0 +1,9 @@
+// The app's version, the Android app's: `./gradlew writeIosVersion`, from the repository's root,
+// writes it to Version.xcconfig (not committed), included below. Without it, the build is
+// "unversioned" and a Release build fails, see project.yml's "Check the version" phase.
+MARKETING_VERSION = 0.0.0
+CURRENT_PROJECT_VERSION = 1
+APP_VERSION_NAME = unversioned
+APP_VERSION_COMMIT =
+
+#include? "Version.xcconfig"

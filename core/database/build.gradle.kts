@@ -22,4 +22,7 @@ dependencies {
     // directly RequerySQLiteOpenHelperFactory
     implementation(libs.requery)
     implementation(libs.relinker)
+
+    testImplementation(project(":core:test"))
+    testImplementation(libs.sqldelight.sqlite.driver)
 }

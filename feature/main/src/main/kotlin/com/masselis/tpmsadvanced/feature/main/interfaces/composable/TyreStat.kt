@@ -264,7 +264,8 @@ private fun elapsedSinceUpdateLabel(timestamp: Double): String {
     return label
 }
 
-private fun elapsedLabel(timestamp: Double, now: Double): String {
+/** The time since the last update, "<1 min" to "99+ days", from timestamps in seconds */
+public fun elapsedLabel(timestamp: Double, now: Double): String {
     val totalMinutes = totalMinutesSince(timestamp, now)
     val totalHours = totalMinutes / MINUTES_PER_HOUR
     return when {

@@ -2,6 +2,7 @@ package com.masselis.tpmsadvanced.feature.androidauto.endpoint.ui.viewmodel
 
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.lifecycleScope
+import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import com.masselis.tpmsadvanced.feature.main.ioc.tyre.TyreComponent.Companion.TyreComponent
 import com.masselis.tpmsadvanced.feature.main.usecase.CurrentVehicleUseCase
@@ -37,6 +38,7 @@ internal class TabScreenViewModel(
     private val currentVehicleUseCase: CurrentVehicleUseCase,
     vehicleListUseCase: VehicleListUseCase,
     private val silenceAlertsUseCase: SilenceAlertsUseCase,
+    appPreferences: AppPreferences,
     @Assisted lifecycleOwner: LifecycleOwner,
 ) : LifecycleOwner by lifecycleOwner {
 
@@ -52,7 +54,14 @@ internal class TabScreenViewModel(
             val displayed: Tab.Displayed,
             /** Null while the alerts aren't spoken */
             val speech: Speech? = null,
+            val readout: Readout = Readout(),
         ) : State {
+            /** The main screen's settings for what its tyres' readouts show */
+            data class Readout(
+                val showTimeSinceUpdate: Boolean = true,
+                val showBatteryVoltage: Boolean = false,
+            )
+
             sealed interface Tab {
                 val vehicle: Vehicle
 
@@ -105,6 +114,9 @@ internal class TabScreenViewModel(
                     }
             }
             .combine(speech()) { tabs, speech -> tabs.copy(speech = speech) }
+            .combine(
+                combine(appPreferences.showTimeSinceUpdate, appPreferences.showBatteryVoltage, State.Tabs::Readout)
+            ) { tabs, readout -> tabs.copy(readout = readout) }
             .onEach { mutableStateFlow.value = it }
             .launchIn(lifecycleScope)
     }

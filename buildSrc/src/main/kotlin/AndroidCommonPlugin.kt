@@ -16,8 +16,6 @@ public class AndroidCommonPlugin : Plugin<Project> {
             compileSdk = libs.versions.sdk.compile.map { it.toInt() }.get()
             with(defaultConfig) {
                 minSdk = libs.versions.sdk.min.map { it.toInt() }.get()
-
-                //targetSdk = libs.versions.sdk.target.map { it.toInt() }.get()
                 ndkVersion = libs.versions.ndk.get()
                 ndk {
                     // Removes the abi "riscv64" to avoid issues when uploading to the play store

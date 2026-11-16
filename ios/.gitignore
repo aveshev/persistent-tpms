@@ -6,3 +6,5 @@ build/
 .swiftpm/
 build-sim/
 build-sim-landscape/
+# Written by ./gradlew writeIosVersion, see Version.base.xcconfig
+Version.xcconfig

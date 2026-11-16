@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.BEKUBEE_KY
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.BEKUBEE_TC_TPMS
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.BEKUBEE_TPMS
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.PECHAM
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.SYSGRATION
@@ -198,6 +199,7 @@ private val SensorBrand.label
         BEKUBEE_KY -> "Bekubee KY"
         WICARLINK -> "Wicarlink"
         BEKUBEE_TPMS -> "Bekubee"
+        BEKUBEE_TC_TPMS -> "Bekubee"
         SYSGRATION -> "Sysgration"
     }
 

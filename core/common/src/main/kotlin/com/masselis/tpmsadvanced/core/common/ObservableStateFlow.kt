@@ -40,10 +40,13 @@ private class ObservableStateFlow<T> private constructor(
     }
 
     override suspend fun emit(value: T) {
+        val previous = stateFlow.value
         stateFlow.emit(value)
-        onValue(stateFlow.value, value)
+        onValue(previous, value)
     }
 
-    override fun tryEmit(value: T): Boolean = stateFlow.tryEmit(value)
-        .also { onValue(stateFlow.value, value) }
+    override fun tryEmit(value: T): Boolean {
+        val previous = stateFlow.value
+        return stateFlow.tryEmit(value).also { onValue(previous, value) }
+    }
 }

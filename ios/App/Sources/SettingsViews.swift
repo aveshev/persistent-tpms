@@ -75,7 +75,7 @@ struct AppSettingsView: View {
                         SettingsRow(tr("Alert sound"), settings.alertSound.label)
                     }
                     Toggle(isOn: $settings.vibrateAlerts) {
-                        SettingsRow(tr("Vibrate"), tr("Along with the alert sound, more for a critical alert"))
+                        SettingsRow(tr("Vibrate"), tr("Along with the alert sound, harder for a critical alert"))
                     }
                 } header: {
                     Text("Alerts")
@@ -125,7 +125,8 @@ struct AppSettingsView: View {
             // 10 taps in a row show the debug options, or hide them again, as Android does with its
             // own developer options
             Button(action: versionTapped) {
-                SettingsRow(tr("Version"), Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String)
+                // The full version, like Android's versionName: 0.9.0-dev+<sha>, see Version.base.xcconfig
+                SettingsRow(tr("Version"), Bundle.main.object(forInfoDictionaryKey: "PersistentTPMSVersionName") as? String)
             }
             Link(destination: URL(string: "https://github.com/VincentMasselis/TPMS-advanced")!) {
                 SettingsRow(tr("Based on TPMS Advanced"), tr("By Vincent Masselis, under the Apache License 2.0"))
@@ -215,19 +216,19 @@ struct AlertSoundSettingsView: View {
     }
 }
 
-/// Listening once the app is closed. Android's scan conditions have no equivalent here: iOS gives apps
-/// neither the classic Bluetooth connections nor beacons' scan windows to act on, and its background
-/// scanning, filtered in the Bluetooth chip, is cheap enough to leave on.
+/// Listening once the app is closed. Android's scan conditions have no equivalent here: a background
+/// app has no higher scan rate to switch on, and its background scanning, filtered in the Bluetooth
+/// chip, is cheap enough to leave on. What invites to open the app takes their place: the app catches
+/// far more readings while it's open than in the background.
 struct PersistentModeView: View {
     @ObservedObject var monitor: Monitor
     @ObservedObject var settings: Settings
-
-    private var isListening: Bool { settings.backgroundMonitoring && monitor.sensors.isEmpty == false }
+    @State private var isDenied = false
 
     var body: some View {
         Form {
             Section {
-                Text("When on, keeps monitoring your tyres in the background, while the phone is locked too. That way you don't have to open the app each ride.")
+                Text("When on, keeps monitoring your tyres in the background, while the phone is locked too. That way you don't have to open the app each ride.\n\nNOTE: iOS throttles Bluetooth scanning in background, so the app will miss some sensor updates that would have been caught if it were open.")
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets())
             }
@@ -239,15 +240,41 @@ struct PersistentModeView: View {
                         monitor.appIsActive(true)
                     }
                 ))
+            }
+            Section {
+                Toggle(isOn: Binding(get: { settings.rideNotification }, set: { monitor.setRideNotification($0); refreshDenied() })) {
+                    SettingsRow(tr("Ride notification"), tr("Prompt \"Going for a ride?\" when near a known vehicle. Opening the app will allow more sensor updates to reach it."))
+                }
+            }
+            if isDenied { NotificationsDeniedSection() }
+            Section {
+                // The only one needing it: it's what hears the sensors while the app is closed
+                Toggle("Known TPMS sensor detected", isOn: Binding(get: { settings.rideSensors }, set: { monitor.setRideSensors($0); refreshDenied() }))
+                    .disabled(settings.rideNotification == false || settings.backgroundMonitoring == false)
+                Group {
+                    NavigationLink {
+                        BeaconsView(monitor: monitor, settings: settings)
+                    } label: {
+                        LabeledContent("Other BLE beacon nearby", value: settings.rideBeacon ? tr("On") : tr("Off"))
+                    }
+                    NavigationLink {
+                        PairedDeviceView(monitor: monitor, settings: settings)
+                    } label: {
+                        LabeledContent("Paired Bluetooth device connected", value: settings.rideShortcut ? tr("On") : tr("Off"))
+                    }
+                }
+                .disabled(settings.rideNotification == false)
             } header: {
-                Text(settings.backgroundMonitoring == false ? tr("Current status: Off") : isListening ? tr("Current status: Listening") : tr("Current status: No sensor to listen to"))
-                    .textCase(nil)
-            } footer: {
-                Text("iOS only lets apps listen now and then in the background, so some readings are missed, more for Pecham sensors than for Wicarlink ones. Swiping the app away in the app switcher stops it until the app is opened again. After restarting the phone, it comes back once the phone is unlocked.\n\nTyres can still be monitored without it: the app scans whenever it is open.")
+                Text("Notify when ...").textCase(nil)
             }
         }
         .navigationTitle("Persistent mode")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear(perform: refreshDenied)
+    }
+
+    private func refreshDenied() {
+        monitor.isNotificationDenied { isDenied = $0 }
     }
 }
 
@@ -269,7 +296,7 @@ struct DebugSettingsView: View {
             Section {
                 Toggle("Debug", isOn: $settings.debugOptions)
             } footer: {
-                Text("What the sensors and the phone report, to help investigate them. Turning Debug off hides all of it, and keeps what is selected here, except the language, which goes back to the phone's.")
+                Text("What the sensors and the phone report, to help investigate them, and \"Simulate a reading\" in the main screen's menu. Turning Debug off hides all of it, and keeps what is selected here, except the language, which goes back to the phone's.")
             }
             Section {
                 Toggle("Sensor ID", isOn: $settings.showSensorId)
@@ -287,6 +314,18 @@ struct DebugSettingsView: View {
                 }
             }
             .disabled(settings.debugOptions == false)
+            Section {
+                Picker("Time away from the vehicle", selection: $settings.rideAbsentFor) {
+                    Text("30 minutes").tag(RideTriggers.defaultAbsentFor)
+                    Text("2 minutes").tag(2.0 * 60)
+                }
+                Picker("Replace unopened notification after", selection: $settings.rideStaleAfter) {
+                    Text("1 hour").tag(RideTriggers.defaultStaleAfter)
+                    Text("2 minutes").tag(2.0 * 60)
+                }
+            } footer: {
+                Text("Time away: how long a sensor or beacon must stay unheard before hearing it again counts as back near the vehicle, which sends the notification. Replace: how long after the last trigger an unopened notification gets replaced, or removed if nothing fires. Shorter values are for trying them.")
+            }
             Section("Data") {
                 Button {
                     do {
@@ -304,10 +343,6 @@ struct DebugSettingsView: View {
         }
         .navigationTitle("Debug")
         .navigationBarTitleDisplayMode(.inline)
-        // With nothing selected there is nothing to show: same as turning the switch off
-        .onDisappear {
-            if settings.showSensorId == false, settings.showSensorFlags == false, settings.language == .system { settings.debugOptions = false }
-        }
         .sheet(item: $exported) { ShareSheet(url: $0.url).ignoresSafeArea() }
     }
 }
@@ -512,7 +547,7 @@ struct DimSettingsView: View {
                 }
                 Section {
                     Toggle(isOn: $settings.pocketGuard) {
-                        SettingsRow(tr("Block touches in a pocket"), tr("Turns the screen off and ignores touches"))
+                        SettingsRow(tr("Block touches in a pocket"), tr("Turns the screen black and ignores touches"))
                     }
                 } header: {
                     Text("In a pocket")

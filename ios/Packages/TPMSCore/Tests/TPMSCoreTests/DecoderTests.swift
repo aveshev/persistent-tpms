@@ -62,6 +62,17 @@ final class DecoderTests: XCTestCase {
         }
     }
 
+    /// Same bytes but the name: Pecham reads 145 as 0 psi, Bekubee KY 146
+    func testBekubeeKyReadsItsOwnPressureOffset() throws {
+        let first15 = [UInt8](Data(hex: "0303A52703084B5908FF801B1B02A5")!)
+        let ky = try XCTUnwrap(decode(Data(first15 + AdvertisingPacket.pechamCRCBytes(first15, brand: .bekubeeKy)).hex))
+        XCTAssertEqual(ky.brand, .bekubeeKy)
+        XCTAssertEqual(ky.pressure.convert(.psi), 53.1, accuracy: 0.01)
+        let pechamFirst15 = [UInt8](Data(hex: "0303A5270308425208FF801B1B02A5")!)
+        let pecham = try XCTUnwrap(decode(Data(pechamFirst15 + AdvertisingPacket.pechamCRCBytes(pechamFirst15)).hex))
+        XCTAssertEqual(pecham.pressure.convert(.psi), 53.2, accuracy: 0.01)
+    }
+
     func testWicarlinkPressureDropIsAnAlarm() throws {
         XCTAssertFalse(try XCTUnwrap(decode("0201060303B0FB12FFAC00C78952000D3800D510FF1100C42122")).isAlarm)
         XCTAssertTrue(try XCTUnwrap(decode("0201060303B0FB12FFAC00C67C53010D0400F010FF1100C42122")).isAlarm)
@@ -76,6 +87,25 @@ final class DecoderTests: XCTestCase {
         let unplugged = try XCTUnwrap(decode("050854504D530CFF0600B34A0064002FA0057D030327A8"))
         XCTAssertEqual(unplugged.sensorId, 10497792)
         XCTAssertEqual(unplugged.pressure.kpa, 0)
+    }
+
+    /// nRF Connect captures of one AOOCCI sensor, address 34:30:07:10:80:9C, see BekubeeTcTpmsTest.kt
+    func testBekubeeTcTpms() throws {
+        let off = try XCTUnwrap(decode("080854432E54504D530CFF021E1E009234300710809C030328A8"))
+        XCTAssertEqual(off.brand, .bekubeeTcTpms)
+        XCTAssertEqual(off.sensorId, 0x10809C)
+        XCTAssertEqual(off.pressure.convert(.psi), 0, accuracy: 0.01)
+        XCTAssertEqual(off.temperature.celsius, 30)
+        XCTAssertEqual(try XCTUnwrap(off.batteryVoltage).volts, 3, accuracy: 0.01)
+        XCTAssertFalse(off.isAlarm)
+        let mounted = try XCTUnwrap(decode("080854432E54504D530CFF011E1E02A034300710809C030328A8"))
+        XCTAssertEqual(mounted.pressure.convert(.psi), 52.6, accuracy: 0.01)
+        let warmer = try XCTUnwrap(decode("080854432E54504D530CFF011E20017A34300710809C030328A8"))
+        XCTAssertEqual(warmer.pressure.convert(.psi), 23.2, accuracy: 0.01)
+        XCTAssertEqual(warmer.temperature.celsius, 32)
+        // Bekubee TPMS's service UUID, or another name, isn't this sensor
+        XCTAssertNil(decode("080854432E54504D530CFF021E1E009234300710809C030327A8"))
+        XCTAssertNil(decode("080854432E58504D530CFF021E1E009234300710809C030328A8"))
     }
 
     func testSysgration() throws {
@@ -96,6 +126,7 @@ final class DecoderTests: XCTestCase {
         XCTAssertEqual(status("0201060303B0FB12FFAC00C70053010D4F00DE10FF1100C42122"), [0x01])
         XCTAssertEqual(status("050854504D530CFF0600B34A0064002FA0057D030327A8"), [0x06])
         XCTAssertEqual(status("0201060303B0FB13FF010080EACA123456E0930400D0070000" + "5A01"), [0x01])
+        XCTAssertEqual(status("080854432E54504D530CFF021E1E009234300710809C030328A8"), [0x02])
         XCTAssertNil(status("0201060303AAAA"))
     }
 
@@ -112,6 +143,10 @@ final class DecoderTests: XCTestCase {
 
         let bekubee = AdvertisingPacket(name: "TPMS", serviceUUIDs: ["A827"], manufacturerData: Data(hex: "0200AF4500A7002D56A8B4")!)
         XCTAssertEqual(bekubee.bytes.hex, "050854504D530CFF0200AF4500A7002D56A8B4030327A8")
+
+        let tcTpms = AdvertisingPacket(name: "TC.TPMS", serviceUUIDs: ["A828"], manufacturerData: Data(hex: "011E1E02A034300710809C")!)
+        XCTAssertEqual(tcTpms.bytes.hex, "080854432E54504D530CFF011E1E02A034300710809C030328A8")
+        XCTAssertEqual(tcTpms.decode()?.brand, .bekubeeTcTpms)
     }
 
     func testJavaHashCode() {

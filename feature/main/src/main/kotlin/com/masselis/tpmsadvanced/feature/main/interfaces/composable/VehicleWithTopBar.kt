@@ -82,9 +82,17 @@ internal fun VehicleWithTopBar(
             placement
                 .boxHeight()
                 .takeIf { width > 0 && it > 0 }
-                // Without the minimum height, which only lets the readouts go past the box
+                // Without the minimum height, which only lets the readouts go past the box, nor the
+                // maximum area, or a vehicle as wide as it's tall would have the bar over it in
+                // landscape: more area, but less height
                 ?.let { boxHeight ->
-                    boxHeight * sizing.imageHeight(width.toDp(), boxHeight.toDp(), placement.corners(), 0f)
+                    boxHeight * sizing.imageHeight(
+                        maxWidth = width.toDp(),
+                        maxHeight = boxHeight.toDp(),
+                        corners = placement.corners(),
+                        atLeast = 0f,
+                        maxArea = Float.MAX_VALUE,
+                    )
                 }
                 ?: 0f
         }

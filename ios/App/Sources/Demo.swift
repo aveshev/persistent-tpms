@@ -31,6 +31,16 @@ enum Demo {
     }
 
     #if DEBUG
+    /// `-otheralert red|crimson` has a vehicle other than the one shown alerting, to see the vehicle
+    /// menu blink, without a reading and so without a sound
+    static func ongoingAlerts(_ vehicles: [Vehicle]) -> OngoingAlerts {
+        guard let level = argument("-otheralert").flatMap({ ["red": AlertLevel.red, "crimson": .crimson][$0] }),
+              let other = vehicles.first(where: { $0.isCurrent == false }),
+              let location = other.kind.locations.first
+        else { return OngoingAlerts() }
+        // Far ahead, for as long as it's looked at
+        return OngoingAlerts().next(.init(vehicleId: other.id, location: location), levels: [.pressure: level], at: Date().timeIntervalSince1970 + 24 * 3600)
+    }
     /// `-pocket`: dimmed, and saying the screen was just turned off in a pocket, for -render
     static var isPocketShown: Bool { ProcessInfo.processInfo.arguments.contains("-pocket") }
 

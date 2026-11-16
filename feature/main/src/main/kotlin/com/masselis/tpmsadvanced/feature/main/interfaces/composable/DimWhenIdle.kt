@@ -7,18 +7,24 @@ import android.os.PowerManager
 import android.os.PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK
 import android.os.PowerManager.RELEASE_FLAG_WAIT_FOR_NO_PROXIMITY
 import android.view.WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
-import android.widget.Toast
-import android.widget.Toast.LENGTH_LONG
 import android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
 import android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
 import androidx.activity.compose.LocalActivity
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -30,6 +36,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerEventPass.Initial
@@ -39,6 +46,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
@@ -82,8 +91,9 @@ import kotlinx.coroutines.delay
  * dimmed, saying touches are blocked somewhere else every [BLOCKED_SHIFT] so it isn't burnt in,
  * and touches do nothing, not even brighten it, until uncovered. Meanwhile the screen is turned
  * off as during a phone call, the system ignoring its touches, and back on once uncovered, still
- * unlocked: the app stays open and scanning in the pocket. A toast then says why it went off, the
- * screen being off for as long as there would be something to say on it. On a phone which can't
+ * unlocked: the app stays open and scanning in the pocket. A message under the top bar then says why
+ * it went off for [TURNED_OFF_SHOWN], the screen being off for as long as there would be something
+ * to say on it: the app's own, longer than a toast can be, over [content]. On a phone which can't
  * turn its screen off this way, the black screen says it instead, and the system bars are hidden:
  * a first swipe from an edge only brings them back for a moment rather than opening the shade or
  * going home. Not otherwise, the main screen being laid out again for them.
@@ -185,7 +195,16 @@ internal fun DimWhenIdle(
     val canTurnScreenOff = remember(powerManager) {
         powerManager?.isWakeLockLevelSupported(PROXIMITY_SCREEN_OFF_WAKE_LOCK) == true
     }
-    val context = LocalContext.current
+    // Each one shows the turned off message again, for as long as from the start
+    var turnedOff by remember { mutableIntStateOf(0) }
+    var isTurnedOffShown by remember { mutableStateOf(false) }
+    LaunchedEffect(turnedOff) {
+        if (turnedOff > 0) {
+            isTurnedOffShown = true
+            delay(TURNED_OFF_SHOWN)
+            isTurnedOffShown = false
+        }
+    }
     if (isBlocked && canTurnScreenOff) DisposableEffect(powerManager) {
         // Released once uncovered, or with the app no longer resumed, which stops the sensor
         @SuppressLint("WakelockTimeout")
@@ -195,8 +214,7 @@ internal fun DimWhenIdle(
         onDispose {
             screenOff?.release(RELEASE_FLAG_WAIT_FOR_NO_PROXIMITY)
             // Uncovered, rather than the sensor stopped with the app leaving the screen
-            if (lifecycle.currentState.isAtLeast(RESUMED))
-                Toast.makeText(context, "Screen was turned off by \"Block touches in a pocket\"", LENGTH_LONG).show()
+            if (lifecycle.currentState.isAtLeast(RESUMED)) turnedOff++
         }
     }
     val brightness = LocalContext.current.let { remember(it) { SystemBrightness(it) } }
@@ -230,6 +248,19 @@ internal fun DimWhenIdle(
         }
     ) {
         content(isDimmed)
+        AnimatedVisibility(
+            visible = isTurnedOffShown,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                // Under the top bar, its vehicle picker still showing
+                .padding(top = TopAppBarDefaults.TopAppBarExpandedHeight)
+                .padding(horizontal = 16.dp),
+        ) {
+            TurnedOff()
+        }
         // A window of its own, shown after the dialogs over the main screen so it's over them too:
         // they're windows of their own, which the content's touches never reach. It holds the low
         // brightness, the screen's brightness comes back with it gone.
@@ -293,6 +324,26 @@ internal fun DimWhenIdle(
     }
 }
 
+/** Says the screen was turned off in a pocket, under the top bar, over the content */
+@Composable
+private fun TurnedOff() = Surface(
+    shape = MaterialTheme.shapes.extraLarge,
+    color = MaterialTheme.colorScheme.inverseSurface,
+    contentColor = MaterialTheme.colorScheme.inverseOnSurface,
+    modifier = Modifier.testTag(DimWhenIdleTags.turnedOff),
+) {
+    Text(
+        text = "Screen was turned off by\n\"Block touches in a pocket\"",
+        // In proportion to the size it's shown at
+        style = MaterialTheme.typography.headlineSmall.copy(lineHeight = TURNED_OFF_LINE),
+        textAlign = TextAlign.Center,
+        // As large as the silence button's, shrunk rather than wrapped where it doesn't fit the width
+        maxLines = 2,
+        autoSize = TextAutoSize.StepBased(maxFontSize = MaterialTheme.typography.headlineSmall.fontSize),
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+    )
+}
+
 /** Says touches are blocked, somewhere else every [BLOCKED_SHIFT] so it isn't burnt in */
 @Composable
 private fun BlockedTouches() {
@@ -334,6 +385,11 @@ private const val DARKENED_ALPHA = 0.3f
 /** How long after brightening again the proximity sensor is still watched */
 private val POCKET_GRACE = 1.seconds
 
+/** How long the screen being turned off in a pocket is said for, after */
+private val TURNED_OFF_SHOWN = 6.seconds
+
+private val TURNED_OFF_LINE = 1.3.em
+
 /** How often the blocked touches' text moves */
 private val BLOCKED_SHIFT = 5.seconds
 
@@ -342,4 +398,5 @@ internal object DimWhenIdleTags {
     const val overlay = "DimWhenIdleTags_overlay"
     const val blocked = "DimWhenIdleTags_blocked"
     const val dimmed = "DimWhenIdleTags_dimmed"
+    const val turnedOff = "DimWhenIdleTags_turnedOff"
 }

@@ -19,8 +19,8 @@ dependencies {
     implementation(libs.lifecycle.common)
     api(libs.androidx.startup)
     api(libs.kotlinx.coroutines.android)
-    api(libs.kotlinx.coroutines.playservices)
-    api(libs.kotlinx.coroutines.guava)
     api(platform(libs.google.firebase.bom))
     api(platform(libs.androidx.compose.bom))
+
+    testImplementation(project(":core:test"))
 }

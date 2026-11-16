@@ -6,7 +6,7 @@ public enum class PressureUnit {
     PSI;
 
     public fun string(): String = when (this) {
-        KILO_PASCAL -> "kpa"
+        KILO_PASCAL -> "kPa"
         BAR -> "bar"
         PSI -> "psi"
     }

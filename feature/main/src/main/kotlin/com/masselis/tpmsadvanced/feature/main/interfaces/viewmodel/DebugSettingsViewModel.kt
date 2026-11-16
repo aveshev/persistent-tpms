@@ -59,12 +59,6 @@ internal class DebugSettingsViewModel(
         }
     }
 
-    fun disableIfNoneSelected() {
-        listOf(showSensorId, showSensorFlags, showDetectedActivities, announceScanStatus, balancedAfterFirstReading)
-            .none { it.value }
-            .also { if (it) debugOptions.value = false }
-    }
-
     internal companion object {
         const val TAPS_TO_TOGGLE = 10
         const val TAPS_COUNTED_DOWN = 3

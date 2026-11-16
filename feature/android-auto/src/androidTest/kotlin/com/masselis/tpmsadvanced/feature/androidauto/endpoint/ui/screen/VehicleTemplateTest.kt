@@ -1,7 +1,7 @@
 package com.masselis.tpmsadvanced.feature.androidauto.endpoint.ui.screen
 
 import androidx.car.app.Screen
-import androidx.car.app.model.GridItem
+import androidx.car.app.model.Row
 import androidx.car.app.model.Template
 import androidx.car.app.testing.TestCarContext
 import androidx.test.core.app.ApplicationProvider
@@ -16,6 +16,7 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.bar
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.FRONT_LEFT
 import com.masselis.tpmsadvanced.data.vehicle.model.Temperature.CREATOR.celsius
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
+import com.masselis.tpmsadvanced.data.vehicle.model.Voltage
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location.Wheel
 import com.masselis.tpmsadvanced.feature.androidauto.endpoint.ui.viewmodel.TabScreenViewModel.State
 import com.masselis.tpmsadvanced.feature.main.usecase.TyreIconStateFlow
@@ -31,7 +32,7 @@ import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 
 // Runs on a real device/emulator rather than as a local Robolectric test because
-// TyreGridItem's icon tinting reads core:ui's LightColors/DarkColors, which are backed by a
+// TyreRow's icon tinting reads core:ui's LightColors/DarkColors, which are backed by a
 // process-wide appContext only ever populated by App Startup running this module's own
 // androidTest-only com.masselis.tpmsadvanced.ioc.AppGraph
 @RunWith(AndroidJUnit4::class)
@@ -66,25 +67,28 @@ internal class VehicleTemplateTest {
         }
     }
 
-    private fun singleTyreGridItem(
+    private fun singleTyreRow(
         iconState: TyreIconStateFlow.State,
         statsState: TyreStatsStateFlow.State,
+        // The readings below are dated 0, so the age is the time since then
+        now: Double = 0.0,
     ) = Vehicle.Kind.CAR.locations
         .associateWith { location ->
             if (location == Wheel(FRONT_LEFT)) iconState to statsState
             else TyreIconStateFlow.State.NotDetected to TyreStatsStateFlow.State.NotDetected
         }
         .let { tyres -> State.Tabs.Tab.Displayed(mockVehicle(), tyres) }
-        .let { tab -> runOnMain { context(screen) { VehicleTemplate(tab) } } }
+        .let { tab -> runOnMain { context(screen) { VehicleTemplate(tab, now = now) } } }
         .singleList!!
         .items
-        .also { items -> assertEquals(4, items.size) }
-        .map { item -> assertIs<GridItem>(item); item }
+        // The vehicle, then its 4 tyres
+        .also { items -> assertEquals(5, items.size) }
+        .map { item -> assertIs<Row>(item); item }
         .first { item -> item.title.toString() == "Front left" }
 
     @Test
     fun alertingTyreShowsItsLocationAndFormattedPressureWithTemperature() {
-        singleTyreGridItem(
+        singleTyreRow(
             TyreIconStateFlow.State.Alerting(),
             TyreStatsStateFlow.State.Detected(
                 0.0,
@@ -97,61 +101,132 @@ internal class VehicleTemplateTest {
             ),
         ).also { item ->
             assertEquals("Front left", item.title.toString())
-            assertEquals("3.2b  60°C", item.text.toString())
+            assertEquals("3.20 bar · 60°C · <1 min", item.texts.first().toString())
             assertNotNull(item.image)
         }
     }
 
     @Test
     fun normalTyreShowsItsLocationAndFormattedPressureWithTemperature() {
-        singleTyreGridItem(
+        singleTyreRow(
             TyreIconStateFlow.State.Normal.BlueToGreen(Fraction(0.5f)),
             TyreStatsStateFlow.State.Detected(0.0, 0, 2.4f.bar, BAR, 22f.celsius, CELSIUS),
         ).also { item ->
             assertEquals("Front left", item.title.toString())
-            assertEquals("2.4b  22°C", item.text.toString())
+            assertEquals("2.40 bar · 22°C · <1 min", item.texts.first().toString())
             assertNotNull(item.image)
         }
     }
 
     @Test
+    fun aReadingShowsTheTimeSinceItsUpdateAsTheMainScreenDoes() {
+        listOf(
+            12 * 60.0 to "12 min",
+            3 * 3_600.0 to "3 hours",
+            2 * 86_400.0 to "2 days",
+        ).forEach { (age, text) ->
+            singleTyreRow(
+                TyreIconStateFlow.State.Normal.BlueToGreen(Fraction(0.5f)),
+                TyreStatsStateFlow.State.Detected(0.0, 0, 2.4f.bar, BAR, 22f.celsius, CELSIUS),
+                now = age,
+            ).also { item -> assertEquals("2.40 bar · 22°C · $text", item.texts.first().toString()) }
+        }
+    }
+
+    @Test
+    fun aLeakAndALowBatteryShowOnASecondLine() {
+        singleTyreRow(
+            TyreIconStateFlow.State.Alerting(),
+            TyreStatsStateFlow.State.Detected(
+                0.0,
+                0,
+                2.4f.bar,
+                BAR,
+                22f.celsius,
+                CELSIUS,
+                batteryVoltage = Voltage(2.5f),
+                levels = mapOf(AlertClass.SENSOR_ALARM to AlertLevel.AMBER, AlertClass.BATTERY to AlertLevel.RED),
+            ),
+        ).also { item ->
+            assertEquals(2, item.texts.size)
+            assertEquals("Leak? · 2.5 V", item.texts[1].toString())
+        }
+    }
+
+    @Test
+    fun aCriticalPressureIsFollowedByItsLabel() {
+        singleTyreRow(
+            TyreIconStateFlow.State.Alerting(),
+            TyreStatsStateFlow.State.Detected(
+                0.0,
+                0,
+                1.2f.bar,
+                BAR,
+                22f.celsius,
+                CELSIUS,
+                levels = mapOf(AlertClass.PRESSURE to AlertLevel.CRIMSON),
+            ),
+        ).also { item -> assertEquals("1.20 bar LOW! · 22°C · <1 min", item.texts.single().toString()) }
+    }
+
+    @Test
     fun notDetectedTyreShowsItsLocationAndAPlaceholderText() {
-        singleTyreGridItem(
+        singleTyreRow(
             TyreIconStateFlow.State.NotDetected,
             TyreStatsStateFlow.State.NotDetected,
         ).also { item ->
             assertEquals("Front left", item.title.toString())
-            assertEquals("-.-", item.text.toString())
+            assertEquals("No reading", item.texts.first().toString())
             assertNotNull(item.image)
         }
     }
 
     @Test
     fun detectionIssueTyreShowsItsLocationAndAPlaceholderText() {
-        singleTyreGridItem(
+        singleTyreRow(
             TyreIconStateFlow.State.DetectionIssue,
             TyreStatsStateFlow.State.NotDetected,
         ).also { item ->
             assertEquals("Front left", item.title.toString())
-            assertEquals("-.-", item.text.toString())
+            assertEquals("No reading", item.texts.first().toString())
             assertNotNull(item.image)
         }
     }
 
     @Test
-    fun oneGridItemIsRenderedPerTyreLocation() {
+    fun theVehicleThenOneRowPerTyreLocation() {
         Vehicle.Kind.CAR.locations
             .associateWith { TyreIconStateFlow.State.Alerting() to TyreStatsStateFlow.State.NotDetected }
             .let { tyres -> State.Tabs.Tab.Displayed(mockVehicle(), tyres) }
             .let { tab -> runOnMain { context(screen) { VehicleTemplate(tab) } } }
             .singleList!!
             .items
-            .also { items -> assertEquals(4, items.size) }
-            .map { assertIs<GridItem>(it) }
+            .map { assertIs<Row>(it) }
             .map { it.title.toString() }
-            .toSet()
             .also { titles ->
-                assertEquals(setOf("Front left", "Front right", "Rear left", "Rear right"), titles)
+                assertEquals(listOf("MOCK", "Front left", "Front right", "Rear left", "Rear right"), titles)
+            }
+    }
+
+    @Test
+    fun theVehicleRowOpensTheSwitchOnlyWhenGivenOne() {
+        Vehicle.Kind.CAR.locations
+            .associateWith { TyreIconStateFlow.State.NotDetected to TyreStatsStateFlow.State.NotDetected }
+            .let { tyres -> State.Tabs.Tab.Displayed(mockVehicle(), tyres) }
+            .let { tab ->
+                listOf(null, {}).map { onChangeVehicle ->
+                    runOnMain { context(screen) { VehicleTemplate(tab, onChangeVehicle = onChangeVehicle) } }
+                        .singleList!!
+                        .items
+                        .first()
+                        .let { assertIs<Row>(it) }
+                }
+            }
+            .also { (alone, withOthers) ->
+                assertEquals(false, alone.isBrowsable)
+                assertEquals(emptyList(), alone.texts)
+                assertEquals(true, withOthers.isBrowsable)
+                assertEquals("Change vehicle", withOthers.texts.single().toString())
             }
     }
 

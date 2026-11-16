@@ -140,9 +140,6 @@ public data class Vehicle(
          */
         MONOWHEEL(setOf(Location.Single), 2.8f.bar..3.5f.bar);
 
-        public val defaultsToSeparateFrontRearPressure: Boolean
-            get() = defaultRearPressures != null
-
         /**
          * `true` when this [Kind]'s [locations] distinguish a front axle from a rear one, i.e.
          * every kind except [SINGLE_AXLE_TRAILER] which only has [Location.Side] left/right

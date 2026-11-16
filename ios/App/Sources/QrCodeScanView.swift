@@ -35,7 +35,7 @@ struct QrCodeOutcome {
             if let reassigns {
                 message += "\n\n" + (sensors.count == 1 ? tr("This sensor is already assigned to \(reassigns), it will be reassigned.") : tr("One of these sensors is already assigned to \(reassigns), it will be reassigned."))
             }
-            if overwrites(sensors) { message += tr("\n\nThis will overwrite already assigned sensors.") }
+            if overwrites(sensors) { message += tr("\n\n⚠️ Warning: this will overwrite already assigned sensors") }
             return QrCodeOutcome(title: tr("Assign sensors"), message: message, confirm: (reassigns != nil ? tr("Reassign") : tr("Yes"), sensors, []))
         }
 
@@ -79,7 +79,7 @@ struct QrCodeOutcome {
             for (sensor, place) in reassigns {
                 message += tr("\n\n\(sensor.id.asSensorId(sensor.brand)) is assigned to \(place), it will be reassigned.")
             }
-            if overwrites(sensors) { message += tr("\n\nThis will overwrite already assigned sensors.") }
+            if overwrites(sensors) { message += tr("\n\n⚠️ Warning: this will overwrite already assigned sensors") }
             if skipped.isEmpty == false {
                 message += tr("\n\nNot assigned, \(vehicle.name) has no \(skipped.map(\.location.phrase).joined(separator: tr(" or "))).")
             }

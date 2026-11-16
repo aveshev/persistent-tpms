@@ -21,133 +21,82 @@ public class AppPreferences internal constructor(
         Context.MODE_PRIVATE
     )
 
-    public val showSensorId: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("SHOW_SENSOR_ID", false)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("SHOW_SENSOR_ID", newValue) }
-    }
+    public val showSensorId: MutableStateFlow<Boolean> = sharedPreferences.booleanFlow("SHOW_SENSOR_ID", false)
 
     /**
      * Whether the switch of the debug options is shown in the app settings, revealed and hidden
      * again by tapping the version. While hidden, [debugOptions] keeps its value but doesn't apply.
      */
-    public val developer: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("DEVELOPER", false)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("DEVELOPER", newValue) }
-    }
+    public val developer: MutableStateFlow<Boolean> = sharedPreferences.booleanFlow("DEVELOPER", false)
 
     /**
      * The switch of the debug options: while off, none of them is shown, whatever is selected.
      * On by default when the sensor ID, the only one which predates it, was shown. What applies is
      * [debugOptionsInUse].
      */
-    public val debugOptions: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("DEBUG_OPTIONS", sharedPreferences.getBoolean("SHOW_SENSOR_ID", false))
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("DEBUG_OPTIONS", newValue) }
-    }
+    public val debugOptions: MutableStateFlow<Boolean> =
+        sharedPreferences.booleanFlow("DEBUG_OPTIONS", sharedPreferences.getBoolean("SHOW_SENSOR_ID", false))
 
     /** [debugOptions], unless [developer] is off: what the debug options check before applying */
     public val debugOptionsInUse: StateFlow<Boolean> = developer.combineState(debugOptions, Boolean::and)
 
     /** Shows the status byte of the last packet under each tyre, bit by bit */
-    public val showSensorFlags: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("SHOW_SENSOR_FLAGS", false)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("SHOW_SENSOR_FLAGS", newValue) }
-    }
+    public val showSensorFlags: MutableStateFlow<Boolean> = sharedPreferences.booleanFlow("SHOW_SENSOR_FLAGS", false)
 
     /** Shows the activities the phone detects, with their confidence, on the home screen */
-    public val showDetectedActivities: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("SHOW_DETECTED_ACTIVITIES", false)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("SHOW_DETECTED_ACTIVITIES", newValue) }
-    }
+    public val showDetectedActivities: MutableStateFlow<Boolean> =
+        sharedPreferences.booleanFlow("SHOW_DETECTED_ACTIVITIES", false)
 
     /**
      * Speaks the status of persistent scanning (idle, active, suspended, off) each time it changes,
      * unless the main screen is shown
      */
-    public val announceScanStatus: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("ANNOUNCE_SCAN_STATUS", false)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("ANNOUNCE_SCAN_STATUS", newValue) }
-    }
+    public val announceScanStatus: MutableStateFlow<Boolean> =
+        sharedPreferences.booleanFlow("ANNOUNCE_SCAN_STATUS", false)
 
     /**
      * Switches the tyre scan to balanced after its first reading, as it used to, instead of keeping
      * it at low latency the whole time it runs (main screen shown, or persistent scanning active)
      */
-    public val balancedAfterFirstReading: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("BALANCED_AFTER_FIRST_READING", false)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("BALANCED_AFTER_FIRST_READING", newValue) }
-    }
+    public val balancedAfterFirstReading: MutableStateFlow<Boolean> =
+        sharedPreferences.booleanFlow("BALANCED_AFTER_FIRST_READING", false)
 
-    public val showTimeSinceUpdate:MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("SHOW_TIME_SINCE_UPDATE", true)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("SHOW_TIME_SINCE_UPDATE", newValue) }
-    }
+    public val showTimeSinceUpdate: MutableStateFlow<Boolean> =
+        sharedPreferences.booleanFlow("SHOW_TIME_SINCE_UPDATE", true)
 
     /** A voltage getting low or alarming is shown whatever this is set to */
-    public val showBatteryVoltage: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("SHOW_BATTERY_VOLTAGE", false)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("SHOW_BATTERY_VOLTAGE", newValue) }
-    }
+    public val showBatteryVoltage: MutableStateFlow<Boolean> =
+        sharedPreferences.booleanFlow("SHOW_BATTERY_VOLTAGE", false)
 
     /** Tapping a tyre's part of the main screen shows its reading magnified, to read it on a shaking phone */
-    public val magnifier: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("MAGNIFIER", true)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("MAGNIFIER", newValue) }
-    }
+    public val magnifier: MutableStateFlow<Boolean> = sharedPreferences.booleanFlow("MAGNIFIER", true)
 
     /** How long, in seconds, a reading stays magnified, see [magnifier] */
-    public val magnifierSeconds: MutableStateFlow<Int> = observableStateFlow(
-        sharedPreferences.getInt("MAGNIFIER_DURATION_SECONDS", DEFAULT_MAGNIFIER_SECONDS)
-    ) { _, newValue ->
-        sharedPreferences.edit { putInt("MAGNIFIER_DURATION_SECONDS", newValue) }
-    }
+    public val magnifierSeconds: MutableStateFlow<Int> =
+        sharedPreferences.intFlow("MAGNIFIER_DURATION_SECONDS", DEFAULT_MAGNIFIER_SECONDS)
 
     /**
      * Dims the main screen once nothing new was alerted or warned about, nor touched, for
      * [dimDisplaySeconds], to keep a phone mounted in a car from glaring at night
      */
-    public val dimDisplay: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("DIM_DISPLAY", true)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("DIM_DISPLAY", newValue) }
-    }
+    public val dimDisplay: MutableStateFlow<Boolean> = sharedPreferences.booleanFlow("DIM_DISPLAY", true)
 
     /** How long, in seconds, the main screen waits before dimming, see [dimDisplay] */
-    public val dimDisplaySeconds: MutableStateFlow<Int> = observableStateFlow(
-        sharedPreferences.getInt("DIM_DISPLAY_SECONDS", DEFAULT_DIM_DISPLAY_SECONDS)
-    ) { _, newValue ->
-        sharedPreferences.edit { putInt("DIM_DISPLAY_SECONDS", newValue) }
-    }
+    public val dimDisplaySeconds: MutableStateFlow<Int> =
+        sharedPreferences.intFlow("DIM_DISPLAY_SECONDS", DEFAULT_DIM_DISPLAY_SECONDS)
 
     /**
      * What the brightness the system would give the screen is divided by when dimmed, rounded
      * down, see [dimDisplay]
      */
-    public val dimDisplayDivisor: MutableStateFlow<Int> = observableStateFlow(
-        sharedPreferences.getInt("DIM_DISPLAY_DIVIDED_BY", DEFAULT_DIM_DISPLAY_DIVISOR)
-    ) { _, newValue ->
-        sharedPreferences.edit { putInt("DIM_DISPLAY_DIVIDED_BY", newValue) }
-    }
+    public val dimDisplayDivisor: MutableStateFlow<Int> =
+        sharedPreferences.intFlow("DIM_DISPLAY_DIVIDED_BY", DEFAULT_DIM_DISPLAY_DIVISOR)
 
     /**
      * While dimmed, and shortly after, the proximity sensor covered (a pocket) blocks the main
      * screen's touches, see [dimDisplay], and after a while lets the screen turn off
      */
-    public val pocketGuard: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("POCKET_GUARD", true)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("POCKET_GUARD", newValue) }
-    }
+    public val pocketGuard: MutableStateFlow<Boolean> = sharedPreferences.booleanFlow("POCKET_GUARD", true)
 
     /** Whether the app is light or dark, [Theme.SYSTEM] following the phone's own setting */
     public val theme: MutableStateFlow<Theme> = observableStateFlow(
@@ -169,28 +118,17 @@ public class AppPreferences internal constructor(
      * The tyre readouts' text size, multiplying the system's font size: 1 follows it. The readouts
      * still shrink from there when they don't fit the screen.
      */
-    public val readoutTextScale: MutableStateFlow<Float> = observableStateFlow(
-        sharedPreferences.getFloat("READOUT_TEXT_SCALE", 1f)
-    ) { _, newValue ->
-        sharedPreferences.edit { putFloat("READOUT_TEXT_SCALE", newValue) }
-    }
+    public val readoutTextScale: MutableStateFlow<Float> = sharedPreferences.floatFlow("READOUT_TEXT_SCALE", 1f)
 
     /**
      * Warns about a tyre losing at least [pressureLossMinDrop] kPa while riding. Experimental, so
      * off by default.
      */
-    public val pressureLoss: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("PRESSURE_LOSS", false)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("PRESSURE_LOSS", newValue) }
-    }
+    public val pressureLoss: MutableStateFlow<Boolean> = sharedPreferences.booleanFlow("PRESSURE_LOSS", false)
 
     /** In kPa */
-    public val pressureLossMinDrop: MutableStateFlow<Float> = observableStateFlow(
-        sharedPreferences.getFloat("PRESSURE_LOSS_MIN_DROP_KPA", DEFAULT_PRESSURE_LOSS_MIN_DROP)
-    ) { _, newValue ->
-        sharedPreferences.edit { putFloat("PRESSURE_LOSS_MIN_DROP_KPA", newValue) }
-    }
+    public val pressureLossMinDrop: MutableStateFlow<Float> =
+        sharedPreferences.floatFlow("PRESSURE_LOSS_MIN_DROP_KPA", DEFAULT_PRESSURE_LOSS_MIN_DROP)
 
     /**
      * How the red and crimson tyre alerts sound, on top of their notifications. Was a switch for
@@ -233,73 +171,43 @@ public class AppPreferences internal constructor(
      * Vibrates along with the red and crimson tyre alerts' sound, in the same loops, harder for a
      * crimson one. Works with [AlertSound.NONE] too, vibrating on its own.
      */
-    public val vibrateAlerts: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("VIBRATE_ALERTS", false)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("VIBRATE_ALERTS", newValue) }
-    }
+    public val vibrateAlerts: MutableStateFlow<Boolean> = sharedPreferences.booleanFlow("VIBRATE_ALERTS", false)
 
-    public val persistentScanning: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("PERSISTENT_SCANNING", false)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("PERSISTENT_SCANNING", newValue) }
-    }
+    public val persistentScanning: MutableStateFlow<Boolean> =
+        sharedPreferences.booleanFlow("PERSISTENT_SCANNING", false)
 
     /**
      * Whether persistent scanning was turned on once from its settings page, which explains when it
      * scans. The main screen's menu only offers its switch after that. Those who already use it,
      * from before this was stored, have done so.
      */
-    public val persistentScanningSetUp: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean(
-            "PERSISTENT_SCANNING_SET_UP",
-            sharedPreferences.getBoolean("PERSISTENT_SCANNING", false),
-        )
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("PERSISTENT_SCANNING_SET_UP", newValue) }
-    }
+    public val persistentScanningSetUp: MutableStateFlow<Boolean> = sharedPreferences.booleanFlow(
+        "PERSISTENT_SCANNING_SET_UP",
+        sharedPreferences.getBoolean("PERSISTENT_SCANNING", false),
+    )
 
-    public val activateOnCableCharging: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("ACTIVATE_ON_CABLE_CHARGING", true)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("ACTIVATE_ON_CABLE_CHARGING", newValue) }
-    }
+    public val activateOnCableCharging: MutableStateFlow<Boolean> =
+        sharedPreferences.booleanFlow("ACTIVATE_ON_CABLE_CHARGING", true)
 
-    public val activateOnWirelessCharging: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("ACTIVATE_ON_WIRELESS_CHARGING", true)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("ACTIVATE_ON_WIRELESS_CHARGING", newValue) }
-    }
+    public val activateOnWirelessCharging: MutableStateFlow<Boolean> =
+        sharedPreferences.booleanFlow("ACTIVATE_ON_WIRELESS_CHARGING", true)
 
-    public val activateOnAndroidAuto: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("ACTIVATE_ON_ANDROID_AUTO", true)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("ACTIVATE_ON_ANDROID_AUTO", newValue) }
-    }
+    public val activateOnAndroidAuto: MutableStateFlow<Boolean> =
+        sharedPreferences.booleanFlow("ACTIVATE_ON_ANDROID_AUTO", true)
 
     /** Scans while one of [activateBluetoothDevices] is connected */
-    public val activateOnBluetooth: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("ACTIVATE_ON_BLUETOOTH", false)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("ACTIVATE_ON_BLUETOOTH", newValue) }
-    }
+    public val activateOnBluetooth: MutableStateFlow<Boolean> =
+        sharedPreferences.booleanFlow("ACTIVATE_ON_BLUETOOTH", false)
 
     /**
      * Addresses of the Bluetooth devices picked for [activateOnBluetooth]. A device unpaired since
      * then stays in the set, so that it comes back selected once paired again.
      */
-    public val activateBluetoothDevices: MutableStateFlow<Set<String>> = observableStateFlow(
-        sharedPreferences.getStringSet("ACTIVATE_BLUETOOTH_DEVICES", emptySet())!!.toSet()
-    ) { _, newValue ->
-        sharedPreferences.edit { putStringSet("ACTIVATE_BLUETOOTH_DEVICES", newValue) }
-    }
+    public val activateBluetoothDevices: MutableStateFlow<Set<String>> =
+        sharedPreferences.stringSetFlow("ACTIVATE_BLUETOOTH_DEVICES")
 
     /** Scans while one of [beacons] is nearby */
-    public val activateOnBeacon: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("ACTIVATE_ON_BEACON", false)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("ACTIVATE_ON_BEACON", newValue) }
-    }
+    public val activateOnBeacon: MutableStateFlow<Boolean> = sharedPreferences.booleanFlow("ACTIVATE_ON_BEACON", false)
 
     /** The beacons of [activateOnBeacon], in the order they were added */
     public val beacons: MutableStateFlow<List<Beacon>> = observableStateFlow(
@@ -318,22 +226,15 @@ public class AppPreferences internal constructor(
      * A nearby beacon overrides every suspend condition but the phone being idle: it tells
      * the vehicle is around, while a phone left still for a long time was likely forgotten in it
      */
-    public val beaconOverridesSuspend: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("BEACON_OVERRIDES_SUSPEND", false)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("BEACON_OVERRIDES_SUSPEND", newValue) }
-    }
+    public val beaconOverridesSuspend: MutableStateFlow<Boolean> =
+        sharedPreferences.booleanFlow("BEACON_OVERRIDES_SUSPEND", false)
 
     /**
      * The name of the BLE scan mode looking for [beacons] in the background, a debug option. Left
      * as a name: the modes belong to the scanner, the reader falls back on its default for an
      * unknown one.
      */
-    public val beaconScanMode: MutableStateFlow<String?> = observableStateFlow(
-        sharedPreferences.getString("BEACON_SCAN_MODE", null)
-    ) { _, newValue ->
-        sharedPreferences.edit { putString("BEACON_SCAN_MODE", newValue) }
-    }
+    public val beaconScanMode: MutableStateFlow<String?> = sharedPreferences.stringFlow("BEACON_SCAN_MODE")
 
     /** [beaconScanMode] while [debugOptionsInUse], else null for the reader's default */
     public val beaconScanModeInUse: StateFlow<String?> =
@@ -343,11 +244,8 @@ public class AppPreferences internal constructor(
      * The signal (dBm) from which one of the [beacons] counts as nearby, a debug option. Weaker
      * than that, it is likely someone else's or across the street.
      */
-    public val beaconMinRssi: MutableStateFlow<Int> = observableStateFlow(
-        sharedPreferences.getInt("BEACON_MIN_RSSI", DEFAULT_BEACON_MIN_RSSI)
-    ) { _, newValue ->
-        sharedPreferences.edit { putInt("BEACON_MIN_RSSI", newValue) }
-    }
+    public val beaconMinRssi: MutableStateFlow<Int> =
+        sharedPreferences.intFlow("BEACON_MIN_RSSI", DEFAULT_BEACON_MIN_RSSI)
 
     /** [beaconMinRssi] while [debugOptionsInUse], else [DEFAULT_BEACON_MIN_RSSI] */
     public val beaconMinRssiInUse: StateFlow<Int> =
@@ -356,88 +254,51 @@ public class AppPreferences internal constructor(
         }
 
     /** Keeps scanning for [stayActiveMinutes] once every activate condition has ended */
-    public val stayActive: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("STAY_ACTIVE", false)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("STAY_ACTIVE", newValue) }
-    }
+    public val stayActive: MutableStateFlow<Boolean> = sharedPreferences.booleanFlow("STAY_ACTIVE", false)
 
-    public val stayActiveMinutes: MutableStateFlow<Int> = observableStateFlow(
-        sharedPreferences.getInt("STAY_ACTIVE_MINUTES", DEFAULT_STAY_ACTIVE_MINUTES)
-    ) { _, newValue ->
-        sharedPreferences.edit { putInt("STAY_ACTIVE_MINUTES", newValue) }
-    }
+    public val stayActiveMinutes: MutableStateFlow<Int> =
+        sharedPreferences.intFlow("STAY_ACTIVE_MINUTES", DEFAULT_STAY_ACTIVE_MINUTES)
 
     /** When off, persistent scanning ignores the activate conditions and always scans */
-    public val activateConditions: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("ACTIVATE_CONDITIONS", true)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("ACTIVATE_CONDITIONS", newValue) }
-    }
+    public val activateConditions: MutableStateFlow<Boolean> =
+        sharedPreferences.booleanFlow("ACTIVATE_CONDITIONS", true)
 
     /** When off, none of the suspend conditions applies, whatever each one is set to */
-    public val suspendConditions: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("SUSPEND_CONDITIONS", true)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("SUSPEND_CONDITIONS", newValue) }
-    }
+    public val suspendConditions: MutableStateFlow<Boolean> = sharedPreferences.booleanFlow("SUSPEND_CONDITIONS", true)
 
     /**
      * On by default: a phone idle for that long is not on a moving vehicle, it was left somewhere.
      * What "idle" means is [phoneIdleMechanism].
      */
-    public val suspendScanningInDoze: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("SUSPEND_SCANNING_IN_DOZE", true)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("SUSPEND_SCANNING_IN_DOZE", newValue) }
-    }
+    public val suspendScanningInDoze: MutableStateFlow<Boolean> =
+        sharedPreferences.booleanFlow("SUSPEND_SCANNING_IN_DOZE", true)
 
     /**
      * The name of the mechanism telling the phone is idle for [suspendScanningInDoze], a debug
      * option. Left as a name like [beaconScanMode]: the reader falls back on its default for an
      * unknown one.
      */
-    public val phoneIdleMechanism: MutableStateFlow<String?> = observableStateFlow(
-        sharedPreferences.getString("PHONE_IDLE_MECHANISM", null)
-    ) { _, newValue ->
-        sharedPreferences.edit { putString("PHONE_IDLE_MECHANISM", newValue) }
-    }
+    public val phoneIdleMechanism: MutableStateFlow<String?> = sharedPreferences.stringFlow("PHONE_IDLE_MECHANISM")
 
     /** [phoneIdleMechanism] while [debugOptionsInUse], else null for the reader's default */
     public val phoneIdleMechanismInUse: StateFlow<String?> =
         debugOptionsInUse.combineState(phoneIdleMechanism) { inUse, mechanism -> mechanism.takeIf { inUse } }
 
-    public val suspendScanningOnWifi: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("SUSPEND_SCANNING_ON_WIFI", false)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("SUSPEND_SCANNING_ON_WIFI", newValue) }
-    }
+    public val suspendScanningOnWifi: MutableStateFlow<Boolean> =
+        sharedPreferences.booleanFlow("SUSPEND_SCANNING_ON_WIFI", false)
 
-    public val wifiExceptionEnabled: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("WIFI_EXCEPTION_ENABLED", false)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("WIFI_EXCEPTION_ENABLED", newValue) }
-    }
+    public val wifiExceptionEnabled: MutableStateFlow<Boolean> =
+        sharedPreferences.booleanFlow("WIFI_EXCEPTION_ENABLED", false)
 
-    public val exceptedWifiSsids: MutableStateFlow<Set<String>> = observableStateFlow(
-        sharedPreferences.getStringSet("EXCEPTED_WIFI_SSIDS", emptySet())!!.toSet()
-    ) { _, newValue ->
-        sharedPreferences.edit { putStringSet("EXCEPTED_WIFI_SSIDS", newValue) }
-    }
+    public val exceptedWifiSsids: MutableStateFlow<Set<String>> = sharedPreferences.stringSetFlow("EXCEPTED_WIFI_SSIDS")
 
     /** Suspends scanning while one of [suspendBluetoothDevices] is connected */
-    public val suspendScanningOnBluetooth: MutableStateFlow<Boolean> = observableStateFlow(
-        sharedPreferences.getBoolean("SUSPEND_SCANNING_ON_BLUETOOTH", false)
-    ) { _, newValue ->
-        sharedPreferences.edit { putBoolean("SUSPEND_SCANNING_ON_BLUETOOTH", newValue) }
-    }
+    public val suspendScanningOnBluetooth: MutableStateFlow<Boolean> =
+        sharedPreferences.booleanFlow("SUSPEND_SCANNING_ON_BLUETOOTH", false)
 
     /** Same as [activateBluetoothDevices], for [suspendScanningOnBluetooth] */
-    public val suspendBluetoothDevices: MutableStateFlow<Set<String>> = observableStateFlow(
-        sharedPreferences.getStringSet("SUSPEND_BLUETOOTH_DEVICES", emptySet())!!.toSet()
-    ) { _, newValue ->
-        sharedPreferences.edit { putStringSet("SUSPEND_BLUETOOTH_DEVICES", newValue) }
-    }
+    public val suspendBluetoothDevices: MutableStateFlow<Set<String>> =
+        sharedPreferences.stringSetFlow("SUSPEND_BLUETOOTH_DEVICES")
 
     /**
      * A device recognized by its advertisements, by [address] or by [advertisedName] since some

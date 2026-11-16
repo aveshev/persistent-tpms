@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import UserNotifications
 
 @main
 struct PersistentTPMSApp: App {
@@ -18,12 +19,33 @@ struct PersistentTPMSApp: App {
     }
 }
 
-final class AppDelegate: NSObject, UIApplicationDelegate {
+final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        // Before this returns, or the tap that launched the app isn't told
+        UNUserNotificationCenter.current().delegate = self
         // Also when iOS relaunches the app in the background for a sensor, through Bluetooth state
         // restoration: the scan has to start again before this returns
         Monitor.shared.start()
         return true
+    }
+
+    func applicationProtectedDataWillBecomeUnavailable(_ application: UIApplication) {
+        rideLog("phone locked")
+    }
+
+    func applicationProtectedDataDidBecomeAvailable(_ application: UIApplication) {
+        rideLog("phone unlocked")
+    }
+
+    /// Shown while the app is open too, like on Android: the user may not be looking at the tyre. A
+    /// silent update only changes what's in the list.
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler(notification.request.content.sound == nil ? [.list] : [.banner, .list, .sound])
+    }
+
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+        Monitor.shared.answered(response)
+        completionHandler()
     }
 }
 
