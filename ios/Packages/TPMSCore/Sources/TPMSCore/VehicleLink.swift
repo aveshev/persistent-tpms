@@ -30,11 +30,33 @@ public struct VehicleShortcut: Equatable, Sendable {
         self.kind = kind
     }
 
-    /// In the vehicles' order, [limit] at most. One without a name is skipped, as on Android: it
-    /// would show as an empty line.
-    public static func list(_ vehicles: [Vehicle], limit: Int) -> [VehicleShortcut] {
-        vehicles
+    /// [limit] at most, in the order the Android app ranks its shortcuts: the vehicles with a red or
+    /// critical alert in [alerting] first, the worst first, then the latest read in [latestReadings]
+    /// (seconds since 1970), then the others by name. One without a name is skipped, as on Android:
+    /// it would show as an empty line.
+    public static func list(
+        _ vehicles: [Vehicle],
+        alerting: [UUID: AlertLevel] = [:],
+        latestReadings: [UUID: Double] = [:],
+        limit: Int
+    ) -> [VehicleShortcut] {
+        func alert(_ vehicle: Vehicle) -> AlertLevel? { alerting[vehicle.id].flatMap { $0 >= .red ? $0 : nil } }
+        return vehicles
             .filter { $0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false }
+            .sorted { a, b in
+                switch (alert(a), alert(b)) {
+                case let (x?, y?) where x != y: return x > y
+                case (.some, nil): return true
+                case (nil, .some): return false
+                default: break
+                }
+                switch (latestReadings[a.id], latestReadings[b.id]) {
+                case let (x?, y?) where x != y: return x > y
+                case (.some, nil): return true
+                case (nil, .some): return false
+                default: return a.name < b.name
+                }
+            }
             .prefix(max(limit, 0))
             .map { VehicleShortcut(id: $0.id, name: $0.name, kind: $0.kind) }
     }

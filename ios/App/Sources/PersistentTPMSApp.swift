@@ -35,8 +35,22 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         // restoration: the scan has to start again before this returns
         Monitor.shared.start()
         // A quick action per vehicle, like the Android app's launcher shortcuts (ShortcutUseCase)
-        quickActions = Monitor.shared.$vehicles
-            .map { VehicleShortcut.list($0, limit: Self.maxQuickActions) }
+        // Ranked like them too: the alerting vehicles, then the latest read
+        quickActions = Publishers.CombineLatest3(Monitor.shared.$vehicles, Monitor.shared.$ongoing, Monitor.shared.$tyres)
+            .map { vehicles, ongoing, tyres in
+                let now = Date()
+                return VehicleShortcut.list(
+                    vehicles,
+                    alerting: Dictionary(uniqueKeysWithValues: vehicles.compactMap { vehicle in
+                        ongoing.worst(of: vehicle.id, now: now).map { (vehicle.id, $0) }
+                    }),
+                    latestReadings: tyres.reduce(into: [:]) { latest, entry in
+                        guard let timestamp = entry.value.latest?.timestamp else { return }
+                        latest[entry.key.vehicleId] = max(latest[entry.key.vehicleId] ?? timestamp, timestamp)
+                    },
+                    limit: Self.maxQuickActions
+                )
+            }
             .removeDuplicates()
             .sink { shortcuts in
                 application.shortcutItems = shortcuts.map {

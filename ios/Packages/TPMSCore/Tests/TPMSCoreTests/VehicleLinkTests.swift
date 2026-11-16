@@ -41,17 +41,46 @@ final class VehicleLinkTests: XCTestCase {
         Vehicle.new(name: name, kind: kind)
     }
 
-    func testShortcutsKeepTheVehiclesOrderAndKind() {
+    func testShortcutsKeepTheVehiclesKindAndGoByNameWithoutReadings() {
         let vehicles = [vehicle("NMax", .motorcycle), vehicle("My car"), vehicle("Trailer", .singleAxleTrailer)]
         XCTAssertEqual(
             VehicleShortcut.list(vehicles, limit: 4),
-            vehicles.map { VehicleShortcut(id: $0.id, name: $0.name, kind: $0.kind) }
+            [vehicles[1], vehicles[0], vehicles[2]].map { VehicleShortcut(id: $0.id, name: $0.name, kind: $0.kind) }
+        )
+    }
+
+    func testTheLatestReadComesFirst() {
+        let car = vehicle("car"), bike = vehicle("bike"), trailer = vehicle("trailer")
+        XCTAssertEqual(
+            VehicleShortcut.list([car, trailer, bike], latestReadings: [car.id: 100, bike.id: 200, trailer.id: 50], limit: 4).map(\.name),
+            ["bike", "car", "trailer"]
+        )
+    }
+
+    func testTheWorstAlertComesFirstThenTheLatestRead() {
+        let car = vehicle("car"), bike = vehicle("bike"), trailer = vehicle("trailer"), van = vehicle("van")
+        XCTAssertEqual(
+            VehicleShortcut.list(
+                [car, trailer, bike, van],
+                alerting: [car.id: .red, bike.id: .red, van.id: .crimson],
+                latestReadings: [car.id: 100, bike.id: 200, trailer.id: 300],
+                limit: 4
+            ).map(\.name),
+            ["van", "bike", "car", "trailer"]
+        )
+    }
+
+    func testAnAmberAlertDoesNotRankFirst() {
+        let car = vehicle("car"), bike = vehicle("bike")
+        XCTAssertEqual(
+            VehicleShortcut.list([car, bike], alerting: [car.id: .amber], latestReadings: [bike.id: 200], limit: 4).map(\.name),
+            ["bike", "car"]
         )
     }
 
     func testAVehicleWithoutANameHasNoShortcut() {
         let vehicles = [vehicle(""), vehicle("NMax"), vehicle("  \n"), vehicle(" My car ")]
-        XCTAssertEqual(VehicleShortcut.list(vehicles, limit: 4).map(\.name), ["NMax", " My car "])
+        XCTAssertEqual(VehicleShortcut.list(vehicles, limit: 4).map(\.name), [" My car ", "NMax"])
     }
 
     func testTheLimitCountsTheNamedOnes() {
