@@ -9,6 +9,7 @@ android {
 
 dependencies {
     implementation(project(":feature:main"))
+    implementation(project(":feature:background"))
 
     implementation(project(":data:vehicle"))
     implementation(project(":data:unit"))

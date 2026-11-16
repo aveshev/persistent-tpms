@@ -1,6 +1,8 @@
 package com.masselis.tpmsadvanced.feature.shortcut.ioc
 
 import com.masselis.tpmsadvanced.core.common.appGraph
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.ReadingDatabase
+import com.masselis.tpmsadvanced.feature.background.usecase.AlertingVehiclesUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.VehicleListUseCase
 import com.masselis.tpmsadvanced.feature.shortcut.usecase.ShortcutUseCase
 import dev.zacsweers.metro.AppScope
@@ -15,8 +17,10 @@ public interface Bindings {
     @Provides
     @SingleIn(AppScope::class)
     private fun shortcutUseCase(
-        vehicleListUseCase: VehicleListUseCase
-    ): ShortcutUseCase = ShortcutUseCase(vehicleListUseCase)
+        vehicleListUseCase: VehicleListUseCase,
+        alertingVehiclesUseCase: AlertingVehiclesUseCase,
+        readingDatabase: ReadingDatabase,
+    ): ShortcutUseCase = ShortcutUseCase(vehicleListUseCase, alertingVehiclesUseCase, readingDatabase)
 
     public val featureShortcutInternal: Internal
 
