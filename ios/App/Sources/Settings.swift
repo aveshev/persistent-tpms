@@ -199,11 +199,15 @@ final class Settings: ObservableObject {
         alerts = defaults.bool(forKey: "alerts")
         backgroundMonitoring = defaults.object(forKey: "backgroundMonitoring") as? Bool ?? true
         rideSensors = defaults.bool(forKey: "rideSensors")
-        rideBeacon = defaults.bool(forKey: "rideBeacon")
-        // A single device was kept before
-        rideBeaconDevices = defaults.data(forKey: "rideBeaconDevices").flatMap { try? JSONDecoder().decode([RideBeacon].self, from: $0) }
+        // A single device was kept before. One advertising no service was woken by connecting to it,
+        // which isn't done any more, see RideBeacon.canWake.
+        let beacons = (defaults.data(forKey: "rideBeaconDevices").flatMap { try? JSONDecoder().decode([RideBeacon].self, from: $0) }
             ?? defaults.data(forKey: "rideBeaconDevice").flatMap { try? JSONDecoder().decode(RideBeacon.self, from: $0) }.map { [$0] }
-            ?? []
+            ?? [])
+            .filter(\.canWake)
+        rideBeaconDevices = beacons
+        // Without any beacon left it could never fire, as Monitor.disableRideBeaconIfNone says
+        rideBeacon = defaults.bool(forKey: "rideBeacon") && beacons.isEmpty == false
         rideShortcut = defaults.bool(forKey: "rideShortcut")
         // Before this switch, turning a trigger on was enough
         let isAnyTriggerOn = ["rideSensors", "rideBeacon", "rideShortcut"].contains { UserDefaults.standard.bool(forKey: $0) }

@@ -122,10 +122,6 @@ final class Monitor: ObservableObject {
             if rssi != RideTriggers.noRssi, rssi >= RideTriggers.minRssi { self?.beaconsHeard[beacon] = Date() }
             self?.ride.beaconHeard(rssi: rssi, needsConfirming: needsConfirming)
         }
-        scanner.onBeaconStillThere = { [weak self] beacon in
-            self?.beaconsHeard[beacon] = Date()
-            self?.ride.beaconStillThere()
-        }
         rideLog("started")
         appIsActive(UIApplication.shared.applicationState == .active)
     }
@@ -141,7 +137,6 @@ final class Monitor: ObservableObject {
         let beacons = settings.rideNotification && settings.rideBeacon ? settings.rideBeaconDevices : []
         scanner.setBeacons(beacons)
         scanner.start(services: beacons
-            .filter { $0.wake == .service }
             .flatMap(\.services)
             .map { CBUUID(string: $0) }
             .reduce(listensToSensors ? Scanner.services : []) { $0.contains($1) ? $0 : $0 + [$1] }, isActive: isActive)

@@ -63,11 +63,6 @@ public struct RideTriggers: Codable, Equatable {
         return true
     }
 
-    /// [source] was known to be there until now, its connection coming as soon as it was allowed to
-    public mutating func stillThere(_ source: String, at now: Double) {
-        lastHeard[source] = now
-    }
-
     /// A trigger fired, whichever one. Whether a new notification should go out: not while one
     /// [isShowing] is still current, so two triggers firing for one return, or one coming back and
     /// forth, make a single notification. Each firing keeps it current for another [staleAfter].
