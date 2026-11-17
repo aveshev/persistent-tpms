@@ -6,7 +6,10 @@ import com.masselis.tpmsadvanced.core.common.AppGraphReadyInitializer
 import com.masselis.tpmsadvanced.core.common.CoreCommonInitializer
 import com.masselis.tpmsadvanced.feature.background.ioc.Bindings
 
-/** Alerts whatever scans, the main screen or the monitor service, from the app's start */
+/**
+ * Alerts whatever scans, the main screen or the monitor service, from the app's start. The ride
+ * notification is removed by opening the app, the service running or not.
+ */
 public class FeatureBackgroundInitializer : AppGraphReadyInitializer<Unit> {
 
     // The alerts read the app's context right away, which CoreCommonInitializer sets
@@ -15,5 +18,6 @@ public class FeatureBackgroundInitializer : AppGraphReadyInitializer<Unit> {
 
     override fun create(context: Context) {
         Bindings.featureBackgroundInternal.alertNotifier()
+        Bindings.featureBackgroundInternal.rideNotifier()
     }
 }
