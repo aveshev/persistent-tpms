@@ -6,14 +6,18 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Sensor
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.PECHAM
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.SYSGRATION
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.TC_TPMS
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.WICARLINK
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorCalibration
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.Axle.REAR
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.FRONT_LEFT
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.FRONT_RIGHT
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.REAR_LEFT
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.REAR_RIGHT
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.CAR
+import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.MOTORCYCLE
+import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location.Axle
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location.Wheel
 import org.junit.Test
 import java.util.Base64
@@ -40,6 +44,23 @@ internal class SharedSensorsTest {
     @Test
     fun `a code reads back as the sensors it was made of`() {
         assertEquals(car, SharedSensors.decode(car.uri))
+    }
+
+    @Test
+    fun `a TC_TPMS sensor is written the way the iOS app writes it`() {
+        // The same code as SharedSensorsUriTests.testATcTpmsSensorIsWrittenTheWayAndroidWritesIt: its ID
+        // comes from the advertisement, so an iPhone shares it too
+        SharedSensors(
+            MOTORCYCLE,
+            "Moto",
+            listOf(
+                SharedSensor(
+                    Sensor(0x005AD8, Axle(REAR), TC_TPMS),
+                    SensorCalibration(true, PressureCalibration(Pressure(34.5f), 1f)),
+                ),
+            ),
+        ).also { assertEquals("tpmsadvanced://sensors?v=1&d=AgRNb3RvAQAAWtgFBQNCCgAAP4AAAA", it.uri) }
+            .also { assertEquals(it, SharedSensors.decode(it.uri)) }
     }
 
     @Test
