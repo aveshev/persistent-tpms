@@ -45,6 +45,15 @@ public class ReadingDatabase internal constructor(
         .latestBySensorByLocation(sensorId = sensorId, vehicleId = vehicleId, location = location)
         .asOneOrNull { it.decoded() }
 
+    /** Each vehicle's latest reading time, in seconds, for the vehicles with any reading stored */
+    public suspend fun latestByVehicle(): Map<UUID, Double> = withContext(IO) {
+        queries
+            .latestByVehicle()
+            .executeAsList()
+            .mapNotNull { row -> row.timestamp?.let { row.vehicleId to it } }
+            .toMap()
+    }
+
     /** All the stored readings of [location], oldest first, at most [CAP] of them */
     public fun allByLocation(location: Location, vehicleId: UUID): QueryList<Tyre.Located> = queries
         .allByLocation(vehicleId, location)
