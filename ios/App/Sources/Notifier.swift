@@ -21,6 +21,14 @@ final class Notifier {
         }
     }
 
+    /// Whether iOS lets the app notify, which can be turned off in its Settings at any time
+    func isAuthorized(_ completion: @escaping (Bool) -> Void) {
+        center.getNotificationSettings { settings in
+            let isAuthorized = [.authorized, .provisional, .ephemeral].contains(settings.authorizationStatus)
+            DispatchQueue.main.async { completion(isAuthorized) }
+        }
+    }
+
     func update(vehicle: Vehicle, location: TyreLocation, alerts: TyreAlerts, loss: PressureLoss?, settings: Settings) {
         guard let reading = alerts.latest else { return }
         let thresholds = vehicle.thresholds(location)

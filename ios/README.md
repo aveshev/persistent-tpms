@@ -60,7 +60,15 @@ Android's Lite scans in the background only while a Bluetooth device it's told a
 connected or a beacon is near. iOS gives apps neither the classic Bluetooth connections (the
 car's audio) nor a way to wake on them. Background scanning is cheap on iOS, filtered in the
 Bluetooth chip by service UUID, so the iOS app simply listens in the background whenever a
-sensor is assigned (Persistent mode, on by default).
+sensor is assigned (Persistent mode, on by default). With Persistent mode off, the top bar's
+minimize button keeps scanning in the background until tapped again, like Android's manual
+monitoring. An iOS app can't close itself, so a toast tells the user to leave it, and with no
+foreground notification to stop it from, the button turns into a cancel button. Swiping the app
+away ends it, like Android's restart; a relaunch by Bluetooth state restoration keeps it. With
+Persistent mode on, Android's bell takes the button's place: green while scanning is always active
+(the only mode iOS has), red and crossed out while something keeps it from alerting (Bluetooth off
+or not allowed, no sensor assigned, notifications off in the app or in iOS's Settings). Tapped, it
+tells which, with a way to fix it.
 
 ### What it has
 
@@ -120,8 +128,8 @@ The settings and menus follow Android's, screen by screen:
 ### Left out
 
 - **Android Auto, shortcuts**: CarPlay needs Apple's approval for this category.
-- **Scan conditions** (Bluetooth devices, beacons, Wi-Fi, stay active, suspend when idle), the monitoring
-  button and the debug options about scanning: iOS gives an app nothing to act on, and its background
+- **Scan conditions** (Bluetooth devices, beacons, Wi-Fi, stay active, suspend when idle) and the
+  debug options about scanning: iOS gives an app nothing to act on, and its background
   scanning is cheap enough to leave on.
 - **An app icon** and **localisation**.
 

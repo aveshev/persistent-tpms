@@ -22,7 +22,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         // Also when iOS relaunches the app in the background for a sensor, through Bluetooth state
         // restoration: the scan has to start again before this returns
-        Monitor.shared.start()
+        Monitor.shared.start(isRestored: launchOptions?[.bluetoothCentrals] != nil)
         return true
     }
 }

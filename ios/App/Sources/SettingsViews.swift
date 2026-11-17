@@ -250,16 +250,13 @@ struct PersistentModeView: View {
             Section {
                 Toggle("Persistent scanning", isOn: Binding(
                     get: { settings.backgroundMonitoring },
-                    set: {
-                        settings.backgroundMonitoring = $0
-                        monitor.appIsActive(true)
-                    }
+                    set: { monitor.setPersistentMonitoring($0) }
                 ))
             } header: {
                 Text(settings.backgroundMonitoring == false ? "Current status: Off" : isListening ? "Current status: Listening" : "Current status: No sensor to listen to")
                     .textCase(nil)
             } footer: {
-                Text("iOS only lets apps listen now and then in the background, so some readings are missed, more for Pecham sensors than for Wicarlink ones. Swiping the app away in the app switcher stops it until the app is opened again. After restarting the phone, it comes back once the phone is unlocked.\n\nTyres can still be monitored without it: the app scans whenever it is open.")
+                Text("iOS only lets apps listen now and then in the background, so some readings are missed. Swiping the app away in the app switcher stops it until the app is opened again. After restarting the phone, it comes back once the phone is unlocked.\n\nTyres can still be monitored without it: the app scans whenever it is open, and tapping the minimize button at the top of the main screen keeps scanning in the background, until tapped again or the app is swiped away in the app switcher.")
             }
         }
         .navigationTitle("Persistent mode")
