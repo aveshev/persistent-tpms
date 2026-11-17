@@ -9,7 +9,7 @@ import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.SYSGRATION
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.WICARLINK
 
 /** The brand as the user knows it, with its type when the brand makes several */
-internal val SensorBrand.label: String
+public val SensorBrand.label: String
     get() = when (this) {
         PECHAM -> "Pecham"
         // Several kinds of sensors, named after what they advertise

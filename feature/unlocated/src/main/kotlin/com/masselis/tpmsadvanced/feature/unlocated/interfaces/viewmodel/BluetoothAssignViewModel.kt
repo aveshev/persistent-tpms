@@ -2,6 +2,9 @@ package com.masselis.tpmsadvanced.feature.unlocated.interfaces.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.masselis.tpmsadvanced.data.unit.interfaces.UnitPreferences
+import com.masselis.tpmsadvanced.data.unit.model.PressureUnit
+import com.masselis.tpmsadvanced.data.unit.model.TemperatureUnit
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorDatabase
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.VehicleDatabase
@@ -46,12 +49,14 @@ import kotlin.time.Duration.Companion.seconds
  * Sensors already bound to this vehicle are ignored.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
+@Suppress("LongParameterList")
 @AssistedInject
 internal class BluetoothAssignViewModel(
     private val scanner: BluetoothLeScanner,
     private val sensorDatabase: SensorDatabase,
     private val vehicleDatabase: VehicleDatabase,
     private val bindSensorToVehicleUseCase: BindSensorToVehicleUseCase,
+    unitPreferences: UnitPreferences,
     @Assisted private val vehicleUuid: UUID,
     @Assisted val location: Location,
 ) : ViewModel() {
@@ -72,6 +77,8 @@ internal class BluetoothAssignViewModel(
         val isAssigned: Boolean = false,
         /** The found sensor's, to show its id the way it's printed */
         val foundBrand: SensorBrand? = null,
+        /** The last reading of each sensor heard, to list the ones found with what they read */
+        val heard: Map<Int, Tyre.SensorInput> = emptyMap(),
     )
 
     /** Asked before going on: on the page itself, but [BoundElsewhere] in a dialog */
@@ -96,8 +103,10 @@ internal class BluetoothAssignViewModel(
     private val channel = Channel<Event>(BUFFERED)
     val eventChannel: ReceiveChannel<Event> = channel
 
-    /** The last reading of each sensor heard, to bind the one found with it */
-    private val heard = mutableMapOf<Int, Tyre.SensorInput>()
+    /** What the sensors found read, in the user's units */
+    val pressureUnit: StateFlow<PressureUnit> = unitPreferences.pressure
+    val temperatureUnit: StateFlow<TemperatureUnit> = unitPreferences.temperature
+
     private var readings = Readings()
 
     /** The sensors already on this vehicle, left out */
@@ -139,8 +148,7 @@ internal class BluetoothAssignViewModel(
         val kpa = tyre.pressure.kpa
         val step = mutableStateFlow.value.step.after(tyre.sensorId, kpa, readings)
         readings += tyre.sensorId to kpa
-        heard[tyre.sensorId] = tyre
-        mutableStateFlow.update { it.copy(step = step) }
+        mutableStateFlow.update { it.copy(step = step, heard = it.heard + (tyre.sensorId to tyre)) }
         (step as? AssignStep.Found)?.also { found(it.sensorId) }
     }
 
@@ -191,7 +199,7 @@ internal class BluetoothAssignViewModel(
     }
 
     private fun found(sensorId: Int) = viewModelScope.launch {
-        mutableStateFlow.update { it.copy(step = AssignStep.Found(sensorId), foundBrand = heard[sensorId]?.brand) }
+        mutableStateFlow.update { it.copy(step = AssignStep.Found(sensorId), foundBrand = it.heard[sensorId]?.brand) }
         withContext(IO) { vehicleDatabase.selectBySensorId(sensorId).execute() }
             ?.takeIf { it.uuid != vehicleUuid }
             ?.also { vehicle -> mutableStateFlow.update { it.copy(dialog = Dialog.BoundElsewhere(vehicle)) } }
@@ -199,7 +207,7 @@ internal class BluetoothAssignViewModel(
     }
 
     private suspend fun bind(sensorId: Int) {
-        val tyre = heard.getValue(sensorId)
+        val tyre = mutableStateFlow.value.heard.getValue(sensorId)
         bindSensorToVehicleUseCase.bind(vehicleUuid, Sensor(sensorId, location, tyre.brand), tyre)
         mutableStateFlow.update { it.copy(dialog = null, isAssigned = true) }
     }
