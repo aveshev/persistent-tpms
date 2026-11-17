@@ -180,8 +180,8 @@ The settings and menus follow Android's, screen by screen:
 
 ### Differences from Android
 
-- **The alert sound is off by default** (speech on Android) until it's been tried on a phone. iOS
-  runs the app in the background only when a sensor is heard, so it may play late or not at all there.
+- **The alert sound is speech by default, like on Android**, but iOS runs the app in the background
+  only when a sensor is heard, so it may play late or not at all there.
 - **A red or critical alert stops holding the screen bright 30 minutes after its last reading.** Android
   only holds live readings, until dismissed. Without a
   limit, an old reading kept in the database would stop the screen ever dimming.
