@@ -33,6 +33,8 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.composable.Beacon
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.ActivateScanConditions
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.DetectedActivitiesSettingsItem
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.PhoneIdleMechanismSettingsItem
+import com.masselis.tpmsadvanced.feature.background.interfaces.composable.RideNotificationSettings
+import com.masselis.tpmsadvanced.feature.background.interfaces.composable.RideNotificationTimesSettingsItems
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.ScanStatusAnnouncementsSettingsItem
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.ExceptedWifis
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.PersistentScanningDetails
@@ -59,6 +61,7 @@ import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.misc
 import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.persistentScanning
 import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.display
 import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.readings
+import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.rideNotification
 import com.mikepenz.aboutlibraries.ui.compose.m3.LibrariesContainer
 import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
 import com.masselis.tpmsadvanced.core.common.R as CommonR
@@ -173,6 +176,7 @@ internal fun PersistentModeSettings(
                 .testTag(persistentScanning),
         )
     }
+    RideNotificationSettings(Modifier.testTag(rideNotification))
 }
 
 @Composable
@@ -195,6 +199,7 @@ internal fun DebugSettingsPage(
             BeaconScanModeSettingsItem()
             BeaconMinRssiSettingsItem()
             PhoneIdleMechanismSettingsItem()
+            RideNotificationTimesSettingsItems()
         }
     )
 }
@@ -336,4 +341,5 @@ internal object AppSettingsTag {
     const val persistentScanning = "AppSettingsTag_persistentScanning"
     const val persistentMode = "AppSettingsTag_persistentMode"
     const val misc = "AppSettingsTag_misc"
+    const val rideNotification = "AppSettingsTag_rideNotification"
 }

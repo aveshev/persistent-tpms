@@ -4,6 +4,10 @@ package com.masselis.tpmsadvanced.feature.unlocated.interfaces.ui
 
 import com.masselis.tpmsadvanced.core.ui.appendBold
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.asSensorId
+import com.masselis.tpmsadvanced.feature.main.interfaces.composable.label
+import com.masselis.tpmsadvanced.data.unit.model.PressureUnit
+import com.masselis.tpmsadvanced.data.unit.model.TemperatureUnit
+import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.AnnotatedString
@@ -87,6 +91,8 @@ private fun Steps(
     modifier: Modifier = Modifier,
 ) {
     val step = state.step
+    val pressureUnit by viewModel.pressureUnit.collectAsState()
+    val temperatureUnit by viewModel.temperatureUnit.collectAsState()
     // The step's instruction in the middle, its actions anchored at the bottom
     Column(modifier = modifier.fillMaxSize().testTag(BluetoothAssignTags.root)) {
         Column(
@@ -122,25 +128,33 @@ private fun Steps(
                     appendWheelOn(location, state.vehicle)
                 }
             )
-            else if (dialog == Dialog.OneFound) Instruction(
-                stringResource(CommonR.string.one_sensor_found),
-                stringResource(CommonR.string.assign_it_or_check, buildString { appendLoc(location) }),
-            )
-            else if (dialog is Dialog.ManyFound) Instruction(
-                stringResource(CommonR.string.on_wheel_sensors_found, dialog.count),
-                stringResource(CommonR.string.let_s_figure_out_which_one_to),
-            )
+            else if (dialog == Dialog.OneFound) {
+                Instruction(
+                    stringResource(CommonR.string.one_sensor_found),
+                    stringResource(CommonR.string.assign_it_or_check, buildString { appendLoc(location) }),
+                )
+                (step as? AssignStep.PutOn)?.also { Sensors(it.found, state.heard, pressureUnit, temperatureUnit) }
+            }
+            else if (dialog is Dialog.ManyFound) {
+                Instruction(
+                    stringResource(CommonR.string.on_wheel_sensors_found, dialog.count),
+                    stringResource(CommonR.string.let_s_figure_out_which_one_to),
+                )
+                (step as? AssignStep.PutOn)?.also { Sensors(it.found, state.heard, pressureUnit, temperatureUnit) }
+            }
             else when (step) {
                 AssignStep.Ask -> Instruction(stringResource(CommonR.string.is_the_sensor_you_want_to_assign))
 
                 is AssignStep.PutOn -> {
                     Instruction(stringResource(CommonR.string.put_the_sensor_on_the_wheel), FORCES_UPDATE)
                     Listening(stringResource(CommonR.string.listening_for_on_wheel_sensors), step.found.size.sensors(CommonR.plurals.on_wheel_sensors_found))
+                    Sensors(step.found, state.heard, pressureUnit, temperatureUnit)
                 }
 
                 is AssignStep.TakeOff -> {
                     Instruction(stringResource(CommonR.string.remove_the_sensor_from_the_wheel), FORCES_UPDATE)
                     Listening(stringResource(CommonR.string.listening_for_off_wheel_sensors), step.off.size.sensors(CommonR.plurals.off_wheel_sensors_found))
+                    Sensors(step.off, state.heard, pressureUnit, temperatureUnit)
                 }
 
                 is AssignStep.PutBack -> {
@@ -300,6 +314,41 @@ private fun Listening(text: String, found: String?) {
     }
 }
 
+/**
+ * A line per sensor in [ids], from its last reading in [heard]: its brand and ID, the one Android
+ * identifies it by for those which advertise none, then the pressure and temperature it last read,
+ * as the sensor reads them
+ */
+@Composable
+private fun Sensors(
+    ids: Set<Int>,
+    heard: Map<Int, Tyre>,
+    pressureUnit: PressureUnit,
+    temperatureUnit: TemperatureUnit,
+) {
+    val tyres = ids.mapNotNull { heard[it] }
+    if (tyres.isNotEmpty()) Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.testTag(BluetoothAssignTags.sensors),
+    ) {
+        tyres.forEach { tyre ->
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    "${tyre.brand.label} ${tyre.sensorId.asSensorId(tyre.brand)}",
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    listOf(tyre.pressure.string(pressureUnit), tyre.temperature.string(temperatureUnit))
+                        .joinToString(" · "),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
 /** "1 on-wheel sensor found", "2 on-wheel sensors found", nothing until one is */
 private fun Int.sensors(@PluralsRes kind: Int): String? =
     takeIf { it > 0 }?.let { localizedPlural(kind, it, it) }
@@ -314,4 +363,5 @@ public object BluetoothAssignTags {
     public const val assign: String = "BluetoothAssignTags_assign"
     public const val checkAgain: String = "BluetoothAssignTags_checkAgain"
     public const val done: String = "BluetoothAssignTags_done"
+    public const val sensors: String = "BluetoothAssignTags_sensors"
 }

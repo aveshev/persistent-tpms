@@ -32,6 +32,10 @@ public fun SensorReadingsUpdateDetails(modifier: Modifier = Modifier): Unit = Co
             headline = "Pecham",
             supporting = stringResource(CommonR.string.every_minute_while_the_wheel_rotates_while),
         )
+        TextSettingsItem(
+            headline = "TC.TPMS",
+            supporting = "Every 5 minutes, whether the vehicle moves or not, and at once when the pressure changes by about 1.5 psi. Reads the pressure in steps of 0.1 psi",
+        )
     }
     SettingsSectionHeader(stringResource(CommonR.string.when_updates_seem_to_be_missing))
     SettingsIntro(
