@@ -78,6 +78,7 @@ private fun PersistentScanningBell(
                 BellState.NeedsPermission -> stringResource(CommonR.string.persistent_scanning_needs_permissions_tap_to_grant)
                 BellState.Active -> stringResource(CommonR.string.background_scanning_is_active)
                 BellState.Always -> stringResource(CommonR.string.background_scanning_is_always_active)
+                BellState.Bluetooth -> stringResource(CommonR.string.background_scanning_is_active_for_a_bluetooth)
                 BellState.Suspended -> stringResource(CommonR.string.background_scanning_is_suspended)
                 BellState.Idle -> stringResource(CommonR.string.background_scanning_is_idle)
             },
@@ -91,8 +92,8 @@ internal val BellState.color: Color
     @Composable
     get() = when (this) {
         BellState.NeedsPermission -> MaterialTheme.colorScheme.error
-        BellState.Active -> MaterialTheme.colorScheme.primary
-        BellState.Always -> Blue
+        BellState.Active, BellState.Always -> MaterialTheme.colorScheme.primary
+        BellState.Bluetooth -> Blue
         BellState.Suspended -> Orange
         // The theme's content colour, a plain white would vanish on the light theme
         BellState.Idle -> LocalContentColor.current

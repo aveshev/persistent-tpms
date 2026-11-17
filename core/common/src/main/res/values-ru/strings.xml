@@ -68,6 +68,7 @@
     <string name="background_monitoring_stopped_because_of_an_unexpected">Фоновый мониторинг остановлен из-за непредвиденной ошибки, перезапустите приложение, чтобы возобновить его</string>
     <string name="background_scanning_activates_while_any_of_the">Фоновое сканирование запускается, пока подключено любое из отмеченных устройств: магнитола, гарнитура в шлеме и т. п. Здесь показаны устройства, сопряжённые с этим телефоном.</string>
     <string name="background_scanning_is_active">Фоновое сканирование активно</string>
+    <string name="background_scanning_is_active_for_a_bluetooth">Фоновое сканирование активно из-за устройства Bluetooth или маячка</string>
     <string name="background_scanning_is_always_active">Фоновое сканирование активно всегда</string>
     <string name="background_scanning_is_idle">Фоновое сканирование ожидает</string>
     <string name="background_scanning_is_not_suspended_while_connected">Фоновое сканирование не приостанавливается при подключении к одной из этих сетей WiFi. Сюда подходят точка доступа в машине, сети в гараже или на парковке, городские сети, от которых у вас есть пароль, и т. п. Чтобы добавить сеть в список, подключитесь к ней и откройте меню на предыдущей странице.</string>

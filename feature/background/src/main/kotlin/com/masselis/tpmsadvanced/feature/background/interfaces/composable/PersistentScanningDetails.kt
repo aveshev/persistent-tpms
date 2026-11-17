@@ -93,7 +93,8 @@ private fun PersistentScanningDetails(
         BellState.NeedsPermission ->
             stringResource(CommonR.string.notifications_or_the_unrestricted_battery_usage_are)
 
-        BellState.Active, BellState.Always, BellState.Suspended, BellState.Idle -> decision.rationale()
+        BellState.Active, BellState.Always, BellState.Bluetooth, BellState.Suspended, BellState.Idle ->
+            decision.rationale()
     }.let {
         Text(
             text = it,

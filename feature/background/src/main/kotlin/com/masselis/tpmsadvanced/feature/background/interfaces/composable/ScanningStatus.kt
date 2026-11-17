@@ -59,7 +59,7 @@ internal val BellState?.label: String
     get() = when (this) {
         null -> localized(CommonR.string.text_off)
         BellState.NeedsPermission -> localized(CommonR.string.permissions_missing)
-        BellState.Active -> localized(CommonR.string.active)
+        BellState.Active, BellState.Bluetooth -> localized(CommonR.string.active)
         BellState.Always -> localized(CommonR.string.always)
         BellState.Suspended -> localized(CommonR.string.suspended)
         BellState.Idle -> localized(CommonR.string.idle)

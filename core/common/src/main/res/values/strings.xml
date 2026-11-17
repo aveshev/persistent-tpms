@@ -69,6 +69,7 @@
     <string name="background_monitoring_stopped_because_of_an_unexpected">Background monitoring stopped because of an unexpected error, restart the app to monitor again</string>
     <string name="background_scanning_activates_while_any_of_the">Background scanning activates while any of the checked devices is connected: your car stereo, helmet intercom, etc. The devices paired with this phone are listed here.</string>
     <string name="background_scanning_is_active">Background scanning is active</string>
+    <string name="background_scanning_is_active_for_a_bluetooth">Background scanning is active for a Bluetooth device or beacon</string>
     <string name="background_scanning_is_always_active">Background scanning is always active</string>
     <string name="background_scanning_is_idle">Background scanning is idle</string>
     <string name="background_scanning_is_not_suspended_while_connected">Background scanning is not suspended while connected to one of these WiFis. Your car hotspot, WiFis only found in your garage or parking lot, city-wide WiFis you have credentials for, etc., all go here. To add another WiFi to this list, use the menu on the previous page while connected to it.</string>
