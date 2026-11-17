@@ -83,3 +83,7 @@ WHERE vehicleId = :vehicleId AND location = :location AND timestamp <= (
 -- The latest reading of any tyre, to tell which of two apps' data is the newest
 latestTimestamp:
 SELECT MAX(timestamp) AS timestamp FROM Reading;
+
+-- Each vehicle's latest reading, to tell which were used last
+latestByVehicle:
+SELECT vehicleId, MAX(timestamp) AS timestamp FROM Reading GROUP BY vehicleId;

@@ -1,16 +1,16 @@
 package com.masselis.tpmsadvanced.data.vehicle.interfaces.impl
 
-import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.BEKUBEE_TC_TPMS
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.TC_TPMS
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 
 @OptIn(ExperimentalStdlibApi::class)
-internal class BekubeeTcTpmsTest {
+internal class TcTpmsTest {
 
-    // Full raw advertisements captured with nRF Connect from one AOOCCI "TC.TPMS" sensor, address
-    // 34:30:07:10:80:9C, with the pressure a gauge read:
+    // Full raw advertisements captured with nRF Connect from one "TC.TPMS" sensor bought from
+    // Essgoo, address 34:30:07:10:80:9C, with the pressure a gauge read:
     // 0x08: Shortened Local Name ("TC.TPMS")
     // 0xFF: Manufacturer Specific Data: status, battery, temperature, pressure, address
     // 0x03: Complete List of 16-bit Service Class UUIDs (0xA828)
@@ -19,7 +19,7 @@ internal class BekubeeTcTpmsTest {
     @Test
     fun `off the valve, it reads 0 psi`() {
         capture("080854432E54504D530CFF021E1E009234300710809C030328A8").also { tyre ->
-            assertEquals(BEKUBEE_TC_TPMS, tyre.brand)
+            assertEquals(TC_TPMS, tyre.brand)
             assertEquals(0f, tyre.pressure.asPsi(), 0.01f)
             assertEquals(30f, tyre.temperature.celsius)
             assertEquals(3f, assertNotNull(tyre.batteryVoltage).volts, 0.01f)

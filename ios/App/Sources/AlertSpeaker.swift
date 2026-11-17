@@ -29,7 +29,24 @@ final class AlertSpeaker: ObservableObject {
     /// The highest level yet to be said, nil once there's nothing left: what can be silenced
     @Published private(set) var level: AlertLevel?
     /// The alerts up to its level aren't said until then, nor kept to be said later
-    @Published private(set) var silence: (level: AlertLevel, until: Date)?
+    @Published private(set) var silence: (level: AlertLevel, until: Date)? {
+        didSet {
+            UserDefaults.standard.set(silence?.level.rawValue, forKey: Self.silenceLevelKey)
+            UserDefaults.standard.set(silence?.until, forKey: Self.silenceUntilKey)
+        }
+    }
+
+    private static let silenceLevelKey = "alertSilenceLevel"
+    private static let silenceUntilKey = "alertSilenceUntil"
+
+    /// Stored like the snoozes: iOS ending the app in the background doesn't bring the speech back
+    init() {
+        if let level = AlertLevel(rawValue: UserDefaults.standard.integer(forKey: Self.silenceLevelKey)),
+           let until = UserDefaults.standard.object(forKey: Self.silenceUntilKey) as? Date,
+           until > Date() {
+            silence = (level, until)
+        }
+    }
 
     private var settings: Settings?
     private var announcements = [Announcement]()
@@ -37,6 +54,7 @@ final class AlertSpeaker: ObservableObject {
     private var repeated = [String: Repeated]()
     private var nextCrimson: Date?
     private var nextReminder: Date?
+    private var notificationSoundEnds: Date?
     private var loop: Task<Void, Never>?
     private lazy var voice = Voice()
 
@@ -44,6 +62,8 @@ final class AlertSpeaker: ObservableObject {
     private static let crimsonDuration: TimeInterval = 10 * 60
     private static let reminderPeriod: TimeInterval = 10 * 60
     static let silenceDuration: TimeInterval = 10 * 60
+    /// Android waits for the sound to end, which iOS doesn't tell an app: about what its sound lasts
+    private static let notificationSound: TimeInterval = 2
 
     func configure(settings: Settings) {
         self.settings = settings
@@ -53,29 +73,20 @@ final class AlertSpeaker: ObservableObject {
         settings.map { $0.alertSound != .none || $0.vibrateAlerts } ?? false
     }
 
-    /// A reading's [levels], only from readings just heard: an old alert isn't said again at launch
-    func update(tag: String, levels: [AlertClass: AlertLevel]) {
-        for alertClass in [AlertClass.pressure, .temperature, .battery] {
-            let classTag = "\(tag)-\(alertClass.rawValue)"
-            switch levels[alertClass] {
-            case .crimson: crimson(classTag, alertClass)
-            case .red: red(classTag, alertClass)
-            default: stop(classTag)
-            }
-        }
-    }
-
-    private func red(_ tag: String, _ alertClass: AlertClass) {
-        guard isOn else { return }
+    /// [sounded]: its notification sounds now, which the speech doesn't talk over
+    func red(_ tag: String, _ alertClass: AlertClass, sounded: Bool) {
+        guard isOn, alertClass.phrase.isEmpty == false else { return }
+        if sounded { notificationSoundEnds = Date().addingTimeInterval(Self.notificationSound) }
         announcements.append(Announcement(tag: tag, phrase: alertClass.phrase, isCrimson: false))
         repeated[tag] = Repeated(alertClass: alertClass, crimsonUntil: nil)
         scheduled()
     }
 
     /// A new one is said right away, one already in its loop starts its duration over
-    private func crimson(_ tag: String, _ alertClass: AlertClass) {
-        guard isOn else { return }
+    func crimson(_ tag: String, _ alertClass: AlertClass, sounded: Bool) {
+        guard isOn, alertClass.phrase.isEmpty == false else { return }
         let now = Date()
+        if sounded { notificationSoundEnds = now.addingTimeInterval(Self.notificationSound) }
         // Its red announcement yet to be said would only come before it
         announcements.removeAll { $0.tag == tag }
         if repeated[tag]?.isCrimsonLoop(now) != true { nextCrimson = nil }
@@ -87,11 +98,6 @@ final class AlertSpeaker: ObservableObject {
     func stop(tag: String) {
         for key in repeated.keys where key.hasPrefix(tag) { repeated[key] = nil }
         announcements.removeAll { $0.tag.hasPrefix(tag) }
-        scheduled()
-    }
-
-    private func stop(_ classTag: String) {
-        repeated[classTag] = nil
         scheduled()
     }
 
@@ -153,6 +159,10 @@ final class AlertSpeaker: ObservableObject {
         while Task.isCancelled == false {
             scheduled()
             let now = Date()
+            if let ends = notificationSoundEnds, ends > now {
+                try? await Task.sleep(for: .milliseconds(100))
+                continue
+            }
             if let announcement = announcements.first {
                 announcements.removeAll { $0.phrase == announcement.phrase }
                 await say("\(announcement.phrase). \(announcement.phrase).", isCrimson: announcement.isCrimson)

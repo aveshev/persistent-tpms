@@ -55,8 +55,8 @@ public class AppPreferences internal constructor(
         sharedPreferences.booleanFlow("ANNOUNCE_SCAN_STATUS", false)
 
     /**
-     * Switches the tyre scan to balanced after its first reading, as it used to, instead of keeping
-     * it at low latency the whole time it runs (main screen shown, or persistent scanning active)
+     * Switches the tyre scan to balanced after its first reading, as it used to, even while the app
+     * is visible, instead of following whether the app is visible: low latency if so, else balanced
      */
     public val balancedAfterFirstReading: MutableStateFlow<Boolean> =
         sharedPreferences.booleanFlow("BALANCED_AFTER_FIRST_READING", false)
@@ -253,6 +253,40 @@ public class AppPreferences internal constructor(
             rssi.takeIf { inUse } ?: DEFAULT_BEACON_MIN_RSSI
         }
 
+    /**
+     * The "Going for a ride?" notification, inviting to open the app when back near a vehicle: the
+     * open app hears every reading, background scans are throttled. Off until turned on, like on
+     * iOS. Fires on the activate conditions of persistent scanning, and on a bound sensor heard.
+     */
+    public val rideNotification: MutableStateFlow<Boolean> = sharedPreferences.booleanFlow("RIDE_NOTIFICATION", false)
+
+
+    /**
+     * How long a ride notification's trigger must stay unheard before hearing it again sends the notification, a
+     * debug option for trying it
+     */
+    public val rideAbsentMinutes: MutableStateFlow<Int> =
+        sharedPreferences.intFlow("RIDE_ABSENT_MINUTES", DEFAULT_RIDE_ABSENT_MINUTES)
+
+    /** [rideAbsentMinutes] while [debugOptionsInUse], else [DEFAULT_RIDE_ABSENT_MINUTES] */
+    public val rideAbsentMinutesInUse: StateFlow<Int> =
+        debugOptionsInUse.combineState(rideAbsentMinutes) { inUse, minutes ->
+            minutes.takeIf { inUse } ?: DEFAULT_RIDE_ABSENT_MINUTES
+        }
+
+    /**
+     * How long after the last trigger an unopened ride notification is replaced, or removed if
+     * nothing fires, a debug option for trying it
+     */
+    public val rideStaleMinutes: MutableStateFlow<Int> =
+        sharedPreferences.intFlow("RIDE_STALE_MINUTES", DEFAULT_RIDE_STALE_MINUTES)
+
+    /** [rideStaleMinutes] while [debugOptionsInUse], else [DEFAULT_RIDE_STALE_MINUTES] */
+    public val rideStaleMinutesInUse: StateFlow<Int> =
+        debugOptionsInUse.combineState(rideStaleMinutes) { inUse, minutes ->
+            minutes.takeIf { inUse } ?: DEFAULT_RIDE_STALE_MINUTES
+        }
+
     /** Keeps scanning for [stayActiveMinutes] once every activate condition has ended */
     public val stayActive: MutableStateFlow<Boolean> = sharedPreferences.booleanFlow("STAY_ACTIVE", false)
 
@@ -354,6 +388,12 @@ public class AppPreferences internal constructor(
         /** See [beaconMinRssi] */
         public const val DEFAULT_BEACON_MIN_RSSI: Int = -85
         private const val DEFAULT_STAY_ACTIVE_MINUTES = 10
+
+        /** See [rideAbsentMinutes] */
+        public const val DEFAULT_RIDE_ABSENT_MINUTES: Int = 30
+
+        /** See [rideStaleMinutes] */
+        public const val DEFAULT_RIDE_STALE_MINUTES: Int = 60
         private const val DEFAULT_PRESSURE_LOSS_MIN_DROP = 7f
         private const val DEFAULT_MAGNIFIER_SECONDS = 5
         private const val DEFAULT_DIM_DISPLAY_SECONDS = 60
