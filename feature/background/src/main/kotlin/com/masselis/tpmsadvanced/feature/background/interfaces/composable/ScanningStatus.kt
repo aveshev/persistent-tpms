@@ -57,7 +57,7 @@ internal val BellState?.label: String
     get() = when (this) {
         null -> "Off"
         BellState.NeedsPermission -> "Permissions missing"
-        BellState.Active -> "Active"
+        BellState.Active, BellState.Bluetooth -> "Active"
         BellState.Always -> "Always"
         BellState.Suspended -> "Suspended"
         BellState.Idle -> "Idle"
