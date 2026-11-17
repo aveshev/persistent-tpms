@@ -3,7 +3,7 @@ import Foundation
 // Ported from data/vehicle's AlertThresholds, TyreAlerts and PressureLoss, see docs/alerts.md
 
 /// From the least to the most urgent, so levels compare by it
-public enum AlertLevel: Int, Comparable, Sendable {
+public enum AlertLevel: Int, Comparable, CaseIterable, Sendable {
     /// Doesn't need immediate action
     case amber
     /// Riding can go on with caution, to be addressed at the earliest possibility
