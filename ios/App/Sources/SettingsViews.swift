@@ -223,7 +223,7 @@ struct PersistentModeView: View {
     var body: some View {
         Form {
             Section {
-                Text("When on, keeps monitoring your tyres in the background, while the phone is locked too. That way you don't have to open the app each ride.\n\nNOTE: iOS throttles Bluetooth scanning in background, so the app will miss some sensor updates that would have been caught if it were open.")
+                Text("When on, keeps monitoring your tyres in the background, while the phone is locked too. That way you don't have to open the app each ride.\n\nNOTE: iOS throttles Bluetooth scanning in background, so the app will miss some sensor updates that would have been caught if it were open. Swiping the app away in the app switcher stops the monitoring until it's opened again.")
                     .listRowBackground(Color.clear)
                     .listRowInsets(EdgeInsets())
             }
