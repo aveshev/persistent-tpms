@@ -230,11 +230,10 @@ struct PersistentModeView: View {
             Section {
                 Toggle("Persistent scanning", isOn: Binding(
                     get: { settings.backgroundMonitoring },
-                    set: {
-                        settings.backgroundMonitoring = $0
-                        monitor.appIsActive(true)
-                    }
+                    set: { monitor.setPersistentMonitoring($0) }
                 ))
+            } footer: {
+                Text("When off, tapping the minimize button at the top of the main screen keeps scanning in the background, until tapped again or the app is swiped away in the app switcher.")
             }
             Section {
                 Toggle(isOn: Binding(get: { settings.rideNotification }, set: { monitor.setRideNotification($0); refreshDenied() })) {
