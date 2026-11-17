@@ -68,8 +68,8 @@ ride there is a notification instead.
 ### Ride notification
 
 "Going for a ride? Open Persistent TPMS to monitor tire pressure": opening the app gets the full scan
-rate for as long as it's open and the phone unlocked. Silent, at the normal level, so **Driving Focus
-may hold it back**: a time-sensitive level isn't used for it, and this is a free developer account.
+rate for as long as it's open and the phone unlocked. Silent, and time sensitive, so Driving Focus,
+which comes on as a ride starts, doesn't hold it back.
 Off until its switch on the Persistent mode page is turned on, which asks for the permission to notify
 and, the first time, turns on the sensor trigger. Each trigger is optional, under "Notify when ...".
 Only the sensor one needs Persistent scanning, and is greyed out without it. Nothing while the app is
@@ -157,15 +157,14 @@ The settings and menus follow Android's, screen by screen:
   - Alerts: notifications, alert sound (speech or tones), vibration. Pressure, temperature, battery
     (red once it stays so 10 minutes), the sensor's own alarm.
   - Background monitoring: Persistent mode, with the ride notification.
-  - Import a database, exported by Android or iOS.
   - About, with Android's 10 taps on the version for the Debug page: sensor ID, sensor flags, export
     database.
   - Misc: demo mode, pressure loss while riding (experimental, like on Android).
 
 ### Differences from Android
 
-- **The alert sound is off by default** (speech on Android) until it's been tried on a phone. iOS
-  runs the app in the background only when a sensor is heard, so it may play late or not at all there.
+- **The alert sound is speech by default, like on Android**, but iOS runs the app in the background
+  only when a sensor is heard, so it may play late or not at all there.
 - **A red or critical alert stops holding the screen bright 30 minutes after its last reading.** Android
   only holds live readings, until dismissed. Without a
   limit, an old reading kept in the database would stop the screen ever dimming.
@@ -183,6 +182,13 @@ The settings and menus follow Android's, screen by screen:
   - No channel per level for the user to set up, and a notification's time is when it was posted, not
     the reading's: iOS has neither. Speech waits a fixed 2 s for a notification's sound, which iOS doesn't
     report the end of.
+- **Quick actions for Android's launcher shortcuts**: touching and holding the app's icon lists the
+  vehicles, the first 4 with a name, as iOS shows no more, and opens the main screen on the one picked.
+  The Android app's links, `tpmsadvanced://vehicle/<uuid>` (`VehicleLink`), open the same way.
+- **Red and crimson notifications are time sensitive**, going through a Focus as Android's alert channels
+  go through Do Not Disturb only when the user lets them. The user can turn that off per app in iOS's settings.
+- **Swiping the app away stops the monitoring** until it's opened again, which the Persistent mode page
+  says. Android's service keeps running.
 - **Persistent mode is a menu line that opens its page**: an iOS menu line can't hold a switch.
 - **Shared Pecham and Bekubee KY sensors are left out of the QR code**: their IDs are this phone's own,
   they're assigned by Bluetooth.
@@ -196,7 +202,7 @@ The settings and menus follow Android's, screen by screen:
 
 ### Left out
 
-- **Android Auto, shortcuts**: CarPlay needs Apple's approval for this category.
+- **Android Auto**: CarPlay needs Apple's approval for this category.
 - **Scan conditions** (Bluetooth devices, beacons, Wi-Fi, stay active, suspend when idle), the monitoring
   button and the debug options about scanning: a background app has no higher scan rate to switch on, and
   its background scanning is cheap enough to leave on. Bluetooth devices and beacons trigger the ride

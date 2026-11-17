@@ -321,10 +321,15 @@ final class Monitor: ObservableObject {
         if let tag = notifier.snooze(response) {
             speaker.stop(tag: tag)
         } else if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
-            let id = UUID(uuidString: response.notification.request.content.threadIdentifier)
-            vehicles.first { $0.id == id && $0.isCurrent == false }.map(setCurrent)
-            showMainScreen.send()
+            UUID(uuidString: response.notification.request.content.threadIdentifier).map(open) ?? showMainScreen.send()
         }
+    }
+
+    /// The main screen on this vehicle, for a notification, a quick action or a link, see
+    /// VehicleLink. One since deleted leaves the current one.
+    func open(vehicleId: UUID) {
+        vehicles.first { $0.id == vehicleId && $0.isCurrent == false }.map(setCurrent)
+        showMainScreen.send()
     }
 
     func delete(_ vehicle: Vehicle) {

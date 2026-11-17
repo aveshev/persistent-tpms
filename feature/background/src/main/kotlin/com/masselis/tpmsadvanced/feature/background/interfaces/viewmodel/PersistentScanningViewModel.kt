@@ -1,5 +1,7 @@
 package com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel
 
+import android.os.Build.VERSION.SDK_INT
+import android.os.Build.VERSION_CODES
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import co.touchlab.kermit.Logger
@@ -7,6 +9,7 @@ import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
 import com.masselis.tpmsadvanced.data.app.interfaces.AppTier
 import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.LITE
 import com.masselis.tpmsadvanced.data.app.interfaces.OtherApp
+import com.masselis.tpmsadvanced.feature.background.interfaces.MonitorService
 import com.masselis.tpmsadvanced.feature.background.interfaces.MonitoringController
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningViewModel.OtherAppCheck.Clear
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningViewModel.OtherAppCheck.Conflict
@@ -143,9 +146,14 @@ internal class PersistentScanningViewModel(
         data class Conflict(val otherApp: String) : OtherAppCheck
     }
 
-    /** Persistent scanning is on, so the service is expected to run whenever the app is opened */
+    /**
+     * Persistent scanning is on, so the service is expected to run whenever the app is opened. On
+     * Android 11 it's started again even when it runs: one started while the app wasn't visible,
+     * after a reboot for instance, has no location access in the background until then, see
+     * [MonitorService].
+     */
     fun ensureRunning() {
-        if (controller.isRunning.value) return
+        if (controller.isRunning.value && SDK_INT != VERSION_CODES.R) return
         // Never take the app down for this: the next app opening will try again
         runCatching { controller.start() }
             .onFailure { logger.e(it) { "Cannot start the persistent scanning service" } }

@@ -229,8 +229,8 @@ final class Settings: ObservableObject {
         developer = defaults.bool(forKey: "developer")
         debugOptions = defaults.object(forKey: "debugOptions") as? Bool ?? defaults.bool(forKey: "showSensorId")
         demoMode = defaults.bool(forKey: Self.demoModeKey)
-        // Off until turned on, unlike on Android: a phone shouldn't start talking on its own
-        alertSound = defaults.string(forKey: "alertSound").flatMap(AlertSound.init(rawValue:)) ?? .none
+        // Speech until changed, like on Android
+        alertSound = defaults.string(forKey: "alertSound").flatMap(AlertSound.init(rawValue:)) ?? .speech
         lastAlertSound = defaults.string(forKey: "lastAlertSound").flatMap(AlertSound.init(rawValue:)) ?? .speech
         vibrateAlerts = defaults.bool(forKey: "vibrateAlerts")
         pressureLoss = defaults.bool(forKey: "pressureLoss")

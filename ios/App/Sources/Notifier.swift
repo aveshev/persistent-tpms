@@ -214,8 +214,9 @@ final class Notifier {
         content.subtitle = update.vehicle.name
         content.body = "\(update.location.name): \(details(update, alertClass, reading, now: now))"
         content.sound = sound ? .default : nil
-        // Passive updates what's there without a banner or lighting the screen, as Android's do
-        content.interruptionLevel = sound == false ? .passive : level == .crimson ? .timeSensitive : .active
+        // Passive updates what's there without a banner or lighting the screen, as Android's do. Red
+        // and crimson go through a Focus, Driving included: that's when they matter
+        content.interruptionLevel = sound == false ? .passive : level >= .red ? .timeSensitive : .active
         content.threadIdentifier = update.vehicle.id.uuidString
         content.categoryIdentifier = Self.category(level)
         content.userInfo = [
@@ -303,12 +304,12 @@ final class Notifier {
         raises = [:]
     }
 
-    /// Replaces the one already there, if any. Silent, at the normal level: only an invitation, not
-    /// an alert, so a Focus may hold it back.
+    /// Replaces the one already there, if any. Silent, but time sensitive: a ride's start is when
+    /// Driving Focus comes on, which would hold it back until the ride is over.
     func postRidePrompt() {
         let content = UNMutableNotificationContent()
         content.body = "Going for a ride? Open Persistent TPMS to monitor tyre pressure"
-        content.interruptionLevel = .active
+        content.interruptionLevel = .timeSensitive
         center.add(UNNotificationRequest(identifier: Self.ridePromptId, content: content, trigger: nil)) { error in
             rideLog("notification added, error: \(String(describing: error))")
         }

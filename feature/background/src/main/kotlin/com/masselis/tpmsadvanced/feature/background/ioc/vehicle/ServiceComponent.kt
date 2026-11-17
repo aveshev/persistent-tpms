@@ -3,6 +3,7 @@ package com.masselis.tpmsadvanced.feature.background.ioc.vehicle
 import android.app.Service
 import com.masselis.tpmsadvanced.core.common.appGraph
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner
+import com.masselis.tpmsadvanced.feature.background.interfaces.RideNotifier
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanPolicyUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.VehicleListUseCase
@@ -39,12 +40,14 @@ public interface ServiceComponent {
         vehicleListUseCase: VehicleListUseCase,
         scanPolicyUseCase: ScanPolicyUseCase,
         scanner: BluetoothLeScanner,
+        rideNotifier: RideNotifier,
     ): ServiceNotifier = ServiceNotifier(
         scope,
         foregroundService,
         vehicleListUseCase,
         scanPolicyUseCase,
         scanner.tyreScanStatus,
+        rideNotifier,
     )
 
     public val internal: Internal

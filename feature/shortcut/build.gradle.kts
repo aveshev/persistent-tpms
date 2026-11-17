@@ -9,10 +9,13 @@ android {
 
 dependencies {
     implementation(project(":feature:main"))
+    implementation(project(":feature:background"))
 
     implementation(project(":data:vehicle"))
     implementation(project(":data:unit"))
     implementation(project(":data:app"))
 
     implementation(project(":core:common"))
+
+    testImplementation(project(":core:test"))
 }
