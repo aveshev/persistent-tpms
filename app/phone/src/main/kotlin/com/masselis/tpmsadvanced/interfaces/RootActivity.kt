@@ -1,6 +1,7 @@
 package com.masselis.tpmsadvanced.interfaces
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
@@ -26,6 +27,7 @@ import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import java.util.UUID
 
 public class RootActivity : AppCompatActivity() {
@@ -66,11 +68,7 @@ public class RootActivity : AppCompatActivity() {
             .launchIn(lifecycleScope)
 
         val expectedVehicle = intent
-            ?.data
-            ?.pathSegments
-            ?.firstOrNull()
-            // Exported and browsable: any link can open this activity, with anything as its path
-            ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+            ?.expectedVehicle
             ?.takeIf { hasConsumedIntent.not() }
             ?.also { hasConsumedIntent = true }
 
@@ -82,6 +80,22 @@ public class RootActivity : AppCompatActivity() {
             }
         }
     }
+
+    // singleTask: a vehicle's shortcut or alert opened while this activity exists, or whose task
+    // is kept in the recent apps, comes here instead of onCreate()
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        intent
+            .expectedVehicle
+            ?.also { lifecycleScope.launch { Bindings.currentVehicleUseCase.setAsCurrent(it) } }
+    }
+
+    private val Intent.expectedVehicle
+        get() = data
+            ?.pathSegments
+            ?.firstOrNull()
+            // Exported and browsable: any link can open this activity, with anything as its path
+            ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
 
     private val Theme.nightMode
         get() = when (this) {

@@ -349,8 +349,13 @@ public interface Bindings {
     ): AlertSilenceViewModel = AlertSilenceViewModel(silenceAlertsUseCase)
 
     @Provides
-    private fun alertingVehiclesViewModel(alertSpeaker: AlertSpeaker): AlertingVehiclesViewModel =
-        AlertingVehiclesViewModel(AlertingVehiclesUseCase(alertSpeaker))
+    private fun alertingVehiclesUseCase(alertSpeaker: AlertSpeaker): AlertingVehiclesUseCase =
+        AlertingVehiclesUseCase(alertSpeaker)
+
+    @Provides
+    private fun alertingVehiclesViewModel(
+        alertingVehiclesUseCase: AlertingVehiclesUseCase,
+    ): AlertingVehiclesViewModel = AlertingVehiclesViewModel(alertingVehiclesUseCase)
 
     @Provides
     private fun scanStatusAnnouncementsViewModel(
