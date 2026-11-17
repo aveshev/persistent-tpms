@@ -45,13 +45,6 @@ final class RidePrompts: ObservableObject {
         if isBack { Task { @MainActor in await prompt() } }
     }
 
-    /// A beacon woken by connecting was probably in range since it was last detected: no prompt
-    func beaconStillThere() {
-        rideLog("beacon still there")
-        removeIfStale()
-        triggers.stillThere(RideTriggers.beacon, at: now)
-    }
-
     /// The Shortcuts action ran. It can't tell being back near the vehicle, so a device reconnecting is only held back
     /// by the notification still showing. Returns once done, the app being suspended after it.
     @MainActor

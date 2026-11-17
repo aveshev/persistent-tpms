@@ -89,8 +89,7 @@ than that doesn't prompt again.
 | Trigger | Wakes the app with | Needs | Ends after a swipe away |
 |---|---|---|---|
 | Sensor | The scan already running | Persistent scanning, no setup | Yes |
-| Beacon, by service | Its service UUID added to the scan | A device advertising one | Yes |
-| Beacon, by connection | A pending connection by its identifier | A connectable device | Yes |
+| Beacon | Its service UUID added to the scan | A device advertising one | Yes |
 | Shortcuts | An automation running the "Going for a ride" App Intent | Setting it up in Shortcuts | No |
 
 - **Sensor.** Heard after a long gap, each vehicle on its own. A single report is enough: most sensors
@@ -101,38 +100,23 @@ than that doesn't prompt again.
   and iOS doesn't show which do, so one with a fixed address is left out too. Each row shows the start
   of its identifier, to tell devices apart. The page works like Android's (`BeaconList`): it keeps
   scanning while seen, and its order only changes when reloading or sorting. Those with only a name or
-  manufacturer data, not connectable, aren't listed either, as iOS reports nothing about them in the
-  background (iBeacons and AirTags too). With the debug options on, a star marks those woken by
-  connecting. A service comes first: each report has a signal strength
-  and nothing is taken from the beacon. A report needs confirming by a second one, 5 seconds to 5
+  manufacturer data aren't listed either, as iOS reports nothing about them in the background
+  (iBeacons and AirTags too). Each report has a signal strength and nothing is taken from the beacon.
+  A report needs confirming by a second one, 5 seconds to 5
   minutes later, like Android's two packets, the window wider for the background's slower reports.
 - **Several beacons, like Android's page.** Listed with their signal, "Was nearby" or "Not nearby"
   (`BeaconPresence`), renamed, and removed with an undo until the page is left, which turns the trigger
   off with none left. They count as one for the notification: two on a vehicle make a single one, and
   one heard all day hides the others coming back, so a beacon at home can hide one on the bike.
-- **Beacon, by connection.** On connecting the signal is read, then the connection is let go of at
-  once: held, a device typically stops advertising and its maker's app can't connect. The next one is
-  left to iOS 2 minutes later, by `CBConnectPeripheralOptionStartDelayKey`, so a suspended app needs no
-  timer. Connecting again at once instead happens several times a second while the beacon is near. The
-  request's time and delay are stored (`BeaconConnection`), as iOS may end the app. A connection
-  completing within 2 minutes after its delay ended means the beacon was probably in range all along:
-  no prompt. Later, it was away. Being away counts towards the time away from the vehicle, and only a
-  gap of that length prompts, as for the other triggers. So a trip shorter than 2 minutes can go
-  unnoticed, and a prompt can be late by up to 2 minutes. A signal below -85 dBm, or none measured (iOS
-  sometimes reports 0 dBm), counts as away from the second read in a row on: a beacon sitting still
-  reads a few dB either side of the threshold. A device asking for security may show a pairing request.
-
-  Tested on an iPhone 13 Pro, iOS 18, locked, the app in the background, with a Mac as the beacon: 2 and
-  5 minute delays connected within 5 s, by day and overnight, plugged in or not (one run of 2 minutes
-  on Nov 2–3 came 42 to 122 minutes late each time, with another build, unexplained). Back after 5
-  minutes to 4 hours away, the pending connection completed within 2 s. A pending connection survives
-  reinstalling the app, iOS relaunching it to complete it. After a swipe away, nothing came for 5.5
-  minutes with the beacon on. Not tested: iOS ending the app to free memory while a connection is
-  pending, a real beacon, a moving phone.
+- **No beacon by connection.** A connectable device advertising no service could wake the app by a
+  connection request left pending by its identifier. iOS keeps listening for it until the device shows
+  up, competing with the tyres' scan for as long as the beacon is away, and for good once its
+  identifier changed. Probably why an iPhone holding one pending for 11 days caught 14 of 20 tyre
+  bursts on a ride, app open, where an S9 beside it caught all 20. Such beacons were dropped, a saved one is
+  removed, and a leftover connection is cancelled on launch.
 - **Beacons with a rotating private address.** iOS gives only an identifier specific to this iPhone,
-  which changes with the address. A beacon by service is still recognised by its name or its own 128-bit
-  service, not by a 16-bit one, which stands for a whole kind of device. A beacon by connection isn't:
-  its identifier is all there is, so it stays "Not nearby" once the address changed.
+  which changes with the address. A beacon is still recognised by its name or its own 128-bit
+  service, not by a 16-bit one, which stands for a whole kind of device.
 - **Shortcuts.** Only an automation sees classic Bluetooth devices (a car's audio, many headsets),
   which apps can't list. iOS has no API for an app to create one or pre-select its device, so the page
   has a `ShortcutsLink`, a guide calling out Run Immediately, and with the debug options on "Last
