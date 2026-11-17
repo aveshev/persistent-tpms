@@ -9,6 +9,14 @@ import com.masselis.tpmsadvanced.feature.background.ioc.vehicle.ServiceComponent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+/**
+ * On Android 10 and 11, a Bluetooth scan gets results only while the app has location access, and
+ * the app only asks for it while in use: a scan started while the app isn't visible hears nothing,
+ * the system logging "Need ACCESS_FINE_LOCATION permission to get scan results". This service's
+ * location type extends that access to the background. Android 10 gives it however the service
+ * was started, Android 11 only when the service was started while the app was visible, so the app
+ * starts it again when opened, see `PersistentScanningViewModel.ensureRunning`.
+ */
 internal class MonitorService : LifecycleService() {
 
     private lateinit var component: ServiceComponent

@@ -48,6 +48,7 @@ import com.masselis.tpmsadvanced.data.vehicle.interfaces.impl.SimulatedReadings.
 import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.awaitClose
@@ -59,6 +60,8 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
@@ -74,6 +77,7 @@ import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -193,16 +197,27 @@ internal class BluetoothLeScannerImpl(
     }.flowOn(Dispatchers.Main) // System's BluetoothLeScanner class as issues if called on a background thread
         .withMockAdvertisements(context, filters)
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @RequiresPermission("android.permission.BLUETOOTH_SCAN")
-    private fun scan(mode: Int) = rawScan(
-        FILTERS,
-        ScanSettings
-            .Builder()
-            .setScanMode(mode)
-            .setMatchMode(MATCH_MODE_AGGRESSIVE)
-            .setNumOfMatches(MATCH_NUM_ONE_ADVERTISEMENT)
-            .build(),
-    )
+    private fun scan(mode: Int) = flow {
+        emit(Unit)
+        // Below Android 12, a scan started while the app isn't visible may get no results
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) while (true) {
+            delay(SCAN_RESTART)
+            emit(Unit)
+        }
+    }
+        .flatMapLatest {
+            rawScan(
+                FILTERS,
+                ScanSettings
+                    .Builder()
+                    .setScanMode(mode)
+                    .setMatchMode(MATCH_MODE_AGGRESSIVE)
+                    .setNumOfMatches(MATCH_NUM_ONE_ADVERTISEMENT)
+                    .build(),
+            )
+        }
         .mapNotNull { result ->
             logger.v { "Sensor found during scan. Address: ${result.device.address}, scan bytes: ${result.scanRecord?.bytes?.toHexString()}" }
             result.scanRecord?.advertisementHex?.let {
@@ -346,6 +361,16 @@ internal class BluetoothLeScannerImpl(
         private val START_MARGIN = 1.seconds
 
         private const val SCAN_LINGER = 30_000L
+
+        /**
+         * Android moves a scan running for too long to low power without telling the app, even with
+         * the app on screen: "regularScanTimeout" in the system log, after 5 minutes on a Pixel 7 on
+         * Android 17 (`scan_timeout_millis`). Each restart starts that clock over. Only from Android
+         * 12: before, a scan restarted with the app in the background may need a location access
+         * that the app can lose, see `MonitorService`, and a Galaxy S9+ on Android 10 had no such
+         * timeout.
+         */
+        private val SCAN_RESTART = 4.minutes
     }
 }
 
