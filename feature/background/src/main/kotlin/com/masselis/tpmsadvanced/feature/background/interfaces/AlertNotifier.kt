@@ -3,6 +3,7 @@
 package com.masselis.tpmsadvanced.feature.background.interfaces
 
 import android.annotation.SuppressLint
+import android.app.Notification.FLAG_ONLY_ALERT_ONCE
 import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.app.PendingIntent.FLAG_UPDATE_CURRENT
 import android.app.PendingIntent.getBroadcast
@@ -38,6 +39,7 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import com.masselis.tpmsadvanced.feature.background.R
 import com.masselis.tpmsadvanced.feature.background.usecase.AlertSnoozeUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.AlertSpeaker
+import com.masselis.tpmsadvanced.feature.background.usecase.ScreenStateUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.StoredTyreAlertsUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.StoredTyreAlertsUseCase.Event.SensorChanged
 import com.masselis.tpmsadvanced.feature.background.usecase.StoredTyreAlertsUseCase.Update
@@ -48,6 +50,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted.Companion.Eagerly
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -67,12 +70,14 @@ import com.masselis.tpmsadvanced.core.common.localized
  * whatever scans: see docs/alerts.md.
  */
 @SuppressLint("MissingPermission")
+@Suppress("LongParameterList")
 internal class AlertNotifier(
     storedTyreAlertsUseCase: StoredTyreAlertsUseCase,
     vehicleListUseCase: VehicleListUseCase,
     private val snoozeUseCase: AlertSnoozeUseCase,
     private val speaker: AlertSpeaker,
     private val unitPreferences: UnitPreferences,
+    screenStateUseCase: ScreenStateUseCase,
     /** Single threaded: the readings and the end of the holds take turns */
     private val scope: CoroutineScope,
 ) {
@@ -102,6 +107,15 @@ internal class AlertNotifier(
 
     /** [update] is the latest reading raising the notification, posted when [job] ends */
     private data class Raise(val update: Update, val job: Job)
+
+    /** Whether the phone is unlocked and its screen on, see [unseen] */
+    private val isInUse = screenStateUseCase
+        .isInUse
+        .catch { logger.e("Failed to follow the screen's state", it) }
+        .stateIn(scope, Eagerly, false)
+
+    /** The red and crimson notifications which last sounded while the phone wasn't in use */
+    private val unseen = Unseen()
 
     /** The updates hold the vehicles as they were when the tyres started being followed */
     private val latestVehicles = vehicleListUseCase
@@ -140,6 +154,7 @@ internal class AlertNotifier(
                     is SensorChanged -> AlertClass.entries.forEach { alertClass ->
                         tag(event.vehicle, event.location, alertClass).also { tag ->
                             notificationManager.cancel(tag, NOTIFICATION_ID)
+                            unseen.cancelled(tag)
                             holds.remove(tag)?.job?.cancel()
                             raises.remove(tag)?.job?.cancel()
                             speaker.stop(tag, isDismissed = true)
@@ -154,6 +169,31 @@ internal class AlertNotifier(
                 }
             }
             .catch { logger.e("Failed to follow the tyres' alerts", it) }
+            .launchIn(scope)
+
+        // Unlocked after a ride with the phone in a pocket: sounds again what sounded meanwhile,
+        // shown as a heads-up over whatever the user opens, see docs/alerts.md
+        isInUse
+            .filter { it }
+            .onEach { _ ->
+                unseen
+                    .due(shown())
+                    .also { unseen.clear() }
+                    .let { due ->
+                        notificationManager
+                            .activeNotifications
+                            .filter { it.id == NOTIFICATION_ID && it.tag in due }
+                    }
+                    .forEach { shown ->
+                        notificationManager.notify(
+                            shown.tag,
+                            NOTIFICATION_ID,
+                            // A copy, unparcelled: a held notification's update was posted silent
+                            shown.notification.apply { flags = flags and FLAG_ONLY_ALERT_ONCE.inv() },
+                        )
+                    }
+            }
+            .catch { logger.e("Failed to remind the alerts on unlocking", it) }
             .launchIn(scope)
     }
 
@@ -201,11 +241,13 @@ internal class AlertNotifier(
             Action.None -> Unit
             Action.Cancel -> {
                 notificationManager.cancel(tag, NOTIFICATION_ID)
+                unseen.cancelled(tag)
                 holds.remove(tag)?.job?.cancel()
             }
 
             is Action.Post -> {
                 notificationManager.notify(tag, NOTIFICATION_ID, notification(tag, alertClass, action))
+                unseen.posted(tag, action, isInUse.value)
                 holds.remove(tag)?.job?.cancel()
                 holds[tag] = Hold(
                     TimeSource.Monotonic.markNow() + HOLD,
@@ -259,6 +301,7 @@ internal class AlertNotifier(
         when (action) {
             Action.Cancel -> {
                 notificationManager.cancel(tag, NOTIFICATION_ID)
+                unseen.cancelled(tag)
                 holds.remove(tag)?.job?.cancel()
                 speaker.stop(tag, isDismissed = true)
             }
@@ -416,6 +459,36 @@ internal class AlertNotifier(
 
     /** What the notification of a class shows */
     internal data class Shown(val sensorId: Int, val level: AlertLevel)
+
+    /**
+     * The red and crimson notifications which last sounded while the phone wasn't in use, likely
+     * in a pocket or a bag: sounded again once it's unlocked, see docs/alerts.md
+     */
+    internal class Unseen {
+        private val tags = mutableSetOf<String>()
+
+        /** A sound heard with the phone in use, a heads-up over the screen, was seen */
+        fun posted(tag: String, action: Action.Post, isInUse: Boolean) {
+            if (action.sound.not()) return
+            if (action.level >= RED && isInUse.not()) tags.add(tag) else tags.remove(tag)
+        }
+
+        fun cancelled(tag: String) {
+            tags.remove(tag)
+        }
+
+        /**
+         * The tags to sound again among the [shown] notifications: still red or crimson. One lowered
+         * to amber meanwhile, or dismissed, is left alone.
+         */
+        fun due(shown: Map<String?, Shown>): Set<String> = tags
+            .filter { tag -> shown[tag]?.let { it.level >= RED } == true }
+            .toSet()
+
+        fun clear() {
+            tags.clear()
+        }
+    }
 
     /** What a tyre's new reading does to the notification of one of its classes */
     internal sealed interface Action {

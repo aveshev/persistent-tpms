@@ -282,12 +282,14 @@ public interface Bindings {
         alertSnoozeUseCase: AlertSnoozeUseCase,
         alertSpeaker: AlertSpeaker,
         unitPreferences: UnitPreferences,
+        screenStateUseCase: ScreenStateUseCase,
     ): AlertNotifier = AlertNotifier(
         storedTyreAlertsUseCase,
         vehicleListUseCase,
         alertSnoozeUseCase,
         alertSpeaker,
         unitPreferences,
+        screenStateUseCase,
         GlobalScope + Dispatchers.Default.limitedParallelism(1),
     )
 

@@ -325,6 +325,15 @@ struct DebugSettingsView: View {
                     Text(exportError).foregroundStyle(Theme.error)
                 }
             }
+            #if DEBUG
+            Section("Bluetooth") {
+                NavigationLink {
+                    NearbyServicesView()
+                } label: {
+                    SettingsRow("Nearby services", "Which services the devices around advertise, kept across visits")
+                }
+            }
+            #endif
         }
         .navigationTitle("Debug")
         .navigationBarTitleDisplayMode(.inline)
