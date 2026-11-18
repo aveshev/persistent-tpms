@@ -144,6 +144,9 @@ final class Monitor: ObservableObject {
         if isActive { notifier.isAuthorized { [weak self] in self?.isNotificationAuthorized = $0 } }
         if Demo.isOn { return }
         rideLog(isActive ? "app open" : "app left")
+        #if DEBUG
+        logSilentMode(isActive ? "app open" : "app left", throttled: false)
+        #endif
         if isActive { ride.appOpened() }
         let listensToSensors = isActive || ((settings.backgroundMonitoring || isTemporaryMonitoring) && sensors.isEmpty == false)
         // The beacons wake the app whatever Persistent scanning says, its readings then still not
@@ -274,7 +277,24 @@ final class Monitor: ObservableObject {
         sensors.first { $0.id == reading.sensorId }?.calibration.applied != nil
     }
 
+    #if DEBUG
+    private var silentModeLogged = Date.distantPast
+
+    /// Whether SilentMode can tell, in the background too, where a sensor heard wakes the app for a
+    /// few seconds: flip the switch with the phone locked and compare with the log
+    private func logSilentMode(_ event: String, throttled: Bool = true) {
+        guard throttled == false || Date().timeIntervalSince(silentModeLogged) > 20 else { return }
+        silentModeLogged = Date()
+        SilentMode.check { isSilent, elapsed in
+            rideLog("silent mode at \(event): \(isSilent.map { $0 ? "silent" : "ringer on" } ?? "can't tell"), ended after \(elapsed.map { "\(Int($0 * 1000)) ms" } ?? "none")")
+        }
+    }
+    #endif
+
     private func record(_ read: SensorReading, vehicle: Vehicle, location: TyreLocation, isStored: Bool = true) {
+        #if DEBUG
+        logSilentMode("reading")
+        #endif
         // As it was read: the calibration applies when it's read back, it can still change
         if isStored { try? database?.insert(read, vehicleId: vehicle.id, location: location) }
         let reading = corrected(read)
