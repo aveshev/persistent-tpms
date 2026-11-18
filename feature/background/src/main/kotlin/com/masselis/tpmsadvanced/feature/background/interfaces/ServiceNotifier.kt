@@ -6,7 +6,9 @@ import android.app.PendingIntent.getActivity
 import android.app.PendingIntent.getBroadcast
 import android.app.Service
 import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
 import android.os.Build.VERSION.SDK_INT
+import android.os.Build.VERSION_CODES
 import android.os.Build.VERSION_CODES.Q
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
@@ -25,11 +27,13 @@ import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.Scan
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.Retrying
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.Scanning
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.WaitingForBluetooth
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.WaitingForLocation
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import com.masselis.tpmsadvanced.feature.background.R
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.Active
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.BluetoothOff
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.Idle
+import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.LocationOff
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.MonitoringFailure
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.ScanFailure
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.ScanKeepsFailing
@@ -75,6 +79,7 @@ internal class ServiceNotifier(
     vehicleListUseCase: VehicleListUseCase,
     scanPolicyUseCase: ScanPolicyUseCase,
     tyreScanStatus: Flow<ScanStatus?>,
+    rideNotifier: RideNotifier,
 ) {
     private val logger = Logger.withTag("ServiceNotifier")
     private val notificationManager = NotificationManagerCompat.from(appContext)
@@ -113,7 +118,11 @@ internal class ServiceNotifier(
                             .flatMap { vehicle ->
                                 VehicleComponent(vehicle).let { component ->
                                     vehicle.kind.locations.map {
-                                        component.TyreComponent(it).tyreAtmosphereUseCase.listen()
+                                        component
+                                            .TyreComponent(it)
+                                            .tyreAtmosphereUseCase
+                                            .listen()
+                                            .onEach { atmosphere -> rideNotifier.sensorHeard(vehicle.uuid, atmosphere) }
                                     }
                                 }
                             }
@@ -127,20 +136,20 @@ internal class ServiceNotifier(
                     .Builder(
                         appContext,
                         when (state) {
-                            Starting, is Active, is Suspended, Idle, BluetoothOff, is ScanRetrying -> channelNameWhenOk
+                            Starting, is Active, is Suspended, Idle, BluetoothOff, LocationOff, is ScanRetrying -> channelNameWhenOk
                             is ScanKeepsFailing, is ScanFailure, MonitoringFailure -> channelNameForFailure
                         }
                     )
                     .setSmallIcon(
                         when (state) {
                             Starting, is Active, is Suspended, Idle -> R.drawable.car_tire
-                            BluetoothOff, is ScanRetrying, is ScanKeepsFailing, is ScanFailure, MonitoringFailure ->
+                            BluetoothOff, LocationOff, is ScanRetrying, is ScanKeepsFailing, is ScanFailure, MonitoringFailure ->
                                 R.drawable.car_tire_alert
                         }
                     )
                     .setPriority(
                         when (state) {
-                            Starting, is Active, is Suspended, Idle, BluetoothOff, is ScanRetrying -> PRIORITY_LOW
+                            Starting, is Active, is Suspended, Idle, BluetoothOff, LocationOff, is ScanRetrying -> PRIORITY_LOW
                             is ScanKeepsFailing, is ScanFailure, MonitoringFailure -> PRIORITY_MAX
                         }
                     )
@@ -154,6 +163,9 @@ internal class ServiceNotifier(
                                 else state.decision.explanation()
 
                             BluetoothOff -> "Background scanning is waiting for Bluetooth to be turned on"
+                            LocationOff -> "Background scanning is waiting for Location to be turned on, " +
+                                "Android needs it for Bluetooth scans on this phone"
+
                             is ScanRetrying -> "The Android system refused the Bluetooth scan (error " +
                                 "${state.reason}), background scanning tries again shortly"
 
@@ -173,9 +185,9 @@ internal class ServiceNotifier(
                     )
                     .apply {
                         when (state) {
-                            // Opens the app on its current vehicle. Bluetooth off: the app tells it
-                            // and has the button to turn it on
-                            Starting, is Active, is Suspended, Idle, BluetoothOff, is ScanRetrying,
+                            // Opens the app on its current vehicle. Bluetooth or Location off: the
+                            // app tells it and has the button to turn it on
+                            Starting, is Active, is Suspended, Idle, BluetoothOff, LocationOff, is ScanRetrying,
                             is ScanKeepsFailing -> appContext
                                 .packageManager
                                 .getLaunchIntentForPackage(appContext.packageName)
@@ -191,7 +203,7 @@ internal class ServiceNotifier(
                         when (state) {
                             // Persistent scanning is turned off from the app's settings, only the
                             // manual monitoring stops from here, even while waiting for Bluetooth
-                            is Active, BluetoothOff, is ScanRetrying, is ScanKeepsFailing -> if (
+                            is Active, BluetoothOff, LocationOff, is ScanRetrying, is ScanKeepsFailing -> if (
                                 (state as? Active)?.decision?.causes?.contains(MANUAL)
                                     ?: (scanPolicyUseCase.currentDecision as? ScanDecision.Active)?.causes?.contains(MANUAL)
                                     ?: false
@@ -235,7 +247,13 @@ internal class ServiceNotifier(
                         notificationId,
                         it,
                         // https://developer.android.com/about/versions/14/changes/fgs-types-required#connected-device
-                        if (SDK_INT >= Q) FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE else 0
+                        // On Android 10 and 11, a scan gets results only with location access,
+                        // which this type extends to the background: see MonitorService
+                        when (SDK_INT) {
+                            Q, VERSION_CODES.R -> FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or FOREGROUND_SERVICE_TYPE_LOCATION
+                            in Q..Int.MAX_VALUE -> FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+                            else -> 0
+                        }
                     )
                 } catch (e: SecurityException) {
                     // The system refuses a connectedDevice foreground service when Bluetooth scan
@@ -263,6 +281,9 @@ internal class ServiceNotifier(
 
         /** Scanning should be active but Bluetooth is off, it starts again once turned on */
         data object BluetoothOff : State
+
+        /** Scanning should be active but Location is off where scans need it, it starts again once turned on */
+        data object LocationOff : State
 
         /** The system refused the scan for a [reason] that can go away, it's tried again shortly */
         data class ScanRetrying(val reason: Int) : State
@@ -294,7 +315,7 @@ internal class ServiceNotifier(
 
 /**
  * What the service shows for each decision: the [active] states while active, unless the
- * [tyreScanStatus] tells the scan waits for Bluetooth or retries a refused start. The scanner
+ * [tyreScanStatus] tells the scan waits for Bluetooth or Location or retries a refused start. The scanner
  * starts the scan over by itself then. Retrying for [SCAN_KEEPS_FAILING_AFTER] is told as a
  * failure. Only the failures nothing can recover from end the flow, with the state telling which.
  * Each state differs from the previous one.
@@ -315,6 +336,7 @@ internal fun Flow<ScanDecision>.serviceStates(
             tyreScanStatus.transformLatest<ScanStatus?, ServiceNotifier.State?> { status ->
                 when (status) {
                     WaitingForBluetooth -> emit(BluetoothOff)
+                    WaitingForLocation -> emit(LocationOff)
                     is Retrying -> {
                         emit(ScanRetrying(status.reason))
                         delay(SCAN_KEEPS_FAILING_AFTER - status.since.elapsedNow())

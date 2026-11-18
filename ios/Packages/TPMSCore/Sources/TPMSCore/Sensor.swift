@@ -3,7 +3,7 @@ import Foundation
 /// The sensors the app decodes. The raw value is what the database stores, the same as Android's
 /// `SensorBrand.code`: it never changes, a new brand takes the next one.
 public enum SensorBrand: Int, CaseIterable, Sendable {
-    case pecham = 1, bekubeeKy = 2, wicarlink = 3, bekubeeTpms = 4, sysgration = 5, bekubeeTcTpms = 6
+    case pecham = 1, bekubeeKy = 2, wicarlink = 3, bekubeeTpms = 4, sysgration = 5, tcTpms = 6
 
     public var name: String {
         switch self {
@@ -12,7 +12,7 @@ public enum SensorBrand: Int, CaseIterable, Sendable {
         case .wicarlink: "Wicarlink"
         case .bekubeeTpms: "Bekubee TPMS"
         case .sysgration: "Sysgration"
-        case .bekubeeTcTpms: "Bekubee TC.TPMS"
+        case .tcTpms: "TC.TPMS"
         }
     }
 

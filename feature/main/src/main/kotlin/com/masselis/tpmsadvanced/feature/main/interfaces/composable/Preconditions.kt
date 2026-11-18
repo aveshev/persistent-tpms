@@ -20,8 +20,10 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.masselis.tpmsadvanced.core.ui.BluetoothState
+import com.masselis.tpmsadvanced.core.ui.LocationState
 import com.masselis.tpmsadvanced.core.ui.MissingPermission
 import com.masselis.tpmsadvanced.core.ui.rememberBluetoothState
+import com.masselis.tpmsadvanced.core.ui.rememberLocationState
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.PreconditionsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.PreconditionsViewModel
 import dev.zacsweers.metro.Assisted
@@ -47,6 +49,7 @@ internal fun InternalPreconditions(
 ) {
     val permissionState = rememberMultiplePermissionsState(viewModel.requiredPermission())
     val bluetoothState = rememberBluetoothState()
+    val locationState = rememberLocationState()
     when {
         permissionState.allPermissionsGranted.not() -> Scaffold { padding ->
             // Bluetooth scan permission is granted under "Nearby devices" on API 31+, but under
@@ -68,6 +71,15 @@ internal fun InternalPreconditions(
         viewModel.isBluetoothRequired() && bluetoothState.isEnabled.not() -> Scaffold { padding ->
             ChipIsOff(
                 bluetoothState = bluetoothState,
+                modifier = modifier
+                    .padding(padding)
+                    .fillMaxSize()
+            )
+        }
+
+        viewModel.isLocationRequired() && locationState.isEnabled.not() -> Scaffold { padding ->
+            LocationIsOff(
+                locationState = locationState,
                 modifier = modifier
                     .padding(padding)
                     .fillMaxSize()
@@ -101,6 +113,30 @@ private fun ChipIsOff(
             bluetoothState.askEnable()
         }) {
             Text("Enable bluetooth")
+        }
+    }
+}
+
+@Composable
+private fun LocationIsOff(
+    locationState: LocationState,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            @Suppress("MaxLineLength")
+            "Persistent TPMS needs the phone's Location to be turned on in order to listen to TPMS sensors. This version of Android requires it for Bluetooth scans, your position isn't used.",
+            textAlign = TextAlign.Center,
+            modifier = Modifier
+                .fillMaxWidth(0.7f)
+                .padding(bottom = 8.dp)
+        )
+        FilledTonalButton(onClick = locationState::openSettings) {
+            Text("Open Location settings")
         }
     }
 }

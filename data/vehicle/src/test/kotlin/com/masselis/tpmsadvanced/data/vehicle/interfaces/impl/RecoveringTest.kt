@@ -8,7 +8,9 @@ import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.Scan
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.Retrying
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.Scanning
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.WaitingForBluetooth
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.WaitingForLocation
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.impl.BluetoothLeScannerImpl.BluetoothOff
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.impl.BluetoothLeScannerImpl.LocationOff
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,6 +30,7 @@ import kotlin.time.Duration.Companion.seconds
 internal class RecoveringTest {
 
     private lateinit var bluetoothOn: MutableStateFlow<Boolean>
+    private lateinit var locationOn: MutableStateFlow<Boolean>
 
     /** Ends the scan running at the time, like the system does */
     private lateinit var failures: MutableSharedFlow<Throwable>
@@ -43,7 +46,7 @@ internal class RecoveringTest {
         scans++
         emit(scans)
         emitAll(failures.map { throw it })
-    }.recovering(bluetoothOn, scope.testScheduler.timeSource) { statuses += it }
+    }.recovering(bluetoothOn, locationOn, scope.testScheduler.timeSource) { statuses += it }
 
     context(scope: TestScope)
     private fun elapsed() = scope.testScheduler.currentTime.milliseconds
@@ -53,6 +56,7 @@ internal class RecoveringTest {
         // Logcat isn't there on the JVM, the failures are logged
         Logger.setLogWriters(CommonWriter())
         bluetoothOn = MutableStateFlow(true)
+        locationOn = MutableStateFlow(true)
         failures = MutableSharedFlow()
         statuses = mutableListOf()
         scans = 0
@@ -88,6 +92,80 @@ internal class RecoveringTest {
             failures.emit(BluetoothOff(STATE_OFF))
             assertEquals(2, awaitItem())
             assertEquals(listOf(Scanning, WaitingForBluetooth, Scanning), statuses)
+        }
+    }
+
+    @Test
+    fun `a scan ended by Location waits for it, then starts over`() = runTest {
+        test().test {
+            skipItems(1)
+            locationOn.value = false
+            failures.emit(LocationOff())
+            delay(10.minutes)
+            expectNoEvents()
+            assertEquals(WaitingForLocation, statuses.last())
+            locationOn.value = true
+            assertEquals(2, awaitItem())
+            assertEquals(Scanning, statuses.last())
+        }
+    }
+
+    @Test
+    fun `a scan ended by Location starts over right away when it's already back`() = runTest {
+        test().test {
+            skipItems(1)
+            failures.emit(LocationOff())
+            assertEquals(2, awaitItem())
+            assertEquals(listOf(Scanning, WaitingForLocation, Scanning), statuses)
+        }
+    }
+
+    @Test
+    fun `a scan waiting for Location doesn't care about Bluetooth coming back`() = runTest {
+        test().test {
+            skipItems(1)
+            locationOn.value = false
+            failures.emit(LocationOff())
+            bluetoothOn.value = false
+            bluetoothOn.value = true
+            delay(10.minutes)
+            expectNoEvents()
+            assertEquals(WaitingForLocation, statuses.last())
+        }
+    }
+
+    @Test
+    fun `Bluetooth then Location being off are waited for one after the other`() = runTest {
+        test().test {
+            skipItems(1)
+            bluetoothOn.value = false
+            locationOn.value = false
+            failures.emit(BluetoothOff(STATE_OFF))
+            assertEquals(WaitingForBluetooth, statuses.last())
+            bluetoothOn.value = true
+            assertEquals(2, awaitItem())
+            failures.emit(LocationOff())
+            assertEquals(WaitingForLocation, statuses.last())
+            locationOn.value = true
+            assertEquals(3, awaitItem())
+            assertEquals(Scanning, statuses.last())
+        }
+    }
+
+    @Test
+    fun `a location-off wait resets the refused starts`() = runTest {
+        test().test {
+            skipItems(1)
+            repeat(3) {
+                failures.emit(Failure.Scan(SCAN_FAILED_INTERNAL_ERROR))
+                skipItems(1)
+            }
+            failures.emit(LocationOff())
+            skipItems(1)
+            failures.emit(Failure.Scan(SCAN_FAILED_INTERNAL_ERROR))
+            val failedAt = elapsed()
+            awaitItem()
+            assertEquals(5.seconds, elapsed() - failedAt)
         }
     }
 

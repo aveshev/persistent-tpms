@@ -38,6 +38,18 @@ final class Monitor: ObservableObject {
     @Published private(set) var nearby: [Int: Nearby] = [:]
     @Published private(set) var bluetooth: CBManagerState = .unknown
     @Published private(set) var error: String?
+    /// Scanning in the background until stopped, started by hand with persistent mode off, like the
+    /// Android app's manual monitoring. Kept for a relaunch by Bluetooth state restoration, which the
+    /// scan it was running would otherwise end for: any other launch starts without it, like
+    /// Android's after the app is swiped away or the phone restarts.
+    @Published private(set) var isTemporaryMonitoring = UserDefaults.standard.bool(forKey: Monitor.temporaryMonitoringKey) {
+        didSet { UserDefaults.standard.set(isTemporaryMonitoring, forKey: Self.temporaryMonitoringKey) }
+    }
+
+    /// iOS lets the app notify, checked each time the app comes back
+    @Published private(set) var isNotificationAuthorized = true
+
+    private static let temporaryMonitoringKey = "temporaryMonitoring"
 
     struct TyreKey: Hashable {
         let vehicleId: UUID
@@ -81,9 +93,10 @@ final class Monitor: ObservableObject {
     }
 
     /// Opens the database and starts the scan. Called at launch, also when iOS relaunches the app
-    /// in the background for a sensor it was scanning for.
-    func start() {
+    /// in the background for a sensor it was scanning for ([isRestored]).
+    func start(isRestored: Bool = false) {
         guard database == nil else { return }
+        if isRestored == false { isTemporaryMonitoring = false }
         speaker.configure(settings: settings)
         notifier.speaker = speaker
         if Demo.isOn {
@@ -122,26 +135,22 @@ final class Monitor: ObservableObject {
             if rssi != RideTriggers.noRssi, rssi >= RideTriggers.minRssi { self?.beaconsHeard[beacon] = Date() }
             self?.ride.beaconHeard(rssi: rssi, needsConfirming: needsConfirming)
         }
-        scanner.onBeaconStillThere = { [weak self] beacon in
-            self?.beaconsHeard[beacon] = Date()
-            self?.ride.beaconStillThere()
-        }
         rideLog("started")
         appIsActive(UIApplication.shared.applicationState == .active)
     }
 
     /// The app went to the background or came back
     func appIsActive(_ isActive: Bool) {
+        if isActive { notifier.isAuthorized { [weak self] in self?.isNotificationAuthorized = $0 } }
         if Demo.isOn { return }
         rideLog(isActive ? "app open" : "app left")
         if isActive { ride.appOpened() }
-        let listensToSensors = isActive || (settings.backgroundMonitoring && sensors.isEmpty == false)
+        let listensToSensors = isActive || ((settings.backgroundMonitoring || isTemporaryMonitoring) && sensors.isEmpty == false)
         // The beacons wake the app whatever Persistent scanning says, its readings then still not
         // coming in with the sensors left out of the scan
         let beacons = settings.rideNotification && settings.rideBeacon ? settings.rideBeaconDevices : []
         scanner.setBeacons(beacons)
         scanner.start(services: beacons
-            .filter { $0.wake == .service }
             .flatMap(\.services)
             .map { CBUUID(string: $0) }
             .reduce(listensToSensors ? Scanner.services : []) { $0.contains($1) ? $0 : $0 + [$1] }, isActive: isActive)
@@ -150,6 +159,19 @@ final class Monitor: ObservableObject {
             speaker.stopAll()
             ongoing = OngoingAlerts()
         }
+    }
+
+    /// Starts or stops the temporary monitoring, see isTemporaryMonitoring
+    func setTemporaryMonitoring(_ enabled: Bool) {
+        isTemporaryMonitoring = enabled
+        appIsActive(UIApplication.shared.applicationState == .active)
+    }
+
+    /// Persistent mode on or off, which ends the temporary monitoring either way, like on Android
+    func setPersistentMonitoring(_ enabled: Bool) {
+        settings.backgroundMonitoring = enabled
+        isTemporaryMonitoring = false
+        appIsActive(UIApplication.shared.applicationState == .active)
     }
 
     /// Between made-up vehicles and the real ones. The Android app restarts for this, an iOS app can't.
@@ -326,10 +348,15 @@ final class Monitor: ObservableObject {
         if let tag = notifier.snooze(response) {
             speaker.stop(tag: tag)
         } else if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
-            let id = UUID(uuidString: response.notification.request.content.threadIdentifier)
-            vehicles.first { $0.id == id && $0.isCurrent == false }.map(setCurrent)
-            showMainScreen.send()
+            UUID(uuidString: response.notification.request.content.threadIdentifier).map(open) ?? showMainScreen.send()
         }
+    }
+
+    /// The main screen on this vehicle, for a notification, a quick action or a link, see
+    /// VehicleLink. One since deleted leaves the current one.
+    func open(vehicleId: UUID) {
+        vehicles.first { $0.id == vehicleId && $0.isCurrent == false }.map(setCurrent)
+        showMainScreen.send()
     }
 
     func delete(_ vehicle: Vehicle) {
@@ -450,7 +477,10 @@ final class Monitor: ObservableObject {
 
     func setAlerts(_ enabled: Bool) {
         if enabled {
-            notifier.requestAuthorization { [weak self] granted in self?.settings.alerts = granted }
+            notifier.requestAuthorization { [weak self] granted in
+                self?.settings.alerts = granted
+                self?.isNotificationAuthorized = granted
+            }
         } else {
             settings.alerts = false
             notifier.clearAll()

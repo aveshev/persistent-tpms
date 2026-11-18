@@ -58,14 +58,6 @@ final class RideTriggersTests: XCTestCase {
         XCTAssertTrue(triggers.heard(source, rssi: -60, needsConfirming: true, at: 1000 + 6 * 60 + 10))
     }
 
-    func testAConnectionEndingCountsAsHeardUntilThen() {
-        var triggers = RideTriggers()
-        _ = triggers.heard(source, rssi: -60, at: 1000)
-        // Connected for 2 hours, then gone for less than the absence
-        triggers.stillThere(source, at: 1000 + 2 * 3600)
-        XCTAssertFalse(triggers.heard(source, rssi: -60, at: 1000 + 2 * 3600 + 60))
-    }
-
     func testNothingShowingAlwaysPosts() {
         var triggers = RideTriggers()
         XCTAssertTrue(triggers.fired(at: 1000, isShowing: false))

@@ -19,6 +19,8 @@ import android.bluetooth.le.ScanSettings.MATCH_NUM_ONE_ADVERTISEMENT
 import android.content.Context
 import android.content.IntentFilter
 import android.os.Build
+import android.os.Build.VERSION.SDK_INT
+import android.os.Build.VERSION_CODES.R
 import android.os.SystemClock.elapsedRealtime
 import androidx.annotation.RequiresPermission
 import androidx.core.content.ContextCompat.RECEIVER_EXPORTED
@@ -28,6 +30,8 @@ import androidx.core.content.getSystemService
 import co.touchlab.kermit.Logger
 import com.masselis.tpmsadvanced.core.common.asFlow
 import com.masselis.tpmsadvanced.core.common.dematerializeCompletion
+import com.masselis.tpmsadvanced.core.common.isLocationOn
+import com.masselis.tpmsadvanced.core.common.isLocationOnFlow
 import com.masselis.tpmsadvanced.core.common.materializeCompletion
 import com.masselis.tpmsadvanced.core.common.now
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner
@@ -38,11 +42,13 @@ import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.Scan
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.Retrying
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.Scanning
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.WaitingForBluetooth
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.WaitingForLocation
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanMode
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.impl.SimulatedReadings.withSimulatedReadings
 import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.channels.awaitClose
@@ -54,6 +60,8 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
@@ -69,6 +77,7 @@ import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.nanoseconds
 import kotlin.time.Duration.Companion.seconds
 
@@ -89,6 +98,7 @@ internal class BluetoothLeScannerImpl(
     /** What each running scan is doing, by its key in [sharedScans] */
     private val scanStatuses = MutableStateFlow(emptyMap<Any, ScanStatus>())
 
+    @Suppress("MagicNumber")
     override val tyreScanStatus: Flow<ScanStatus?> = scanStatuses
         .map { statuses ->
             statuses
@@ -99,7 +109,8 @@ internal class BluetoothLeScannerImpl(
                     when (it) {
                         Scanning -> 0
                         is Retrying -> 1
-                        WaitingForBluetooth -> 2
+                        WaitingForLocation -> 2
+                        WaitingForBluetooth -> 3
                     }
                 }
         }
@@ -138,6 +149,12 @@ internal class BluetoothLeScannerImpl(
             awaitCancellation()
         }
 
+        // The system would run the scan and deliver nothing, without any error
+        if (isLocationRequired && context.isLocationOn.not()) {
+            close(LocationOff())
+            awaitCancellation()
+        }
+
         // Android refuses a start once the app started MAX_STARTS scans within START_WINDOW, and
         // silently: no onScanFailed(), the scan just never delivers anything ("scanning too
         // frequently" in the system log). Every scan of the app counts, the tyre ones and the
@@ -158,6 +175,13 @@ internal class BluetoothLeScannerImpl(
             close(BluetoothOff(bluetoothAdapter?.state))
         }
 
+        if (isLocationRequired) launch {
+            context.isLocationOnFlow.first { it.not() }
+            // The system keeps the scan running but stops delivering its results, also without
+            // telling it to the app: ended like for Bluetooth, see recovering()
+            close(LocationOff())
+        }
+
         val leScanner = bluetoothAdapter?.bluetoothLeScanner
         if (leScanner == null) {
             close(BluetoothOff(bluetoothAdapter?.state))
@@ -173,16 +197,27 @@ internal class BluetoothLeScannerImpl(
     }.flowOn(Dispatchers.Main) // System's BluetoothLeScanner class as issues if called on a background thread
         .withMockAdvertisements(context, filters)
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @RequiresPermission("android.permission.BLUETOOTH_SCAN")
-    private fun scan(mode: Int) = rawScan(
-        FILTERS,
-        ScanSettings
-            .Builder()
-            .setScanMode(mode)
-            .setMatchMode(MATCH_MODE_AGGRESSIVE)
-            .setNumOfMatches(MATCH_NUM_ONE_ADVERTISEMENT)
-            .build(),
-    )
+    private fun scan(mode: Int) = flow {
+        emit(Unit)
+        // Below Android 12, a scan started while the app isn't visible may get no results
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) while (true) {
+            delay(SCAN_RESTART)
+            emit(Unit)
+        }
+    }
+        .flatMapLatest {
+            rawScan(
+                FILTERS,
+                ScanSettings
+                    .Builder()
+                    .setScanMode(mode)
+                    .setMatchMode(MATCH_MODE_AGGRESSIVE)
+                    .setNumOfMatches(MATCH_NUM_ONE_ADVERTISEMENT)
+                    .build(),
+            )
+        }
         .mapNotNull { result ->
             logger.v { "Sensor found during scan. Address: ${result.device.address}, scan bytes: ${result.scanRecord?.bytes?.toHexString()}" }
             result.scanRecord?.advertisementHex?.let {
@@ -260,7 +295,7 @@ internal class BluetoothLeScannerImpl(
      * The scan for [key], started by [scan] unless already running. It keeps running for
      * [SCAN_LINGER] after its last collector is gone, so that coming back to a page reuses it:
      * starting another one counts towards Android's limit, see [rawScan]. It starts over by itself
-     * after Bluetooth was turned off or a refused start, see [recovering], its collectors only see
+     * after Bluetooth or Location was turned off or a refused start, see [recovering], its collectors only see
      * the readings stop meanwhile. A scan that ended, because the phone can't scan or after
      * lingering, is forgotten right away: the next collection starts a new one, rather than
      * attaching to one that will never deliver anything again.
@@ -269,7 +304,7 @@ internal class BluetoothLeScannerImpl(
     @Suppress("UNCHECKED_CAST")
     private fun <T> shared(key: Any, scan: () -> Flow<T>): Flow<T> = sharedScans.getOrPut(key) {
         scan()
-            .recovering(isBluetoothOn) { status -> scanStatuses.update { it + (key to status) } }
+            .recovering(isBluetoothOn, context.isLocationOnFlow) { status -> scanStatuses.update { it + (key to status) } }
             .materializeCompletion()
             .onCompletion {
                 // Before forgetting the scan: the next one for this key can't start meanwhile
@@ -291,11 +326,19 @@ internal class BluetoothLeScannerImpl(
 
     override val isBluetoothRequired = true
 
+    override val isLocationRequired = isLocationRequiredToScan(SDK_INT)
+
     /**
      * Bluetooth is off: the scan couldn't start, or it was turned off while scanning. The system
      * drops a running scan then, without telling it to the app. See [recovering].
      */
     internal class BluetoothOff(adapterState: Int?) : Exception("BluetoothOff(adapterState=$adapterState)")
+
+    /**
+     * Location is off where scans need it, see [isLocationRequired]: the scan couldn't start, or it
+     * was turned off while scanning. See [recovering].
+     */
+    internal class LocationOff : Exception("LocationOff")
 
     /** [receivedAt] is on the clock of `SystemClock.elapsedRealtimeNanos()` */
     private data class Packet(val address: String, val rssi: Int, val advertisement: String, val receivedAt: Duration)
@@ -308,7 +351,7 @@ internal class BluetoothLeScannerImpl(
             RawWicarlink.SERVICE_UUID,
             RawBekubeeKy.SERVICE_UUID,
             RawBekubeeTpms.SERVICE_UUID,
-            RawBekubeeTcTpms.SERVICE_UUID,
+            RawTcTpms.SERVICE_UUID,
         )
         private val FILTERS = SERVICE_UUIDS.map { ScanFilter.Builder().setServiceUuid(it).build() }
 
@@ -318,5 +361,18 @@ internal class BluetoothLeScannerImpl(
         private val START_MARGIN = 1.seconds
 
         private const val SCAN_LINGER = 30_000L
+
+        /**
+         * Android moves a scan running for too long to low power without telling the app, even with
+         * the app on screen: "regularScanTimeout" in the system log, after 5 minutes on a Pixel 7 on
+         * Android 17 (`scan_timeout_millis`). Each restart starts that clock over. Only from Android
+         * 12: before, a scan restarted with the app in the background may need a location access
+         * that the app can lose, see `MonitorService`, and a Galaxy S9+ on Android 10 had no such
+         * timeout.
+         */
+        private val SCAN_RESTART = 4.minutes
     }
 }
+
+/** See [BluetoothLeScanner.isLocationRequired] */
+internal fun isLocationRequiredToScan(sdkInt: Int): Boolean = sdkInt <= R

@@ -94,7 +94,8 @@ private fun PersistentScanningDetails(
             "Notifications or the unrestricted battery usage are missing, tap the bell on the main " +
                 "screen to grant them"
 
-        BellState.Active, BellState.Always, BellState.Suspended, BellState.Idle -> decision.rationale()
+        BellState.Active, BellState.Always, BellState.Bluetooth, BellState.Suspended, BellState.Idle ->
+            decision.rationale()
     }.let {
         Text(
             text = it,

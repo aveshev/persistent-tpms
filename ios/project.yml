@@ -56,6 +56,16 @@ targets:
         NSCameraUsageDescription: Persistent TPMS scans the QR code of your tyre pressure sensors to assign them.
         UISupportedInterfaceOrientations: [UIInterfaceOrientationPortrait, UIInterfaceOrientationLandscapeLeft, UIInterfaceOrientationLandscapeRight]
         ITSAppUsesNonExemptEncryption: false
+        # The Android app's links, `tpmsadvanced://vehicle/<uuid>`, see VehicleLink
+        CFBundleURLTypes:
+          - CFBundleURLName: com.aveshev.persistenttpms.vehicle
+            CFBundleURLSchemes: [tpmsadvanced]
+    # Generated, like Info.plist. Time sensitive: the red and crimson alerts and the ride
+    # notification go through a Focus
+    entitlements:
+      path: App/PersistentTPMS.entitlements
+      properties:
+        com.apple.developer.usernotifications.time-sensitive: true
     settings:
       base:
         # Lite, like the Android app's Lite

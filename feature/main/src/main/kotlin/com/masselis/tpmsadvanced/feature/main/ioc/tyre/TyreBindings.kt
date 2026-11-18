@@ -1,5 +1,6 @@
 package com.masselis.tpmsadvanced.feature.main.ioc.tyre
 
+import com.masselis.tpmsadvanced.core.ui.isAppVisibleFlow
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
 import com.masselis.tpmsadvanced.data.unit.interfaces.UnitPreferences
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner
@@ -110,6 +111,8 @@ public interface TyreBindings {
         scanner,
         // A debug option: turning Debug off turns it off too
         combine(appPreferences.debugOptionsInUse, appPreferences.balancedAfterFirstReading, Boolean::and),
+        isAppVisibleFlow,
+        ListenTyreSmartDutyUseCase.KEEPS_LOW_LATENCY_IN_BACKGROUND,
     )
 
     // Single, it keeps the sensor it detects for TyreActionsViewModel

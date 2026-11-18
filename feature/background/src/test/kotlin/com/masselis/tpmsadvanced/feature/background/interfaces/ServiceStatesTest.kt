@@ -8,10 +8,12 @@ import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.Scan
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.Retrying
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.Scanning
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.WaitingForBluetooth
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanStatus.WaitingForLocation
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.Active
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.BluetoothOff
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.Idle
+import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.LocationOff
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.MonitoringFailure
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.ScanFailure
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.ScanKeepsFailing
@@ -100,6 +102,28 @@ internal class ServiceStatesTest {
             tyreScanStatus.value = Scanning
             assertEquals(ACTIVE, awaitItem())
             assertEquals(1, scans)
+        }
+    }
+
+    @Test
+    fun `the scan waiting for Location is told, and the scan's states once it's back`() = runTest {
+        test().test {
+            skipItems(2)
+            tyreScanStatus.value = WaitingForLocation
+            assertEquals(LocationOff, awaitItem())
+            tyreScanStatus.value = Scanning
+            assertEquals(ACTIVE, awaitItem())
+            assertEquals(1, scans)
+        }
+    }
+
+    @Test
+    fun `a suspended scan doesn't tell it waits for Location`() = runTest {
+        tyreScanStatus.value = WaitingForLocation
+        decision.value = ScanDecision.Suspended(setOf(WIFI))
+        test().test {
+            assertEquals(Starting, awaitItem())
+            assertEquals(Suspended(ScanDecision.Suspended(setOf(WIFI))), awaitItem())
         }
     }
 

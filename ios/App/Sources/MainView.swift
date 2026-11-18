@@ -14,6 +14,9 @@ struct MainView: View {
     @State private var magnifiedAt = Date()
     @State private var isDimmed = false
     @State private var isVehicleListOpen = false
+    /// What the monitoring button just did, shown for a moment like Android's toast
+    @State private var monitoringToast: String?
+    @State private var isBellRationaleShown = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @ScaledMetric(relativeTo: .body) private var baseSize: CGFloat = TyreReadout.baseSize
@@ -42,6 +45,25 @@ struct MainView: View {
                 guard magnified != nil else { return }
                 try? await Task.sleep(for: .seconds(settings.magnifierSeconds))
                 if Task.isCancelled == false { withAnimation { magnified = nil } }
+            }
+            .task(id: monitoringToast) {
+                guard monitoringToast != nil else { return }
+                try? await Task.sleep(for: .seconds(3))
+                if Task.isCancelled == false { withAnimation { monitoringToast = nil } }
+            }
+            .overlay(alignment: .bottom) {
+                if let monitoringToast {
+                    Text(monitoringToast)
+                        .font(.subheadline)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+                        .background(.regularMaterial, in: Capsule())
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 24)
+                        .transition(.opacity)
+                        .allowsHitTesting(false)
+                }
             }
             // Its own, which goes beside the vehicle when that makes its image larger
             .toolbar(.hidden, for: .navigationBar)
@@ -183,7 +205,7 @@ struct MainView: View {
             let size = geometry.size
             let content = VehicleLayout.Content(vehicle: vehicle, monitor: monitor, settings: settings, baseSize: baseSize, isManaging: false, isMoving: false, date: Date())
             let barHeight = barHeight
-            let barGaps = Self.besideTitleStart + Self.besideTitleEnd + Self.barPadding + barHeight
+            let barGaps = Self.besideTitleStart + Self.besideTitleEnd + Self.barPadding + actionsWidth
             let end = min(barTitleWidth, size.width * Self.barMaxEndShare - barGaps) + barGaps
             let corners = VehicleLayout.Corners(start: 0, end: end, height: barHeight, bottomInset: geometry.safeAreaInsets.bottom)
             let over = CGSize(width: size.width, height: size.height - barHeight)
@@ -208,8 +230,8 @@ struct MainView: View {
                 VStack(spacing: 0) {
                     if isBeside == false {
                         ZStack {
-                            vehicleMenu.padding(.horizontal, barHeight)
-                            settingsMenu.frame(maxWidth: .infinity, alignment: .trailing)
+                            vehicleMenu.padding(.horizontal, actionsWidth)
+                            actions.frame(maxWidth: .infinity, alignment: .trailing)
                         }
                         .frame(height: barHeight)
                     }
@@ -222,7 +244,7 @@ struct MainView: View {
                 if isBeside {
                     HStack(spacing: Self.besideTitleEnd) {
                         vehicleMenu
-                        settingsMenu
+                        actions
                     }
                     .padding(.leading, Self.besideTitleStart)
                     .padding(.trailing, Self.barPadding)
@@ -263,6 +285,92 @@ struct MainView: View {
         ((monitor.current?.name ?? "") as NSString)
             .size(withAttributes: [.font: UIFont.systemFont(ofSize: barTitleSize, weight: .semibold)]).width
             + 4 + barTitleSize
+    }
+
+    /// The monitoring button, or the bell once persistent mode is on, then the settings menu, like
+    /// the Android app's top bar actions
+    private var actions: some View {
+        HStack(spacing: 0) {
+            if settings.backgroundMonitoring { bell } else { monitoringButton }
+            settingsMenu
+        }
+    }
+
+    private var actionsWidth: CGFloat { 2 * barHeight }
+
+    /// What keeps persistent scanning from alerting, like the Android app's BellState. iOS has no
+    /// scan conditions, so it's always active once nothing is missing.
+    enum BellProblem: CaseIterable {
+        case bluetoothDenied, bluetoothOff, noSensor, notificationsOff
+
+        var text: String {
+            switch self {
+            case .bluetoothDenied: tr("Bluetooth isn't allowed for Persistent TPMS")
+            case .bluetoothOff: tr("Bluetooth is off")
+            case .noSensor: tr("no sensor is assigned to listen to")
+            case .notificationsOff: tr("notifications are off, so alerts can't reach you in the background")
+            }
+        }
+    }
+
+    private var bellProblems: [BellProblem] {
+        BellProblem.allCases.filter {
+            switch $0 {
+            case .bluetoothDenied: monitor.bluetooth == .unauthorized
+            case .bluetoothOff: monitor.bluetooth == .poweredOff
+            case .noSensor: monitor.sensors.isEmpty
+            case .notificationsOff: settings.alerts == false || monitor.isNotificationAuthorized == false
+            }
+        }
+    }
+
+    /// Green while scanning is always active, red while something keeps it from alerting. Tapped, it
+    /// tells which, like the Android app's PersistentScanningBell.
+    private var bell: some View {
+        let problems = bellProblems
+        let missing = problems.map(\.text).joined(separator: ", ")
+        return Button { isBellRationaleShown = true } label: {
+            Image(systemName: problems.isEmpty ? "bell.fill" : "bell.slash.fill")
+                .font(.system(size: barTitleSize * 20 / 17))
+                .foregroundStyle(problems.isEmpty ? Theme.primary : Theme.error)
+                .frame(width: barHeight, height: barHeight)
+        }
+        .accessibilityLabel(problems.isEmpty ? tr("Background scanning is always active") : tr("Persistent scanning needs setting up, tap to see what's missing"))
+        .alert(
+            problems.isEmpty
+                ? tr("Background scanning is always active, while the phone is locked too.")
+                : tr("Persistent scanning can't keep watch: \(missing)."),
+            isPresented: $isBellRationaleShown
+        ) {
+            if problems.contains(.notificationsOff), settings.alerts == false {
+                // Asks iOS, which only shows its prompt the first time
+                Button("Turn on notifications") { monitor.setAlerts(true) }
+            }
+            if problems.contains(.bluetoothDenied) || (problems.contains(.notificationsOff) && monitor.isNotificationAuthorized == false) {
+                Button("Settings") { UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!) }
+            }
+            Button(problems.isEmpty ? tr("OK") : tr("Cancel"), role: .cancel) {}
+        }
+    }
+
+    /// Starts scanning in the background until tapped again, like the Android app's manual
+    /// monitoring. iOS apps can't close themselves as Android's does, so it tells the user to leave.
+    private var monitoringButton: some View {
+        Button {
+            let isOn = monitor.isTemporaryMonitoring == false
+            monitor.setTemporaryMonitoring(isOn)
+            withAnimation {
+                monitoringToast = isOn
+                    ? tr("Background monitoring on: the tyres are monitored after leaving the app, until stopped here")
+                    : tr("Background monitoring off")
+            }
+        } label: {
+            Image(systemName: monitor.isTemporaryMonitoring ? "xmark.circle" : "arrow.down.and.line.horizontal.and.arrow.up")
+                .font(.system(size: barTitleSize * 20 / 17))
+                .frame(width: barHeight, height: barHeight)
+                .contentTransition(.symbolEffect(.replace))
+        }
+        .accessibilityLabel(monitor.isTemporaryMonitoring ? "Cancel background monitoring" : "Enable background monitoring")
     }
 
     private var settingsMenu: some View {

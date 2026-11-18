@@ -18,6 +18,7 @@ import com.masselis.tpmsadvanced.feature.background.usecase.WifiConnectionUseCas
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
+import io.mockk.justRun
 import io.mockk.mockk
 import io.mockk.verify
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -128,6 +129,22 @@ internal class PersistentScanningViewModelTest {
         verify { controller.stop() }
         coVerify(exactly = 0) { otherApp.turnOffPersistentScanning() }
         assertEquals(Unchecked, viewModel.otherAppCheck.value)
+    }
+
+    @Test
+    fun `opening the app starts the service when it isn't running`() {
+        every { controller.isRunning } returns MutableStateFlow(false)
+        justRun { controller.start() }
+        test().ensureRunning()
+        verify { controller.start() }
+    }
+
+    @Test
+    fun `opening the app leaves a running service alone`() {
+        // Not on Android 11, which starts it again, see ensureRunning: the unit tests' SDK is 0
+        every { controller.isRunning } returns MutableStateFlow(true)
+        test().ensureRunning()
+        verify(exactly = 0) { controller.start() }
     }
 
     @Test

@@ -21,8 +21,6 @@ final class BluetoothAssignModel: ObservableObject {
     private let monitor: Monitor
     private var subscription: AnyCancellable?
     private var lowPressureTask: Task<Void, Never>?
-    /// The last reading of each sensor heard, to bind the one found with it
-    private var heard = [Int: SensorReading]()
     private var readings = [Int: Float]()
 
     @Published private(set) var step = AssignStep.ask {
@@ -33,6 +31,8 @@ final class BluetoothAssignModel: ObservableObject {
     @Published private(set) var offersLowPressure = false
     /// The sensor found was assigned, the flow is done
     @Published private(set) var assigned: SensorReading?
+    /// The last reading of each sensor heard, to bind the one found with it and list the ones found
+    @Published private(set) var heard = [Int: SensorReading]()
 
     private static let lowPressureAfter: Duration = .seconds(10)
 
@@ -156,12 +156,14 @@ final class BluetoothAssignModel: ObservableObject {
 struct BluetoothAssignView: View {
     @StateObject private var model: BluetoothAssignModel
     @ObservedObject private var monitor: Monitor
+    @ObservedObject private var settings: Settings
     private let onDone: () -> Void
     private static var forcesUpdate: String { tr("This will force it to send an update") }
 
-    init(vehicle: Vehicle, location: TyreLocation, monitor: Monitor, onDone: @escaping () -> Void) {
+    init(vehicle: Vehicle, location: TyreLocation, monitor: Monitor, settings: Settings, onDone: @escaping () -> Void) {
         _model = StateObject(wrappedValue: BluetoothAssignModel(vehicle: vehicle, location: location, monitor: monitor))
         self.monitor = monitor
+        self.settings = settings
         self.onDone = onDone
     }
 
@@ -230,16 +232,20 @@ struct BluetoothAssignView: View {
             switch (model.question, model.step) {
             case (.oneFound?, _):
                 instruction(tr("One sensor found"), tr("Assign it to the \(model.location.phrase), or check again to make sure?"))
+                if case let .putOn(found, _) = model.step { sensors(found) }
             case let (.manyFound(count)?, _):
                 instruction(tr("\(count) on-wheel sensors found"), tr("Let's figure out which one to assign"))
+                if case let .putOn(found, _) = model.step { sensors(found) }
             case (_, .ask):
                 instruction(tr("Is the sensor you want to assign on the wheel right now?"))
             case let (_, .putOn(found, _)):
                 instruction(tr("Put the sensor on the wheel"), Self.forcesUpdate)
                 listening(tr("Listening for on-wheel sensors…"), found.count, "on-wheel")
+                sensors(found)
             case let (_, .takeOff(_, off)):
                 instruction(tr("Remove the sensor from the wheel"), Self.forcesUpdate)
                 listening(tr("Listening for off-wheel sensors…"), off.count, "off-wheel")
+                sensors(off)
             case (_, .putBack):
                 instruction(tr("Put the sensor back on the wheel"), Self.forcesUpdate)
                 listening(tr("Listening for the sensor to come back on…"), 0, "")
@@ -262,6 +268,26 @@ struct BluetoothAssignView: View {
         case (true, false): tr("\(count) on-wheel sensors found")
         case (false, true): tr("1 off-wheel sensor found")
         case (false, false): tr("\(count) off-wheel sensors found")
+        }
+    }
+
+    /// A line per sensor in [ids] heard: its brand and ID, this iPhone's own for those which
+    /// advertise none (see SensorBrand.isIdentifiedByAddress), then the pressure and temperature it
+    /// last read, as the sensor reads them
+    @ViewBuilder private func sensors(_ ids: Set<Int>) -> some View {
+        let readings = ids.sorted().compactMap { model.heard[$0] }
+        if readings.isEmpty == false {
+            VStack(spacing: 12) {
+                ForEach(readings, id: \.sensorId) { reading in
+                    VStack(spacing: 2) {
+                        Text("\(reading.brand.name) \(reading.sensorId.asSensorId(reading.brand))")
+                            .font(.subheadline.weight(.semibold))
+                        Text("\(reading.pressure.string(settings.pressureUnit)) · \(reading.temperature.string(settings.temperatureUnit))")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
         }
     }
 

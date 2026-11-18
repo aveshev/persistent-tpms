@@ -1,6 +1,9 @@
 package com.masselis.tpmsadvanced.feature.unlocated.interfaces.viewmodel
 
 import com.masselis.tpmsadvanced.core.test.MainDispatcherRule
+import com.masselis.tpmsadvanced.data.unit.interfaces.UnitPreferences
+import com.masselis.tpmsadvanced.data.unit.model.PressureUnit
+import com.masselis.tpmsadvanced.data.unit.model.TemperatureUnit
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorDatabase
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.VehicleDatabase
@@ -8,6 +11,7 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Pressure
 import com.masselis.tpmsadvanced.data.vehicle.model.Sensor
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.PECHAM
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.WICARLINK
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.SYSGRATION
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.FRONT_LEFT
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.REAR_RIGHT
@@ -29,6 +33,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.test.TestScope
@@ -68,6 +73,7 @@ internal class BluetoothAssignViewModelTest {
     private lateinit var sensorDatabase: SensorDatabase
     private lateinit var vehicleDatabase: VehicleDatabase
     private lateinit var bindUseCase: BindSensorToVehicleUseCase
+    private lateinit var unitPreferences: UnitPreferences
 
     @Before
     fun setup() {
@@ -100,6 +106,10 @@ internal class BluetoothAssignViewModelTest {
             }
         }
         bindUseCase = mockk(relaxUnitFun = true)
+        unitPreferences = mockk {
+            every { pressure } returns MutableStateFlow(PressureUnit.KILO_PASCAL)
+            every { temperature } returns MutableStateFlow(TemperatureUnit.CELSIUS)
+        }
     }
 
     private fun vehicle(name: String) = Vehicle(
@@ -117,6 +127,7 @@ internal class BluetoothAssignViewModelTest {
         sensorDatabase,
         vehicleDatabase,
         bindUseCase,
+        unitPreferences,
         vehicle.uuid,
         location,
     ).also { viewModel -> viewModel.stateFlow.first { it.vehicle != null } }
@@ -160,6 +171,17 @@ internal class BluetoothAssignViewModelTest {
             assertFalse(stateFlow.value.isAssigned)
         }
         assertEquals(0, scans.subscriptionCount.value)
+    }
+
+    @Test
+    fun `the last reading of each sensor heard is kept, to list the ones found`() = runTest {
+        test().apply {
+            answer(isOnWheel = false)
+            heard(1, 230f)
+            heard(2, 240f, WICARLINK)
+            heard(1, 231f)
+            assertEquals(mapOf(1 to reading(1, 231f), 2 to reading(2, 240f, WICARLINK)), stateFlow.value.heard)
+        }
     }
 
     @Test

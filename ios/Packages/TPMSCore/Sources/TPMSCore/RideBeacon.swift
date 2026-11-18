@@ -3,35 +3,27 @@ import Foundation
 /// A Bluetooth device chosen to trigger the ride notification, as far as iOS tells: no address, an
 /// identifier of this iPhone's own instead, and only what it advertises.
 public struct RideBeacon: Codable, Equatable, Identifiable {
-    /// How a device can wake a suspended app. In the background iOS only reports a peripheral whose
-    /// service UUID it was told to scan for, or one it was told to connect to.
-    public enum Wake: Equatable {
-        /// Its advertised service UUID added to the background scan, the first choice: every report
-        /// carries a signal strength, and it takes nothing away from the app that owns the device
-        case service
-        /// A connection left pending by its identifier, for a device advertising no service
-        case connection
-    }
-
     public let id: UUID
     public let name: String?
     public let services: [String]
-    public let isConnectable: Bool
     /// The user's name for it, shown instead of the advertised one
     public var label: String?
 
-    public init(id: UUID, name: String?, services: [String], isConnectable: Bool, label: String? = nil) {
+    public init(id: UUID, name: String?, services: [String], label: String? = nil) {
         self.id = id
         self.name = name
         self.services = services
-        self.isConnectable = isConnectable
         self.label = label
     }
 
-    /// Nil for a device which can't: nothing but a name or manufacturer data, not connectable
-    public var wake: Wake? {
-        services.isEmpty == false ? .service : isConnectable ? .connection : nil
-    }
+    /// Whether it can wake a suspended app: in the background iOS only reports a peripheral whose
+    /// service UUID it was told to scan for. Every report carries a signal strength, and it takes
+    /// nothing away from the app that owns the device.
+    ///
+    /// iOS could also be told to connect to a device advertising no service, which it then listens for
+    /// until it shows up: that took the radio's time from the tyres' scan for as long as the beacon was
+    /// away, and for good once its identifier changed. Such devices aren't beacons any more.
+    public var canWake: Bool { services.isEmpty == false }
 
     /// Whether it can be told again once its identifier changed, which is what a private address
     /// rotating does and can't be seen from here: by its name or its own service. Such a device would
