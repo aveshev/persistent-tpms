@@ -33,7 +33,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         UNUserNotificationCenter.current().delegate = self
         // Also when iOS relaunches the app in the background for a sensor, through Bluetooth state
         // restoration: the scan has to start again before this returns
-        Monitor.shared.start()
+        Monitor.shared.start(isRestored: launchOptions?[.bluetoothCentrals] != nil)
         // A quick action per vehicle, like the Android app's launcher shortcuts (ShortcutUseCase)
         // Ranked like them too: the alerting vehicles, then the latest read
         quickActions = Publishers.CombineLatest3(Monitor.shared.$vehicles, Monitor.shared.$ongoing, Monitor.shared.$tyres)

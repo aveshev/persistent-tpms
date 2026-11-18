@@ -68,10 +68,6 @@ struct PairedDeviceView: View {
 
 extension RideBeacon {
     var displayName: String { label ?? name ?? "Unnamed device" }
-    /// With the debug options on, a star tells one woken by connecting from one woken by its service
-    func rowName(_ settings: Settings) -> String {
-        settings.debugOptions && wake == .connection ? "★ \(displayName)" : displayName
-    }
     /// The start of the identifier, to tell devices apart in a list: iOS shows no address
     var shortId: String { String(id.uuidString.prefix(8)) }
 }
@@ -154,7 +150,7 @@ struct BeaconsView: View {
         let isRemoved = removed.contains(beacon.id)
         return HStack {
             VStack(alignment: .leading) {
-                Text(beacon.rowName(settings)).strikethrough(isRemoved)
+                Text(beacon.displayName).strikethrough(isRemoved)
                 details(beacon)
                     .font(.subheadline)
                     .strikethrough(isRemoved)
@@ -309,7 +305,7 @@ private struct BeaconPickerView: View {
             ForEach(scan.devices) { device in
                 let isAdded = settings.rideBeaconDevices.contains { $0.id == device.id }
                 HStack {
-                    SettingsRow(device.beacon.rowName(settings), device.details(isAdded: isAdded))
+                    SettingsRow(device.beacon.displayName, device.details(isAdded: isAdded))
                         // Too weak or gone for now, may come back
                         .opacity(device.isCandidate ? 1 : 0.5)
                     Spacer()
@@ -399,7 +395,6 @@ private final class BeaconScan: NSObject, ObservableObject, CBCentralManagerDele
     private struct Heard {
         var name: String?
         var services = [String]()
-        var isConnectable = false
         var isSensor = false
         var rssis = [Int]()
         var timestamps = [Double]()
@@ -467,10 +462,10 @@ private final class BeaconScan: NSObject, ObservableObject, CBCentralManagerDele
         let now = Date()
         let all = seen.compactMap { id in
             heard[id].flatMap { heard -> Device? in
-                let beacon = RideBeacon(id: id, name: heard.name, services: heard.services, isConnectable: heard.isConnectable)
+                let beacon = RideBeacon(id: id, name: heard.name, services: heard.services)
                 // A tyre sensor is no beacon, and neither is what couldn't be recognised later, or what
                 // iOS tells an app in the background nothing about (iBeacons and AirTags among them)
-                guard heard.isSensor == false, beacon.isRecognisable, beacon.wake != nil else { return nil }
+                guard heard.isSensor == false, beacon.isRecognisable, beacon.canWake else { return nil }
                 return Device(
                     beacon: beacon,
                     rssi: heard.median,
@@ -504,7 +499,6 @@ private final class BeaconScan: NSObject, ObservableObject, CBCentralManagerDele
         let services = (advertisementData[CBAdvertisementDataServiceUUIDsKey] as? [CBUUID])?.map(\.uuidString) ?? []
         device.services += services.filter { device.services.contains($0) == false }
         device.isSensor = device.services.contains { service in Scanner.services.contains { $0.uuidString == service } }
-        device.isConnectable = device.isConnectable || advertisementData[CBAdvertisementDataIsConnectable] as? Bool == true
         device.rssis = (device.rssis + [rssi.intValue]).suffix(Self.maxPackets)
         device.lastHeard = Date()
         device.timestamps = (device.timestamps + [device.lastHeard.timeIntervalSince1970]).suffix(Self.maxTimestamps)
