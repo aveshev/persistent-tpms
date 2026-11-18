@@ -170,6 +170,39 @@ Not for a leak or the sensor's own alarm, whose text already tells the pressure 
 The hold only concerns the notification. The speech follows each reading right away: a reading
 lowering a crimson alert stops its loop at once, and a red one is said as red.
 
+### Reminding on unlocking
+
+The phone often rides in a pocket or a bag, where an alert's sound goes unheard, and its
+notification waits on the lock screen, which a fingerprint or face unlock skips. So a **red or
+crimson** notification which last sounded while the phone wasn't in use sounds again, **once**,
+the next time it's unlocked: Android shows it as a heads-up over whatever the user opens.
+
+- "In use" is the screen on and unlocked (`ScreenStateUseCase`). A screen lit on the lock screen,
+  by a notification or by lifting the phone, isn't: it happens in pockets too.
+- A sound while in use was a heads-up over the screen, seen: the notification won't remind until
+  it sounds again with the phone away. A silent update doesn't change that.
+- Only what's still shown at red or crimson when unlocking: one lowered to amber meanwhile, cleared
+  or dismissed isn't reminded. Amber, "when convenient", never is: it would come back at every
+  unlock.
+- It's the same notification sounding again, with its reading's time, on its level's channel. The
+  speech isn't repeated.
+- Kept in memory: after the process died, nothing reminds until an alert sounds again.
+
+On iOS the phone being locked stands for not in use: its protected data is unavailable, which only
+happens with a passcode set. iOS only runs the app in the background when a sensor is heard, so an
+unlock while it's suspended reminds at the next reading instead, if any. The app being open on
+unlocking reminds of nothing: its screen shows the alerts. The notifications to remind are kept
+with the levels notified, across relaunches.
+
+Once no bound sensor is heard, likely the ride over and the vehicle out of range, nothing wakes the
+app to tell an unlock. So each reading also schedules the notifications to remind to sound again,
+15 and 45 minutes after it, pushed back by the next reading: a scheduled notification sounds
+without the app running. Some sensors send every 5 minutes, riding or parked (TC.TPMS), so the
+first one allows for a packet missed. A vehicle still in range keeps waking the app, which then
+reminds on unlocking instead. The scheduled ones are cancelled when the phone is unlocked with the
+app running, when the app is opened, or when the alert is lowered below red or clears. Unlocked
+while the app is suspended, they still come.
+
 ### Changing a threshold
 
 Once a vehicle's thresholds settle for a second, each tyre's latest reading is evaluated again. A

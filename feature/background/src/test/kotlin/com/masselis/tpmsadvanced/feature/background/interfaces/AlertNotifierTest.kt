@@ -19,6 +19,7 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.AlertNotifier.Com
 import com.masselis.tpmsadvanced.feature.background.interfaces.AlertNotifier.Companion.raises
 import com.masselis.tpmsadvanced.feature.background.interfaces.AlertNotifier.Companion.reevaluation
 import com.masselis.tpmsadvanced.feature.background.interfaces.AlertNotifier.Shown
+import com.masselis.tpmsadvanced.feature.background.interfaces.AlertNotifier.Unseen
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -174,5 +175,62 @@ internal class AlertNotifierTest {
         assertFalse(action(alerts(190f), Shown(1, CRIMSON)).raises(Shown(1, CRIMSON), 1))
         assertFalse(action(alerts(250f), Shown(1, RED), isHeld = true).raises(Shown(1, RED), 1))
         assertFalse(action(alerts(250f), null).raises(null, 1))
+    }
+
+    @Test
+    fun `a red or crimson alert sounding in a pocket sounds again on unlocking`() {
+        val unseen = Unseen()
+        unseen.posted("red", Action.Post(RED, sound = true), isInUse = false)
+        unseen.posted("crimson", Action.Post(CRIMSON, sound = true), isInUse = false)
+        assertEquals(setOf("red", "crimson"), unseen.due(mapOf("red" to Shown(1, RED), "crimson" to Shown(2, CRIMSON))))
+    }
+
+    @Test
+    fun `an alert sounding while the phone is in use was seen`() {
+        val unseen = Unseen()
+        unseen.posted("red", Action.Post(RED, sound = true), isInUse = true)
+        assertEquals(emptySet(), unseen.due(mapOf("red" to Shown(1, RED))))
+    }
+
+    @Test
+    fun `an alert sounding again while the phone is in use was seen`() {
+        val unseen = Unseen()
+        unseen.posted("red", Action.Post(RED, sound = true), isInUse = false)
+        unseen.posted("red", Action.Post(RED, sound = true), isInUse = true)
+        assertEquals(emptySet(), unseen.due(mapOf("red" to Shown(1, RED))))
+    }
+
+    @Test
+    fun `a silent update doesn't change whether it was seen`() {
+        val unseen = Unseen()
+        unseen.posted("red", Action.Post(RED, sound = true), isInUse = false)
+        unseen.posted("red", Action.Post(RED, sound = false), isInUse = true)
+        unseen.posted("other", Action.Post(RED, sound = false), isInUse = false)
+        assertEquals(setOf("red"), unseen.due(mapOf("red" to Shown(1, RED), "other" to Shown(2, RED))))
+    }
+
+    @Test
+    fun `amber doesn't sound again on unlocking`() {
+        val unseen = Unseen()
+        unseen.posted("amber", Action.Post(AMBER, sound = true), isInUse = false)
+        assertEquals(emptySet(), unseen.due(mapOf("amber" to Shown(1, AMBER))))
+    }
+
+    @Test
+    fun `an alert lowered to amber, dismissed or cleared meanwhile doesn't sound again`() {
+        val unseen = Unseen()
+        unseen.posted("lowered", Action.Post(RED, sound = true), isInUse = false)
+        unseen.posted("dismissed", Action.Post(RED, sound = true), isInUse = false)
+        unseen.posted("cleared", Action.Post(RED, sound = true), isInUse = false)
+        unseen.cancelled("cleared")
+        assertEquals(emptySet(), unseen.due(mapOf("lowered" to Shown(1, AMBER), "cleared" to Shown(3, RED))))
+    }
+
+    @Test
+    fun `an alert sounds again once`() {
+        val unseen = Unseen()
+        unseen.posted("red", Action.Post(RED, sound = true), isInUse = false)
+        unseen.clear()
+        assertEquals(emptySet(), unseen.due(mapOf("red" to Shown(1, RED))))
     }
 }
