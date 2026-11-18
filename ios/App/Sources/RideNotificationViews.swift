@@ -51,7 +51,7 @@ struct PairedDeviceView: View {
                         .frame(maxWidth: .infinity)
                         .listRowBackground(Color.clear)
                     if settings.debugOptions {
-                        LabeledContent("Last triggered", value: ride.lastShortcut?.formatted(date: .abbreviated, time: .shortened) ?? "Not triggered yet")
+                        LabeledContent("Last triggered", value: ride.lastShortcut?.formatted(date: .abbreviated, time: .shortened) ?? tr("Not triggered yet"))
                     }
                 }
             }
@@ -67,7 +67,7 @@ struct PairedDeviceView: View {
 }
 
 extension RideBeacon {
-    var displayName: String { label ?? name ?? "Unnamed device" }
+    var displayName: String { label ?? name ?? tr("Unnamed device") }
     /// The start of the identifier, to tell devices apart in a list: iOS shows no address
     var shortId: String { String(id.uuidString.prefix(8)) }
 }
@@ -98,7 +98,7 @@ struct BeaconsView: View {
             if isDenied { NotificationsDeniedSection() }
             Section("Beacons") {
                 if presence.isBluetoothOff {
-                    SettingsRow("Bluetooth is off", "Turn it on to see which beacon is nearby")
+                    SettingsRow(tr("Bluetooth is off"), tr("Turn it on to see which beacon is nearby"))
                 }
                 if settings.rideBeaconDevices.isEmpty { Text("No beacon added yet") }
                 // The last added first
@@ -184,7 +184,7 @@ struct BeaconsView: View {
         guard presence.isBluetoothOff == false else { return id }
         let separator = Text(" · ").foregroundColor(.secondary)
         // Nearby: its signal, in the green of what's going well
-        if let state = presence.nearby[beacon.id].map({ "\($0) dBm" }) ?? (presence.wasNearby.contains(beacon.id) ? "Was nearby" : nil) {
+        if let state = presence.nearby[beacon.id].map({ "\($0) dBm" }) ?? (presence.wasNearby.contains(beacon.id) ? tr("Was nearby") : nil) {
             return id + separator + Text(state).foregroundColor(.accentColor)
         }
         return id + separator + Text("Not nearby").foregroundColor(.secondary)
@@ -385,9 +385,9 @@ private final class BeaconScan: NSObject, ObservableObject, CBCentralManagerDele
 
         func details(isAdded: Bool) -> String {
             // By what each rounds to, so that 0.099 is "0.1 s" rather than "0.10 s"
-            let seconds = period.map { "every \(String(format: $0 >= 0.095 ? "%.1f" : $0 >= 0.0095 ? "%.2f" : "%.3f", $0)) s" }
-            let state = isQuiet ? "Not heard lately" : isStrong ? nil : "Weak signal"
-            return ["ID \(beacon.shortId)", isAdded ? "Added" : nil].compactMap { $0 }.joined(separator: " · ")
+            let seconds = period.map { tr("every \(localizedNumber($0 >= 0.095 ? "%.1f" : $0 >= 0.0095 ? "%.2f" : "%.3f", $0)) s") }
+            let state = isQuiet ? tr("Not heard lately") : isStrong ? nil : tr("Weak signal")
+            return ["ID \(beacon.shortId)", isAdded ? tr("Added") : nil].compactMap { $0 }.joined(separator: " · ")
                 + "\n" + ["\(rssi) dBm", seconds, state].compactMap { $0 }.joined(separator: " · ")
         }
     }

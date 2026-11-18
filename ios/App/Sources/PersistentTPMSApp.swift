@@ -121,7 +121,8 @@ private extension VehicleKind {
     }
 }
 
-/// The settings' theme: the phone's own, or always light or dark
+/// The settings' theme and language: the phone's own, or the one chosen. Every text is read again
+/// when the language changes.
 private struct AppTheme: ViewModifier {
     @ObservedObject var settings: Settings
 
@@ -131,6 +132,9 @@ private struct AppTheme: ViewModifier {
         case .light: .light
         case .dark: .dark
         }
-        return content.preferredColorScheme(scheme)
+        return content
+            .preferredColorScheme(scheme)
+            .environment(\.locale, settings.language.locale)
+            .id(settings.language)
     }
 }

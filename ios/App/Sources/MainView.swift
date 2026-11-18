@@ -305,10 +305,10 @@ struct MainView: View {
 
         var text: String {
             switch self {
-            case .bluetoothDenied: "Bluetooth isn't allowed for Persistent TPMS"
-            case .bluetoothOff: "Bluetooth is off"
-            case .noSensor: "no sensor is assigned to listen to"
-            case .notificationsOff: "notifications are off, so alerts can't reach you in the background"
+            case .bluetoothDenied: tr("Bluetooth isn't allowed for Persistent TPMS")
+            case .bluetoothOff: tr("Bluetooth is off")
+            case .noSensor: tr("no sensor is assigned to listen to")
+            case .notificationsOff: tr("notifications are off, so alerts can't reach you in the background")
             }
         }
     }
@@ -328,17 +328,18 @@ struct MainView: View {
     /// tells which, like the Android app's PersistentScanningBell.
     private var bell: some View {
         let problems = bellProblems
+        let missing = problems.map(\.text).joined(separator: ", ")
         return Button { isBellRationaleShown = true } label: {
             Image(systemName: problems.isEmpty ? "bell.fill" : "bell.slash.fill")
                 .font(.system(size: barTitleSize * 20 / 17))
                 .foregroundStyle(problems.isEmpty ? Theme.primary : Theme.error)
                 .frame(width: barHeight, height: barHeight)
         }
-        .accessibilityLabel(problems.isEmpty ? "Background scanning is always active" : "Persistent scanning needs setting up, tap to see what's missing")
+        .accessibilityLabel(problems.isEmpty ? tr("Background scanning is always active") : tr("Persistent scanning needs setting up, tap to see what's missing"))
         .alert(
             problems.isEmpty
-                ? "Background scanning is always active, while the phone is locked too."
-                : "Persistent scanning can't keep watch: " + problems.map(\.text).joined(separator: ", ") + ".",
+                ? tr("Background scanning is always active, while the phone is locked too.")
+                : tr("Persistent scanning can't keep watch: \(missing)."),
             isPresented: $isBellRationaleShown
         ) {
             if problems.contains(.notificationsOff), settings.alerts == false {
@@ -348,7 +349,7 @@ struct MainView: View {
             if problems.contains(.bluetoothDenied) || (problems.contains(.notificationsOff) && monitor.isNotificationAuthorized == false) {
                 Button("Settings") { UIApplication.shared.open(URL(string: UIApplication.openSettingsURLString)!) }
             }
-            Button(problems.isEmpty ? "OK" : "Cancel", role: .cancel) {}
+            Button(problems.isEmpty ? tr("OK") : tr("Cancel"), role: .cancel) {}
         }
     }
 
@@ -360,8 +361,8 @@ struct MainView: View {
             monitor.setTemporaryMonitoring(isOn)
             withAnimation {
                 monitoringToast = isOn
-                    ? "Background monitoring on: the tyres are monitored after leaving the app, until stopped here"
-                    : "Background monitoring off"
+                    ? tr("Background monitoring on: the tyres are monitored after leaving the app, until stopped here")
+                    : tr("Background monitoring off")
             }
         } label: {
             Image(systemName: monitor.isTemporaryMonitoring ? "xmark.circle" : "arrow.down.and.line.horizontal.and.arrow.up")
@@ -377,7 +378,7 @@ struct MainView: View {
             Button("Vehicle settings", systemImage: "car") { sheet = .vehicle }
             // Laid out with what it's set to: an iOS menu line can't also hold a switch
             Button { sheet = .persistent } label: {
-                Label(settings.backgroundMonitoring ? "Persistent mode: on" : "Persistent mode: off", systemImage: settings.backgroundMonitoring ? "bell.fill" : "bell.slash")
+                Label(settings.backgroundMonitoring ? tr("Persistent mode: on") : tr("Persistent mode: off"), systemImage: settings.backgroundMonitoring ? "bell.fill" : "bell.slash")
             }
             Button("App settings", systemImage: "gear") { sheet = .settings }
             #if DEBUG
@@ -496,9 +497,9 @@ struct MainView: View {
             Banner(text: error, systemImage: "exclamationmark.triangle", color: .red)
         }
         switch monitor.bluetooth {
-        case .poweredOff: Banner(text: "Bluetooth is off: the sensors can't be heard.", systemImage: "antenna.radiowaves.left.and.right.slash", color: .orange)
-        case .unauthorized: Banner(text: "Bluetooth isn't allowed for Persistent TPMS. Allow it in Settings, Privacy & Security, Bluetooth.", systemImage: "lock", color: .orange)
-        case .unsupported: Banner(text: "This device has no Bluetooth Low Energy.", systemImage: "xmark.octagon", color: .orange)
+        case .poweredOff: Banner(text: tr("Bluetooth is off: the sensors can't be heard."), systemImage: "antenna.radiowaves.left.and.right.slash", color: .orange)
+        case .unauthorized: Banner(text: tr("Bluetooth isn't allowed for Persistent TPMS. Allow it in Settings, Privacy & Security, Bluetooth."), systemImage: "lock", color: .orange)
+        case .unsupported: Banner(text: tr("This device has no Bluetooth Low Energy."), systemImage: "xmark.octagon", color: .orange)
         default: EmptyView()
         }
     }
@@ -543,7 +544,7 @@ private struct SilenceAlertsButton: View {
             case let .offer(isCritical):
                 Button { speaker.silenceNow() } label: {
                     // Wrapped to the width it's given, "for 10 min" kept together
-                    Label("Silence \(isCritical ? "critical alerts" : "alerts") for\u{00A0}10\u{00A0}min", systemImage: "speaker.wave.2.fill")
+                    Label(isCritical ? tr("Silence critical alerts for\u{00A0}10\u{00A0}min") : tr("Silence alerts for\u{00A0}10\u{00A0}min"), systemImage: "speaker.wave.2.fill")
                 }
                 .tint(Theme.error)
             case let .silenced(isCritical, until):
@@ -555,7 +556,7 @@ private struct SilenceAlertsButton: View {
                         Button { speaker.unmute() } label: {
                             Label {
                                 VStack(spacing: 2) {
-                                    Text(isCritical ? "All alerts silenced" : "Alerts silenced")
+                                    Text(isCritical ? tr("All alerts silenced") : tr("Alerts silenced"))
                                     Text("\(minutesLeft) min left, tap to unmute")
                                         .font(.callout)
                                 }

@@ -60,7 +60,11 @@ extension AlertLevel {
 extension TyreLocation {
     /// "front left wheel", "spare wheel", a monowheel's only "wheel", like Android's appendLoc
     var phrase: String {
-        self == .single ? "wheel" : shortPhrase + " wheel"
+        switch self {
+        case .single: tr("wheel")
+        case .spare: tr("spare wheel")
+        default: shortPhrase + tr(" wheel")
+        }
     }
 
     /// "front left", without saying it's a wheel
