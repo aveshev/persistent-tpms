@@ -1,4 +1,4 @@
-@file:Suppress("TooManyFunctions")
+@file:Suppress("MaxLineLength", "TooManyFunctions")
 
 package com.masselis.tpmsadvanced.core.ui
 
@@ -49,6 +49,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * The title above a [SettingsGroup], with an optional [action] at its end acting on the whole
@@ -153,7 +155,7 @@ public fun SwitchNavigationSettingsItem(
         ItemTexts(headline, supporting, Modifier.enabledAlpha(enabled), singleLineSupporting = true)
         Icon(
             imageVector = ImageVector.vectorResource(R.drawable.chevron_right_24px),
-            contentDescription = "Open $headline",
+            contentDescription = stringResource(CommonR.string.open, headline),
             modifier = Modifier
                 .size(32.dp)
                 .enabledAlpha(enabled && (checked || openableWhenOff)),
@@ -371,7 +373,7 @@ public fun ExpandSettingsItem(
     ItemTexts(headline, emptyList(), headlineColor = MaterialTheme.colorScheme.onSurfaceVariant)
     Icon(
         imageVector = ImageVector.vectorResource(R.drawable.chevron_right_24px),
-        contentDescription = if (expanded) "Hide $headline" else "Show $headline",
+        contentDescription = if (expanded) stringResource(CommonR.string.hide, headline) else stringResource(CommonR.string.show, headline),
         modifier = Modifier
             .size(32.dp)
             .rotate(if (expanded) -90f else 90f),

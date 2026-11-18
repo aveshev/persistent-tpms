@@ -17,6 +17,8 @@ import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.AlertSound.S
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.AlertSound.TONES
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.AlertsSettingsViewModel
 import com.masselis.tpmsadvanced.feature.background.ioc.Bindings
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * The settings of the tyres' alerts, see docs/alerts.md. [openAlertSound] opens the page choosing
@@ -57,26 +59,26 @@ private fun AlertsSettings(
     modifier: Modifier = Modifier,
 ) = SettingsGroup(modifier) {
     SwitchNavigationSettingsItem(
-        headline = "Alert sound",
+        headline = stringResource(CommonR.string.alert_sound),
         checked = alertSound != NONE,
         onCheckedChange = onAlertSoundOn,
         onClick = openAlertSound,
         supporting = listOf(
             AnnotatedString(
                 when (alertSound) {
-                    SPEECH -> "Speech"
-                    TONES -> "Tones"
-                    NONE -> "Off"
+                    SPEECH -> stringResource(CommonR.string.speech)
+                    TONES -> stringResource(CommonR.string.tones)
+                    NONE -> stringResource(CommonR.string.text_off)
                 }
             )
         ),
         modifier = Modifier.testTag(AlertsSettingsTags.alertSound),
     )
     SwitchSettingsItem(
-        headline = "Vibrate",
+        headline = stringResource(CommonR.string.vibrate),
         checked = vibrate,
         onCheckedChange = onVibrate,
-        supporting = "Along with the alert sound, harder for a critical alert",
+        supporting = stringResource(CommonR.string.along_with_the_alert_sound_harder_for),
         modifier = Modifier.testTag(AlertsSettingsTags.vibrate),
     )
 }

@@ -1,3 +1,5 @@
+@file:Suppress("MaxLineLength")
+
 package com.masselis.tpmsadvanced.feature.main.interfaces.composable
 
 import androidx.compose.foundation.layout.Column
@@ -15,6 +17,8 @@ import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.SYSGRATION
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.FRONT_LEFT
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location
 import com.masselis.tpmsadvanced.feature.main.R
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 
 /**
@@ -34,14 +38,14 @@ internal fun AssignSensorDialog(
 ) {
     OptionsDialog(
         onDismissRequest = onDismissRequest,
-        title = { Text(buildString { append("Assign a sensor to the "); appendLoc(location) }) },
+        title = { Text(buildString { append(stringResource(CommonR.string.assign_a_sensor_to)); appendLoc(location) }) },
         text = {
             Column {
                 detected?.also { sensor ->
                     // The recommended way, under a light tint of the primary color
                     DialogOption(
                         icon = { SysgrationBadge() },
-                        title = "Assign detected sensor",
+                        title = stringResource(CommonR.string.assign_detected_sensor),
                         subtitle = buildString {
                             append("Sysgration, ")
                             appendLoc(location, withType = false)
@@ -55,15 +59,15 @@ internal fun AssignSensorDialog(
                 }
                 DialogOption(
                     icon = { Icon(ImageVector.vectorResource(R.drawable.qr_code_24px), null) },
-                    title = "Scan QR code",
-                    subtitle = "Printed on the sensors' box, card or cap, or shared by another phone",
+                    title = stringResource(CommonR.string.scan_qr_code),
+                    subtitle = stringResource(CommonR.string.printed_on_the_sensors_box_card_or),
                     onClick = scanQrCode,
                     modifier = Modifier.testTag(AssignSensorDialogTags.qrCode),
                 )
                 DialogOption(
                     icon = { Icon(ImageVector.vectorResource(R.drawable.bluetooth_24px), null) },
-                    title = "Scan via Bluetooth",
-                    subtitle = "Use pressure changes to detect the correct sensor",
+                    title = stringResource(CommonR.string.scan_via_bluetooth),
+                    subtitle = stringResource(CommonR.string.use_pressure_changes_to_detect_the_correct),
                     onClick = scanBluetooth,
                     modifier = Modifier.testTag(AssignSensorDialogTags.bluetooth),
                 )
@@ -73,7 +77,7 @@ internal fun AssignSensorDialog(
             TextButton(
                 onClick = onDismissRequest,
                 modifier = Modifier.testTag(AssignSensorDialogTags.cancel),
-            ) { Text("Cancel") }
+            ) { Text(stringResource(CommonR.string.cancel)) }
         },
         modifier = modifier.testTag(AssignSensorDialogTags.root),
     )

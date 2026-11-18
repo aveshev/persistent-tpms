@@ -1,3 +1,5 @@
+@file:Suppress("MaxLineLength")
+
 package com.masselis.tpmsadvanced.feature.main.interfaces.composable
 
 import androidx.activity.compose.BackHandler
@@ -63,6 +65,9 @@ import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent.Facto
 import com.masselis.tpmsadvanced.feature.main.model.MoveChain
 import com.masselis.tpmsadvanced.feature.main.model.MoveChain.Step
 import java.util.UUID
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
+import com.masselis.tpmsadvanced.core.common.localized
 
 /**
  * The vehicle's sensors, laid out like the main screen: every location is outlined, tapping one
@@ -157,7 +162,7 @@ internal fun SensorsPage(
             OutlinedButton(
                 onClick = onClick,
                 modifier = Modifier.fillMaxWidth().testTag(ManageSensorsTags.cancelMove),
-            ) { Text("Cancel") }
+            ) { Text(localized(CommonR.string.cancel)) }
         }
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -176,7 +181,7 @@ internal fun SensorsPage(
                     Button(
                         onClick = { viewModel.apply(chain); stop() },
                         modifier = Modifier.fillMaxWidth().testTag(ManageSensorsTags.confirmMove),
-                    ) { Text("Move as shown") }
+                    ) { Text(localized(CommonR.string.move_as_shown)) }
                 }
 
                 moving != null -> {
@@ -285,7 +290,7 @@ internal fun SensorsPage(
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.height(TOP_BAR_HEIGHT)) {
                 Box(Modifier.padding(start = 4.dp)) { navigationIcon() }
                 Text(
-                    text = if (incoming != null) "Move to" else "Manage sensors",
+                    text = if (incoming != null) localized(CommonR.string.move_to) else localized(CommonR.string.manage_sensors),
                     style = MaterialTheme.typography.titleLarge,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -429,13 +434,13 @@ private fun SwapOrChainDialog(
     OptionsDialog(
         onDismissRequest = onDismissRequest,
         title = {
-            Text(buildString { appendLoc(to, withType = false, capitalized = true); append(" already has a sensor") })
+            Text(buildString { appendLoc(to, withType = false, capitalized = true); append(stringResource(CommonR.string.already_has_a_sensor)) })
         },
         text = {
             Column {
                 DialogOption(
                     icon = { Icon(ImageVector.vectorResource(swapIcon(from, to)), null) },
-                    title = "Just swap them",
+                    title = stringResource(CommonR.string.just_swap_them),
                     subtitle = buildString {
                         appendLoc(from, withType = false, capitalized = true)
                         append(" ⇄ ")
@@ -446,15 +451,15 @@ private fun SwapOrChainDialog(
                 )
                 DialogOption(
                     icon = { Icon(ImageVector.vectorResource(R.drawable.rotate_wheels_24px), null) },
-                    title = "Multi-wheel change",
-                    subtitle = "Tyre rotation, etc",
+                    title = stringResource(CommonR.string.multi_wheel_change),
+                    subtitle = stringResource(CommonR.string.tyre_rotation_etc),
                     onClick = chain,
                     modifier = Modifier.testTag(ManageSensorsTags.multiWheel),
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismissRequest) { Text("Cancel") }
+            TextButton(onClick = onDismissRequest) { Text(stringResource(CommonR.string.cancel)) }
         },
         modifier = modifier.testTag(ManageSensorsTags.askDialog),
     )

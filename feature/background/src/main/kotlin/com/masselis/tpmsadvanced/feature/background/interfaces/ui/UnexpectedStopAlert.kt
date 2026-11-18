@@ -1,3 +1,5 @@
+@file:Suppress("MaxLineLength")
+
 package com.masselis.tpmsadvanced.feature.background.interfaces.ui
 
 import android.text.format.DateUtils
@@ -14,6 +16,8 @@ import com.masselis.tpmsadvanced.feature.background.usecase.UnexpectedStopUseCas
 import com.masselis.tpmsadvanced.feature.background.usecase.UnexpectedStopUseCase.Cause.PermissionRevoked
 import com.masselis.tpmsadvanced.feature.background.usecase.UnexpectedStopUseCase.Cause.Unknown
 import com.masselis.tpmsadvanced.feature.background.usecase.UnexpectedStopUseCase.UnexpectedStop
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * Tells the user that persistent scanning stopped behind their back since the app was last opened,
@@ -26,7 +30,7 @@ internal fun UnexpectedStopAlert(
     onLearnMore: () -> Unit,
 ) {
     AlertDialog(
-        title = { Text(text = "Tyre monitoring was stopped") },
+        title = { Text(text = stringResource(CommonR.string.tyre_monitoring_was_stopped)) },
         text = {
             Text(
                 text = unexpectedStop
@@ -35,21 +39,16 @@ internal fun UnexpectedStopAlert(
                         DateUtils.getRelativeTimeSpanString(it, System.currentTimeMillis(), MINUTE_IN_MILLIS)
                     }
                     .let { stoppedAt ->
-                        "Persistent monitoring stopped${stoppedAt?.let { " $it" }.orEmpty()} " +
+                        stringResource(CommonR.string.persistent_monitoring_stopped) + "${stoppedAt?.let { " $it" }.orEmpty()} " +
                                 when (unexpectedStop.cause) {
-                                    ForceStop -> "because the app was force-stopped, by you or " +
-                                            "by your phone's power management."
+                                    ForceStop -> stringResource(CommonR.string.stop_force)
 
-                                    LowMemory -> "because your phone ran low on memory."
-                                    Crash -> "because the app crashed."
-                                    PermissionRevoked -> "because a permission was revoked."
-                                    Killed, Unknown -> "without being turned off, most likely " +
-                                            "by your phone's power management."
+                                    LowMemory -> stringResource(CommonR.string.stop_memory)
+                                    Crash -> stringResource(CommonR.string.stop_crash)
+                                    PermissionRevoked -> stringResource(CommonR.string.stop_permission)
+                                    Killed, Unknown -> stringResource(CommonR.string.stop_unknown)
                                 } +
-                                " It starts again now that the app is open.\n\n" +
-                                "Some phones stop background apps even when their battery " +
-                                "usage is unrestricted. Learn more to find the settings your " +
-                                "phone needs to keep monitoring running."
+                                stringResource(CommonR.string.stop_end)
                     }
             )
         },
@@ -61,7 +60,7 @@ internal fun UnexpectedStopAlert(
         },
         dismissButton = {
             TextButton(onClick = onLearnMore) {
-                Text(text = "Learn more")
+                Text(text = stringResource(CommonR.string.learn_more))
             }
         },
     )

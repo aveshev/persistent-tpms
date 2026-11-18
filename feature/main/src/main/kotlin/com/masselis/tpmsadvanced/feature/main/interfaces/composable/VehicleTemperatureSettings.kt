@@ -30,6 +30,8 @@ import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent.Facto
 import com.masselis.tpmsadvanced.feature.main.usecase.TyreIconStateFlow.Companion.WARM_UP_CELSIUS
 import com.masselis.tpmsadvanced.feature.main.usecase.TyreIconStateFlow.Companion.fineCelsius
 import com.masselis.tpmsadvanced.feature.main.usecase.TyreIconStateFlow.State
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /** The page editing the temperatures giving the vehicle's tyres their colour */
 @Composable
@@ -67,27 +69,27 @@ private fun VehicleTemperatureSettings(
         "%.0f ${unit.symbol()}".format(if (unit == CELSIUS) celsius else celsius * FAHRENHEIT_PER_CELSIUS)
     }
     TyreLegend(
-        text = "A tyre indicator is blue up to the cold temperature, where the rubber gets too stiff, and turns green over the next ${degrees(WARM_UP_CELSIUS)}. It stays green until ${degrees(AMBER_TEMPERATURE_BELOW)} below hot, then turns towards red. Going above hot will raise an alert and blink the affected tyre indicator in red. Going ${degrees(CRIMSON_TEMPERATURE_ABOVE)} above hot will raise a critical alert.",
+        text = stringResource(CommonR.string.a_tyre_indicator_is_blue_up_to, degrees(WARM_UP_CELSIUS), degrees(AMBER_TEMPERATURE_BELOW), degrees(CRIMSON_TEMPERATURE_ABOVE)),
         entries = listOf(
-            State.Normal.BlueToGreen(Fraction(0f)) to "Cold\n${low.withSymbol(unit)}",
+            State.Normal.BlueToGreen(Fraction(0f)) to stringResource(CommonR.string.cold, low.withSymbol(unit)),
             State.Normal.BlueToGreen(Fraction(1f)) to fineCelsius(low, high).let { fine ->
-                "OK\n${fine.start.celsius.numberString(unit)} – ${fine.endInclusive.celsius.withSymbol(unit)}"
+                stringResource(CommonR.string.ok, fine.start.celsius.numberString(unit), fine.endInclusive.celsius.withSymbol(unit))
             },
-            State.Alerting() to "Hot\n${high.withSymbol(unit)}",
-            State.Alerting(isCritical = true) to "Critical\n${(high.celsius + CRIMSON_TEMPERATURE_ABOVE).celsius.withSymbol(unit)}",
+            State.Alerting() to stringResource(CommonR.string.hot, high.withSymbol(unit)),
+            State.Alerting(isCritical = true) to stringResource(CommonR.string.critical_2, (high.celsius + CRIMSON_TEMPERATURE_ABOVE).celsius.withSymbol(unit)),
         ),
     )
-    SettingsSectionHeader("Temperatures")
+    SettingsSectionHeader(stringResource(CommonR.string.temperatures))
     var editing by rememberSaveable { mutableStateOf<Threshold?>(null) }
     SettingsGroup {
-        TextSettingsItem(headline = "Cold", supporting = low.withSymbol(unit), onClick = { editing = COLD })
-        TextSettingsItem(headline = "Hot", supporting = high.withSymbol(unit), onClick = { editing = HOT })
+        TextSettingsItem(headline = stringResource(CommonR.string.cold_2), supporting = low.withSymbol(unit), onClick = { editing = COLD })
+        TextSettingsItem(headline = stringResource(CommonR.string.hot_2), supporting = high.withSymbol(unit), onClick = { editing = HOT })
     }
     editing?.also { threshold ->
         NumberDialog(
             title = when (threshold) {
-                COLD -> "Cold temperature"
-                HOT -> "Hot temperature"
+                COLD -> stringResource(CommonR.string.cold_temperature)
+                HOT -> stringResource(CommonR.string.hot_temperature)
             },
             value = when (threshold) {
                 COLD -> low
