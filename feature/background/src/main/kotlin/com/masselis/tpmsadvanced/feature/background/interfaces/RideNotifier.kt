@@ -1,5 +1,7 @@
 package com.masselis.tpmsadvanced.feature.background.interfaces
 
+import com.masselis.tpmsadvanced.core.common.localized
+import com.masselis.tpmsadvanced.core.common.R as CommonR
 import android.annotation.SuppressLint
 import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.app.PendingIntent.getActivity
@@ -89,8 +91,8 @@ internal class RideNotifier(
             NotificationChannelCompat
                 // High for a banner, but silent: only an invitation, not an alert
                 .Builder(CHANNEL, IMPORTANCE_HIGH)
-                .setName("Ride notification")
-                .setDescription("\"Going for a ride?\", when back near a vehicle")
+                .setName(localized(CommonR.string.ride_notification))
+                .setDescription(localized(CommonR.string.going_for_a_ride_when_back_near_a_vehicle))
                 .setSound(null, null)
                 .setVibrationEnabled(false)
                 .build()
@@ -189,7 +191,7 @@ internal class RideNotifier(
         NotificationCompat
             .Builder(appContext, CHANNEL)
             .setSmallIcon(R.drawable.car_tire)
-            .setContentText("Going for a ride? Open Persistent TPMS to monitor tyre pressure")
+            .setContentText(localized(CommonR.string.going_for_a_ride_open_persistent_tpms))
             .setStyle(NotificationCompat.BigTextStyle())
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setSilent(true)

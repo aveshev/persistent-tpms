@@ -617,4 +617,11 @@
         <item quantity="one">%1$d sensor</item>
         <item quantity="other">%1$d sensors</item>
     </plurals>
+    <string name="every_5_minutes_whether_the_vehicle">Every 5 minutes, whether the vehicle moves or not, and at once when the pressure changes by about 1.5 psi. Reads the pressure in steps of 0.1 psi</string>
+    <string name="ride_notification">Ride notification</string>
+    <string name="going_for_a_ride_when_back_near_a_vehicle">\"Going for a ride?\", when back near a vehicle</string>
+    <string name="going_for_a_ride_open_persistent_tpms">Going for a ride? Open Persistent TPMS to monitor tyre pressure</string>
+    <string name="prompts_going_for_a_ride_when_a_scan">Prompts \"Going for a ride?\" when a scan condition is met or a known TPMS sensor is detected, after 30 min away. Opening the app allows more sensor updates to reach it.</string>
+    <string name="works_while_persistent_scanning_is_on">Works while persistent scanning is on.</string>
+    <string name="sort_by_signal">Sort by signal</string>
 </resources>
