@@ -176,20 +176,29 @@ final class NearbyServicesLog: NSObject, ObservableObject, CBCentralManagerDeleg
 
     /// The services heard, most sessions first, then most devices now
     var rows: [Row] {
-        let everySession = sessions + [current]
-        let sensors = Set(Scanner.services.map(\.uuidString))
-        return Set(everySession.flatMap { Array($0.services.keys) + Array($0.overflow.keys) })
-            .map { uuid in
-                Row(
-                    uuid: uuid,
-                    name: Self.names[uuid],
-                    sessions: everySession.filter { $0.services[uuid] != nil || $0.overflow[uuid] != nil }.count,
-                    devices: (current.services[uuid]?.count ?? 0) + (current.overflow[uuid]?.count ?? 0),
-                    isOverflow: everySession.allSatisfy { $0.services[uuid] == nil },
-                    isSensor: sensors.contains(uuid)
-                )
-            }
-            .sorted { ($0.sessions, $0.devices, $1.uuid) > ($1.sessions, $1.devices, $0.uuid) }
+        // Typed step by step: as one expression, it takes the CI's compiler too long to type-check
+        let everySession: [NearbyServicesSession] = sessions + [current]
+        let sensors = Set<String>(Scanner.services.map(\.uuidString))
+        let uuids = Set<String>(everySession.flatMap { (session: NearbyServicesSession) -> [String] in
+            Array(session.services.keys) + Array(session.overflow.keys)
+        })
+        let rows: [Row] = uuids.map { (uuid: String) -> Row in
+            let heardIn: Int = everySession.filter { $0.services[uuid] != nil || $0.overflow[uuid] != nil }.count
+            let devicesNow: Int = (current.services[uuid]?.count ?? 0) + (current.overflow[uuid]?.count ?? 0)
+            return Row(
+                uuid: uuid,
+                name: Self.names[uuid],
+                sessions: heardIn,
+                devices: devicesNow,
+                isOverflow: everySession.allSatisfy { $0.services[uuid] == nil },
+                isSensor: sensors.contains(uuid)
+            )
+        }
+        return rows.sorted { (a: Row, b: Row) -> Bool in
+            if a.sessions != b.sessions { return a.sessions > b.sessions }
+            if a.devices != b.devices { return a.devices > b.devices }
+            return a.uuid < b.uuid
+        }
     }
 
     private func save() {
@@ -215,7 +224,7 @@ final class NearbyServicesLog: NSObject, ObservableObject, CBCentralManagerDeleg
     }
 
     /// The services likely heard, by their assigned 16-bit UUID. Others are looked up afterwards.
-    private static let names = [
+    private static let names: [String: String] = [
         "FE2C": "Google Fast Pair",
         "FEAA": "Google Eddystone, Find Hub",
         "FEF3": "Google",
