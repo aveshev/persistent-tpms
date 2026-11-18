@@ -85,9 +85,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     }
 
     /// Shown while the app is open too, like on Android: the user may not be looking at the tyre. A
-    /// silent update only changes what's in the list.
+    /// silent update only changes what's in the list. The speech's backup isn't: the app open says it
+    /// itself.
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        completionHandler(notification.request.content.sound == nil ? [.list] : [.banner, .list, .sound])
+        completionHandler(
+            notification.request.identifier == SpeechBackup.identifier ? []
+                : notification.request.content.sound == nil ? [.list] : [.banner, .list, .sound]
+        )
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {

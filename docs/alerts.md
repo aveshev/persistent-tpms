@@ -195,13 +195,7 @@ unlocking reminds of nothing: its screen shows the alerts. The notifications to 
 with the levels notified, across relaunches.
 
 Once no bound sensor is heard, likely the ride over and the vehicle out of range, nothing wakes the
-app to tell an unlock. So each reading also schedules the notifications to remind to sound again,
-15 and 45 minutes after it, pushed back by the next reading: a scheduled notification sounds
-without the app running. Some sensors send every 5 minutes, riding or parked (TC.TPMS), so the
-first one allows for a packet missed. A vehicle still in range keeps waking the app, which then
-reminds on unlocking instead. The scheduled ones are cancelled when the phone is unlocked with the
-app running, when the app is opened, or when the alert is lowered below red or clears. Unlocked
-while the app is suspended, they still come.
+app to tell an unlock: the speech's backup goes on instead, see "When the app can't speak".
 
 ### Changing a threshold
 
@@ -373,6 +367,39 @@ the navigation.
 
   Once that ends, every alert leaves them, as when scanning stops. Meanwhile, a new crimson reading
   is still said, twice, once, as a red one is.
+
+### When the app can't speak (iOS)
+
+iOS only runs the app in the background when a sensor is heard, a few seconds each time, so the
+loops only go on then: the critical loop's 20 seconds become each packet, every 5 minutes for some
+sensors (TC.TPMS), and out of range, after the ride or with the app swiped away, nothing is said at
+all. So a scheduled notification, the **backup**, says what the loops would, sounding without the
+app running:
+
+- **Its sound is the loops' own**: the phrase, recorded with the same voice, or the tones. With the
+  alert sound off but vibration on, a silent sound, which vibrates. One notification for every
+  alert, as the loops say them all in one phrase; repeating, each one replaces the one before.
+- **Every minute while the critical loop goes on**, the shortest a repeating notification can do;
+  **every 10 minutes and 30 seconds** for the reminders, the margin keeping it from coming at the
+  same moment as the app's own phrase.
+- **The loops push it back after each phrase they say**, counting its period from there, so it only
+  sounds when the app couldn't: suspended, or the audio not starting, during a call for instance.
+- **Once the critical loop is over, it steps down to the reminders'** when something next wakes the
+  app. Until then it keeps saying the critical alerts every minute: a forgotten phone bothers no
+  one.
+- **Heard, it counts as the loop's phrase.** Woken within a period of it, the app doesn't say the
+  same again but counts the period from it. Not in silent mode, where it only vibrates: then the app
+  says it. iOS doesn't tell an app whether it's in silent mode, so the app guesses from a silent
+  system sound, which ends at once in silent mode (`SilentMode`). When it can't tell, it says it.
+- **It ends with the loops**: an alert dismissed or cleared, the speech silenced, or monitoring
+  stopping. Swiped away, it silences the speech, as the main screen's button does. While the app is
+  open it isn't shown, the app saying it itself.
+- A sound played by a notification follows the ringer's volume and its switch, unlike the speech:
+  in silent mode it only vibrates. Apple's critical alerts would play through it, which needs an
+  entitlement Apple grants on request.
+- Left from before the app was relaunched, it goes on until the loops next change, the alerts it
+  says still being notified: the loops forget their alerts as the Android app's do when its process
+  ends.
 
 ## In the app
 

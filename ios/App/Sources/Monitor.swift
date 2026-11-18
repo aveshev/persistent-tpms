@@ -363,9 +363,12 @@ final class Monitor: ObservableObject {
     }
 
     /// A notification dismissed for a while stops being said. Tapped, it opens the main screen, on the
-    /// vehicle of its thread when it has one, which a tyre's alert does.
+    /// vehicle of its thread when it has one, which a tyre's alert does. The speech's backup swiped
+    /// away silences the speech, as its button on the main screen does.
     func answered(_ response: UNNotificationResponse) {
-        if let tag = notifier.snooze(response) {
+        if response.notification.request.identifier == SpeechBackup.identifier, response.actionIdentifier == UNNotificationDismissActionIdentifier {
+            speaker.dismissBackup()
+        } else if let tag = notifier.snooze(response) {
             speaker.stop(tag: tag)
         } else if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
             UUID(uuidString: response.notification.request.content.threadIdentifier).map(open) ?? showMainScreen.send()

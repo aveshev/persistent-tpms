@@ -7,8 +7,8 @@ import UserNotifications
 /// app's AlertNotifier, see docs/alerts.md and AlertAction.
 ///
 /// A red or critical one which sounded while the phone was locked, likely in a pocket or a bag
-/// during a ride, sounds again once it's unlocked, or once the sensors have been quiet for a while,
-/// likely the ride over, see docs/alerts.md ("Reminding on unlocking").
+/// during a ride, sounds again once it's unlocked, see docs/alerts.md ("Reminding on unlocking").
+/// What the speech says goes on without the app, see SpeechBackup.
 final class Notifier {
     private let center = UNUserNotificationCenter.current()
     private let defaults = UserDefaults.standard
@@ -21,16 +21,11 @@ final class Notifier {
     private static let levelKey = "level"
     private static let speechTagKey = "speechTag"
     private static let unseenKey = "unseenAlerts"
-    private static let quietSuffix = "-quiet-"
-
-    /// After the last bound sensor heard, when the unseen ones sound again. Some sensors send every 5
-    /// minutes, riding or parked (TC.TPMS): the first one allows for a packet missed.
-    private static let quietReminders: [TimeInterval] = [15 * 60, 45 * 60]
 
     init() {
         center.setNotificationCategories(Self.categories)
         // Only sent while the app runs: suspended in the background between two sensors heard, it
-        // reminds at the next reading instead, see update(), or once they're quiet
+        // reminds at the next reading instead, see update()
         NotificationCenter.default.addObserver(forName: UIApplication.protectedDataDidBecomeAvailableNotification, object: nil, queue: .main) { [weak self] _ in
             self?.remindIfUnlocked()
         }
@@ -77,30 +72,9 @@ final class Notifier {
         }
     }
 
-    /// The phone was unlocked with them shown: the reminders still to come aren't needed, and the
-    /// ones which came repeat the notification under them
+    /// The phone was unlocked with them shown, or the app opened on them
     private func seen() {
-        let quiet = Self.quietIdentifiers(unseen)
-        center.removePendingNotificationRequests(withIdentifiers: quiet)
-        center.removeDeliveredNotifications(withIdentifiers: quiet)
         unseen = []
-    }
-
-    /// Schedules the unseen ones to sound again once no bound sensor has been heard for a while,
-    /// pushed back by every reading. A sensor heard wakes the app, which then reminds on unlocking
-    /// (remindIfUnlocked), but a suspended app with no sensor around can't tell it was unlocked.
-    /// Scheduled, it sounds without the app running.
-    private func remindWhenQuiet() {
-        let due = due
-        // Lowered to amber, silently
-        center.removePendingNotificationRequests(withIdentifiers: Self.quietIdentifiers(unseen.subtracting(due)))
-        guard due.isEmpty == false else { return }
-        reminders(due) { [center] id, content in
-            zip(Self.quietIdentifiers([id]), Self.quietReminders).forEach { quietId, delay in
-                // Replaces the one already pending under that identifier
-                center.add(UNNotificationRequest(identifier: quietId, content: content, trigger: UNTimeIntervalNotificationTrigger(timeInterval: delay, repeats: false)))
-            }
-        }
     }
 
     /// The notifications [ids] as they show, sounding
@@ -127,15 +101,6 @@ final class Notifier {
     /// included: that's when they matter
     private static func interruptionLevel(_ level: AlertLevel) -> UNNotificationInterruptionLevel {
         level >= .red ? .timeSensitive : .active
-    }
-
-    private static func quietIdentifiers(_ ids: some Sequence<String>) -> [String] {
-        ids.flatMap { id in quietReminders.indices.map { "\(id)\(quietSuffix)\($0)" } }
-    }
-
-    /// The notification a reminder repeats, [id] itself for the notification
-    private static func original(_ id: String) -> String {
-        id.range(of: quietSuffix).map { String(id[..<$0.lowerBound]) } ?? id
     }
 
     private var snoozes: AlertSnoozes {
@@ -202,8 +167,6 @@ final class Notifier {
         if update.isPosted { remindIfUnlocked() }
         shown(isPosted: update.isPosted) { shown in
             AlertClass.allCases.forEach { self.notify(update, $0, shown: shown) }
-            // A sensor heard: pushes the reminders back
-            if update.isPosted { self.remindWhenQuiet() }
         }
     }
 
@@ -357,12 +320,7 @@ final class Notifier {
         contents[id] = content
         // A sound heard with the phone unlocked, a banner over the screen, was seen
         if sound {
-            if level >= .red && isLocked {
-                unseen.insert(id)
-            } else {
-                unseen.remove(id)
-                center.removePendingNotificationRequests(withIdentifiers: Self.quietIdentifiers([id]))
-            }
+            if level >= .red && isLocked { unseen.insert(id) } else { unseen.remove(id) }
         }
     }
 
@@ -373,8 +331,7 @@ final class Notifier {
         unposted[id] = nil
         contents[id] = nil
         unseen.remove(id)
-        center.removeDeliveredNotifications(withIdentifiers: [id] + Self.quietIdentifiers([id]))
-        center.removePendingNotificationRequests(withIdentifiers: Self.quietIdentifiers([id]))
+        center.removeDeliveredNotifications(withIdentifiers: [id])
     }
 
     private func isSnoozed(_ sensorId: Int, _ alertClass: AlertClass, _ level: AlertLevel) -> Bool {
@@ -386,7 +343,7 @@ final class Notifier {
     /// the next reading of a level no longer snoozed alerts again, its notification sounding.
     func snooze(_ response: UNNotificationResponse) -> String? {
         let request = response.notification.request
-        let id = Self.original(request.identifier)
+        let id = request.identifier
         let info = request.content.userInfo
         guard let sensorId = info[Self.sensorIdKey] as? Int,
               let alertClass = (info[Self.alertClassKey] as? String).flatMap(AlertClass.init(rawValue:)),
@@ -406,7 +363,8 @@ final class Notifier {
 
     private static func category(_ level: AlertLevel) -> String { "alert\(level.rawValue)" }
 
-    /// Told when one is swiped away, and offering what to dismiss it for, on a long press
+    /// Told when one is swiped away, and offering what to dismiss it for, on a long press. The speech's
+    /// backup is told too: swiped away, it silences the speech, see Monitor.answered.
     private static var categories: Set<UNNotificationCategory> {
         Set(AlertLevel.allCases.map { level in
             UNNotificationCategory(
@@ -415,7 +373,7 @@ final class Notifier {
                 intentIdentifiers: [],
                 options: .customDismissAction
             )
-        })
+        } + [UNNotificationCategory(identifier: SpeechBackup.category, actions: [], intentIdentifiers: [], options: .customDismissAction)])
     }
 
     private static func snoozeDuration(_ action: String) -> Double? {
@@ -440,7 +398,6 @@ final class Notifier {
 
     func clearAll() {
         center.removeAllDeliveredNotifications()
-        center.removePendingNotificationRequests(withIdentifiers: Self.quietIdentifiers(notified.keys))
         notified = [:]
         unseen = []
         contents = [:]
