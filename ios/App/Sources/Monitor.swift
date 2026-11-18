@@ -286,7 +286,7 @@ final class Monitor: ObservableObject {
         guard throttled == false || Date().timeIntervalSince(silentModeLogged) > 20 else { return }
         silentModeLogged = Date()
         SilentMode.check { isSilent, elapsed in
-            rideLog("silent mode at \(event): \(isSilent.map { $0 ? "silent" : "ringer on" } ?? "can't tell"), ended after \(elapsed.map { "\(Int($0 * 1000)) ms" } ?? "none")")
+            rideLog("silent mode at \(event): \(isSilent.map { $0 ? "silent" : "ringer on" } ?? "can't tell"), ended after \(elapsed.map { "\(Int($0 * 1000)) ms" } ?? "none"), phone \(UIApplication.shared.isProtectedDataAvailable ? "unlocked" : "locked")")
         }
     }
     #endif
