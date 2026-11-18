@@ -33,6 +33,8 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.Persist
 import com.masselis.tpmsadvanced.feature.background.ioc.Bindings
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision
 import kotlin.math.roundToInt
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * The line of the main screen's menu for persistent scanning, with the top bar's bell in the same
@@ -95,7 +97,7 @@ private fun PersistentScanningMenuItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) = DropdownMenuItem(
-    text = { Text("Persistent mode") },
+    text = { Text(stringResource(CommonR.string.persistent_mode)) },
     onClick = onClick,
     leadingIcon = {
         Icon(
@@ -112,7 +114,7 @@ private fun PersistentScanningMenuItem(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
                 imageVector = ImageVector.vectorResource(CoreUiR.drawable.chevron_right_24px),
-                contentDescription = "Open the persistent mode settings",
+                contentDescription = stringResource(CommonR.string.open_the_persistent_mode_settings),
             )
             VerticalDivider(
                 Modifier

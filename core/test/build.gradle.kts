@@ -15,5 +15,6 @@ dependencies {
     api(libs.kotlin.reflect)
     api(libs.turbine)
 
+    implementation(project(":core:common"))
     implementation(project(":core:database"))
 }

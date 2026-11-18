@@ -40,6 +40,8 @@ import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleBindings.Compan
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent.Factory.Companion.key
 import kotlin.math.roundToInt
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * The page editing the levels at which a sensor's battery alarms: its voltage for most sensors, a
@@ -86,23 +88,23 @@ private fun VehicleBatterySettings(
             isVisible = isVisible,
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
         )
-        SettingsSectionHeader("Voltage alarm")
+        SettingsSectionHeader(stringResource(CommonR.string.voltage_alarm))
         var editing by rememberSaveable { mutableStateOf(false) }
         SettingsGroup {
             TextSettingsItem(
-                headline = "Low voltage alarm",
+                headline = stringResource(CommonR.string.low_voltage_alarm),
                 supporting = lowVoltage.string(),
                 onClick = { editing = true },
                 modifier = Modifier.testTag(VehicleBatterySettingsTags.lowVoltage),
             )
         }
         Text(
-            text = "If the sensor reports battery voltage, you can set when to report it as low. Within 0.1 V of the setting, it's shown in orange. After 10 minutes of consistently low readings it will raise an alert. The app will use a slightly reduced value when temperatures are low, to account for the voltage drop.",
+            text = stringResource(CommonR.string.if_the_sensor_reports_battery_voltage_you),
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
         )
         if (editing) NumberDialog(
-            title = "Low voltage alarm",
+            title = stringResource(CommonR.string.low_voltage_alarm),
             value = lowVoltage.volts,
             range = LowVoltageLimits,
             // The sensors report their voltage in steps of 0.1 V
@@ -123,24 +125,23 @@ private fun VehicleBatterySettings(
             isVisible = isVisible,
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
         )
-        SettingsSectionHeader("Percentage alarm")
+        SettingsSectionHeader(stringResource(CommonR.string.percentage_alarm))
         var editing by rememberSaveable { mutableStateOf(false) }
         SettingsGroup {
             TextSettingsItem(
-                headline = "Low battery alarm",
+                headline = stringResource(CommonR.string.low_battery_alarm),
                 supporting = "$lowPercent%",
                 onClick = { editing = true },
                 modifier = Modifier.testTag(VehicleBatterySettingsTags.lowPercent),
             )
         }
         Text(
-            text = "Sysgration sensors report their battery state as a percentage rather than a voltage.\n\n" +
-                "At or below the setting, it will blink red. After 10 minutes of consistently low readings it will raise an alarm.",
+            text = stringResource(CommonR.string.sysgration_sensors_report_their_battery_state_as),
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp),
         )
         if (editing) NumberDialog(
-            title = "Low battery alarm",
+            title = stringResource(CommonR.string.low_battery_alarm),
             value = lowPercent.toFloat(),
             range = LowPercentLimits,
             step = PERCENT_STEP,
@@ -165,9 +166,9 @@ private fun BatteryLevelSamples(
     modifier = modifier.fillMaxWidth(),
 ) {
     listOf(
-        Triple(normal, MaterialTheme.colorScheme.onSurface, "Normal"),
-        Triple(gettingLow, Orange, "Getting low"),
-        Triple(low, MaterialTheme.colorScheme.error, "Low alarm"),
+        Triple(normal, MaterialTheme.colorScheme.onSurface, stringResource(CommonR.string.normal)),
+        Triple(gettingLow, Orange, stringResource(CommonR.string.getting_low)),
+        Triple(low, MaterialTheme.colorScheme.error, stringResource(CommonR.string.low_alarm)),
     ).forEach { (value, color, caption) ->
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(

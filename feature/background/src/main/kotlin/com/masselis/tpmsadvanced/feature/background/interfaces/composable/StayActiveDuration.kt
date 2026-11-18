@@ -18,6 +18,9 @@ import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.PRO
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.SettingsOnScreenEffect
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningSettingsViewModel
 import com.masselis.tpmsadvanced.feature.background.ioc.Bindings.Companion.PersistentScanningSettingsViewModel
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
+import com.masselis.tpmsadvanced.core.common.localizedPlural
 
 /** The page opened from the "Stay active" item of [ActivateScanConditions] */
 @Composable
@@ -48,15 +51,15 @@ private fun StayActiveDuration(
     SettingsIntro(
         when (AppTier.current) {
             // Lite has no suspend scan conditions to tell about, nor charging
-            LITE -> "Once every activate condition has ended, for example when the Bluetooth device disconnects, keep scanning for a while longer."
-            PRO -> "Once every activate condition has ended, for example when the phone is unplugged, keep scanning for a while longer. Only applies if no suspend scan conditions were active at that moment."
+            LITE -> stringResource(CommonR.string.once_every_activate_condition_has_ended_for)
+            PRO -> stringResource(CommonR.string.once_every_activate_condition_has_ended_for_2)
         }
     )
-    SettingsSectionHeader("Keep scanning for")
+    SettingsSectionHeader(stringResource(CommonR.string.keep_scanning_for))
     SettingsGroup {
         STAY_ACTIVE_MINUTES.forEach { option ->
             RadioSettingsItem(
-                headline = if (option == 1) "1 minute" else "$option minutes",
+                headline = localizedPlural(CommonR.plurals.minutes, option, option),
                 selected = option == minutes,
                 onClick = { onMinutes(option) },
                 modifier = Modifier.testTag("${PersistentScanningSettingsTags.stayActiveDuration}_$option"),

@@ -1,8 +1,10 @@
 package com.masselis.tpmsadvanced.data.vehicle.model
 
 import com.masselis.tpmsadvanced.data.unit.model.PressureUnit.BAR
+import com.masselis.tpmsadvanced.data.unit.model.PressureUnit.KILO_PASCAL
 import com.masselis.tpmsadvanced.data.unit.model.PressureUnit.PSI
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.bar
+import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.kpa
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.psi
 import org.junit.After
 import org.junit.Before
@@ -53,5 +55,13 @@ internal class PressureTest {
     @Test
     fun `shows no psi decimal when rounding reaches 100 psi`() {
         assertEquals("100 psi", 99.96f.psi.string(PSI))
+    }
+
+    @Test
+    fun `writes bar and kPa in Russian, psi as it is`() {
+        Locale.setDefault(Locale.forLanguageTag("ru"))
+        assertEquals("2,30 бар", 2.3f.bar.string(BAR))
+        assertEquals("230 кПа", 230f.kpa.string(KILO_PASCAL))
+        assertEquals("33,0 psi", 33f.psi.string(PSI))
     }
 }

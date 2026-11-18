@@ -1,3 +1,5 @@
+@file:Suppress("MaxLineLength")
+
 package com.masselis.tpmsadvanced.feature.main.interfaces.composable
 
 import androidx.activity.compose.BackHandler
@@ -56,6 +58,9 @@ import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.VehicleSettin
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleBindings.Companion.VehicleSettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent.Factory.Companion.key
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
+import com.masselis.tpmsadvanced.core.common.localized
 
 /**
  * The page correcting the pressure read by [sensorId]. Its edits are only a draft until applied to
@@ -110,17 +115,17 @@ public fun SensorCalibrationSettings(
         when (state.dialog) {
             Dialog.EraseOthers -> AlertDialog(
                 onDismissRequest = viewModel::dismissDialog,
-                text = { Text("Applying to all will erase other sensors' calibration, are you sure?") },
-                confirmButton = { TextButton(onClick = viewModel::eraseOthers) { Text("Yes, erase them") } },
-                dismissButton = { TextButton(onClick = viewModel::dismissDialog) { Text("Cancel") } },
+                text = { Text(stringResource(CommonR.string.applying_to_all_will_erase_other_sensors)) },
+                confirmButton = { TextButton(onClick = viewModel::eraseOthers) { Text(stringResource(CommonR.string.yes_erase_them)) } },
+                dismissButton = { TextButton(onClick = viewModel::dismissDialog) { Text(stringResource(CommonR.string.cancel)) } },
                 modifier = Modifier.testTag(SensorCalibrationSettingsTags.eraseOthers),
             )
 
             Dialog.Discard -> AlertDialog(
                 onDismissRequest = viewModel::dismissDialog,
-                text = { Text("Discard your changes?") },
-                confirmButton = { TextButton(onClick = viewModel::discard) { Text("Discard") } },
-                dismissButton = { TextButton(onClick = viewModel::dismissDialog) { Text("Cancel") } },
+                text = { Text(stringResource(CommonR.string.discard_your_changes)) },
+                confirmButton = { TextButton(onClick = viewModel::discard) { Text(stringResource(CommonR.string.discard)) } },
+                dismissButton = { TextButton(onClick = viewModel::dismissDialog) { Text(stringResource(CommonR.string.cancel)) } },
                 modifier = Modifier.testTag(SensorCalibrationSettingsTags.discard),
             )
 
@@ -157,28 +162,28 @@ private fun SensorCalibrationSettings(
             .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
     ) {
         SettingsIntro(
-            "If a sensor is reporting incorrect pressure values, you can adjust it here.\nKeep the multiplier at default (×1.00), unless you're really sure you need to change it."
+            stringResource(CommonR.string.if_a_sensor_is_reporting_incorrect_pressure)
         )
         SettingsGroup(Modifier.padding(top = 24.dp)) {
             SwitchSettingsItem(
-                headline = "Pressure calibration",
+                headline = stringResource(CommonR.string.pressure_calibration),
                 checked = enabled,
                 onCheckedChange = onEnabled,
                 modifier = Modifier.testTag(SensorCalibrationSettingsTags.enabled),
             )
         }
-        SettingsSectionHeader("Correction")
+        SettingsSectionHeader(stringResource(CommonR.string.correction))
         var editing by rememberSaveable { mutableStateOf<CalibrationField?>(null) }
         // Greyed out rather than hidden while the calibration is off, like Android's settings do
         SettingsGroup {
             TextSettingsItem(
-                headline = "Offset",
+                headline = stringResource(CommonR.string.offset),
                 supporting = calibration.offset.signedWithSymbol(unit),
                 onClick = { editing = OFFSET },
                 enabled = enabled,
             )
             TextSettingsItem(
-                headline = "Multiplier",
+                headline = stringResource(CommonR.string.multiplier),
                 supporting = calibration.multiplier.multiplierString(),
                 onClick = { editing = MULTIPLIER },
                 enabled = enabled,
@@ -187,14 +192,15 @@ private fun SensorCalibrationSettings(
         // Under the values it follows from, greyed out with them while the calibration is off
         SettingsSectionNote(
             // "read as": the corrected pressure isn't only shown, the alerts check it too
-            text = "Example: ${example.withSymbol(unit)} reported by ${if (isExampleRead) "this" else "a"} sensor is read as ${calibration.applyTo(example).withSymbol(unit)}* (asterisk added when displaying corrected values)",
+            text = if (isExampleRead) stringResource(CommonR.string.calibration_example_this, example.withSymbol(unit), calibration.applyTo(example).withSymbol(unit))
+            else stringResource(CommonR.string.calibration_example_a, example.withSymbol(unit), calibration.applyTo(example).withSymbol(unit)),
             modifier = Modifier
                 .padding(top = 8.dp)
                 .alpha(if (enabled) 1f else DISABLED_ALPHA),
         )
         when (editing) {
             OFFSET -> NumberDialog(
-                title = "Offset",
+                title = stringResource(CommonR.string.offset),
                 value = calibration.offset.convert(unit),
                 range = OffsetLimit.let { (-it).convert(unit)..it.convert(unit) },
                 step = unit.offsetStep,
@@ -205,7 +211,7 @@ private fun SensorCalibrationSettings(
             )
 
             MULTIPLIER -> NumberDialog(
-                title = "Multiplier",
+                title = stringResource(CommonR.string.multiplier),
                 value = calibration.multiplier,
                 range = MultiplierLimits,
                 step = MULTIPLIER_STEP,
@@ -230,10 +236,10 @@ private fun SensorCalibrationSettings(
         val applyToSensor: @Composable () -> Unit = {
             Text(
                 buildAnnotatedString {
-                    append("Apply to ")
+                    append(stringResource(CommonR.string.apply_to))
                     // A monowheel's only wheel is just "wheel"
-                    appendBold(buildString { location?.also { appendLoc(it, withType = false) } ?: append("this") })
-                    append(" sensor")
+                    appendBold(buildString { location?.also { appendLoc(it, withType = false) } ?: append(localized(CommonR.string.apply_to_this)) })
+                    append(stringResource(CommonR.string.apply_to_sensor_suffix))
                 }
             )
         }
@@ -247,9 +253,9 @@ private fun SensorCalibrationSettings(
             ) {
                 Text(
                     buildAnnotatedString {
-                        append("Apply to all ")
+                        append(stringResource(CommonR.string.apply_to_all))
                         appendBold(vehicleName)
-                        append(" sensors")
+                        append(stringResource(CommonR.string.apply_to_all_suffix))
                     }
                 )
             }
