@@ -626,4 +626,11 @@
         <item quantity="many">%1$d датчиков</item>
         <item quantity="other">%1$d датчика</item>
     </plurals>
+    <string name="every_5_minutes_whether_the_vehicle">Каждые 5 минут, независимо от движения, и сразу при изменении давления примерно на 1,5 psi. Измеряет давление с шагом 0,1 psi</string>
+    <string name="ride_notification">Уведомление о поездке</string>
+    <string name="going_for_a_ride_when_back_near_a_vehicle">«Собираетесь в поездку?», когда вы снова рядом с машиной</string>
+    <string name="going_for_a_ride_open_persistent_tpms">Собираетесь в поездку? Откройте Persistent TPMS, чтобы следить за давлением в шинах</string>
+    <string name="prompts_going_for_a_ride_when_a_scan">Предлагает «Собираетесь в поездку?», когда выполняется условие сканирования или обнаружен известный датчик TPMS, после 30 мин отсутствия. Открытое приложение получает больше обновлений от датчиков.</string>
+    <string name="works_while_persistent_scanning_is_on">Работает, пока включено постоянное сканирование.</string>
+    <string name="sort_by_signal">Сортировать по сигналу</string>
 </resources>

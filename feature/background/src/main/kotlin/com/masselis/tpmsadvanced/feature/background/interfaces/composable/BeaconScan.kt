@@ -128,11 +128,13 @@ private fun BeaconScan(
             ),
             modifier = Modifier.testTag(BeaconScanTags.sort),
         ) {
-            Text(
-                "\u21C5",
-                style = MaterialTheme.typography.titleLarge,
-                modifier = Modifier.semantics { contentDescription = "Sort by signal" },
-            )
+            stringResource(CommonR.string.sort_by_signal).let { label ->
+                Text(
+                    "\u21C5",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.semantics { contentDescription = label },
+                )
+            }
         }
     }
     SettingsGroup {

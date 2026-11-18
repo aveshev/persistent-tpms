@@ -1,5 +1,7 @@
 package com.masselis.tpmsadvanced.feature.background.interfaces.composable
 
+import androidx.compose.ui.res.stringResource
+import com.masselis.tpmsadvanced.core.common.R as CommonR
 import android.Manifest.permission.POST_NOTIFICATIONS
 import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.os.Build.VERSION.SDK_INT
@@ -78,14 +80,14 @@ private fun RideNotificationSettings(
     persistentScanning: Boolean,
     modifier: Modifier = Modifier,
 ) = Column(modifier) {
-    SettingsSectionHeader("Ride notification")
+    SettingsSectionHeader(stringResource(CommonR.string.ride_notification))
     SettingsGroup {
         @Suppress("MaxLineLength")
         SwitchSettingsItem(
-            headline = "Ride notification",
-            supporting = "Prompts \"Going for a ride?\" when a scan condition is met or a known TPMS sensor is detected, after 30 min away. Opening the app allows more sensor updates to reach it." +
+            headline = stringResource(CommonR.string.ride_notification),
+            supporting = stringResource(CommonR.string.prompts_going_for_a_ride_when_a_scan) +
                 // The triggers are only watched while the service runs
-                if (persistentScanning) "" else "\nWorks while persistent scanning is on.",
+                if (persistentScanning) "" else "\n" + stringResource(CommonR.string.works_while_persistent_scanning_is_on),
             checked = rideNotification,
             onCheckedChange = onRideNotification,
             modifier = Modifier.testTag(RideNotificationSettingsTags.rideNotification),
