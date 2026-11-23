@@ -373,7 +373,9 @@ private final class Voice: NSObject, AVSpeechSynthesizerDelegate {
         guard activate() else { return false }
         await withCheckedContinuation { continuation in
             finished = continuation
-            synthesizer.speak(AVSpeechUtterance(string: text))
+            let utterance = AVSpeechUtterance(string: text)
+            utterance.voice = .alerts
+            synthesizer.speak(utterance)
         }
         deactivate()
         return true
@@ -430,5 +432,17 @@ private final class Voice: NSObject, AVSpeechSynthesizerDelegate {
 
     private func deactivate() {
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+}
+
+extension AVSpeechSynthesisVoice {
+    /// In the language the app's texts are in, a phone in another language reading them with its own
+    /// voice otherwise: iOS's default voice follows the phone. That language's voice for the phone's
+    /// region where there's one, en-GB in the UK, its usual one otherwise. The speech's, and the
+    /// backup's recording of it.
+    static var alerts: AVSpeechSynthesisVoice? {
+        let language = Bundle.main.preferredLocalizations.first { $0 != "Base" } ?? "en"
+        return Locale.current.region.flatMap { AVSpeechSynthesisVoice(language: "\(language)-\($0.identifier)") }
+            ?? AVSpeechSynthesisVoice(language: language)
     }
 }

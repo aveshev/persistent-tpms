@@ -34,6 +34,9 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.Persist
 import com.masselis.tpmsadvanced.feature.background.ioc.Bindings.Companion.PersistentScanningSettingsViewModel
 import com.masselis.tpmsadvanced.feature.background.usecase.BluetoothDevicesUseCase.PairedDevice
 import kotlinx.coroutines.flow.map
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
+import com.masselis.tpmsadvanced.core.common.localized
 
 /** The page opened from the "Bluetooth device connected" item of [ActivateScanConditions] */
 @Composable
@@ -94,9 +97,7 @@ internal fun BluetoothDevices(
 
 // Devices moved from another phone (e.g. a Samsung restore) are listed by the system settings, yet
 // not paired until they connect once: the system doesn't tell them to apps meanwhile
-@Suppress("MaxLineLength")
-private const val PAIRING_HINT =
-    "Devices moved from another phone appear here once connected to this one. Pair or connect one from the Bluetooth settings."
+private val PAIRING_HINT = CommonR.string.devices_moved_from_another_phone_appear_here
 
 /** What the system tells about the paired devices, null [devices] while Bluetooth is off */
 internal data class Paired(val devices: List<PairedDevice>?)
@@ -119,11 +120,11 @@ private fun BluetoothDevices(
 ) = Column(modifier) {
     @Suppress("MaxLineLength")
     SettingsIntro(
-        if (activate) "Background scanning activates while any of the checked devices is connected: your car stereo, helmet intercom, etc. The devices paired with this phone are listed here."
-        else "Background scanning is suspended while any of the checked devices is connected: a home speaker, your office headset, etc. The devices paired with this phone are listed here."
+        if (activate) stringResource(CommonR.string.background_scanning_activates_while_any_of_the)
+        else stringResource(CommonR.string.background_scanning_is_suspended_while_any_of)
     )
     SettingsSectionHeader(
-        if (activate) "Activate scanning when connected to" else "Suspend scanning when connected to"
+        if (activate) stringResource(CommonR.string.activate_scanning_when_connected_to) else stringResource(CommonR.string.suspend_scanning_when_connected_to)
     )
     val devices = paired?.devices
     when {
@@ -131,8 +132,8 @@ private fun BluetoothDevices(
         paired == null -> return@Column
         devices == null -> SettingsGroup {
             TextSettingsItem(
-                headline = "Bluetooth is off",
-                supporting = "Turn it on to see your paired devices",
+                headline = stringResource(CommonR.string.bluetooth_is_off),
+                supporting = stringResource(CommonR.string.turn_it_on_to_see_your_paired),
                 onClick = onTurnOnBluetooth,
                 modifier = Modifier.testTag(BluetoothDevicesTags.bluetoothOff),
             )
@@ -140,8 +141,8 @@ private fun BluetoothDevices(
 
         devices.isEmpty() -> SettingsGroup {
             TextSettingsItem(
-                headline = "No paired device",
-                supporting = PAIRING_HINT,
+                headline = stringResource(CommonR.string.no_paired_device),
+                supporting = stringResource(PAIRING_HINT),
                 onClick = openBluetoothSettings,
                 modifier = Modifier.testTag(BluetoothDevicesTags.noDevice),
             )
@@ -158,7 +159,7 @@ private fun BluetoothDevices(
             val (audio, nonAudio) = rest.partition { it.isAudio }
             @Composable
             fun Device(device: PairedDevice, enabled: Boolean = true) = CheckboxSettingsItem(
-                headline = if (device.address in connected) "${device.name} (connected)" else device.name,
+                headline = if (device.address in connected) stringResource(CommonR.string.connected, device.name) else device.name,
                 checked = device.address in selected || enabled.not(),
                 enabled = enabled,
                 onCheckedChange = { onToggle(device.address) },
@@ -168,7 +169,7 @@ private fun BluetoothDevices(
                 (first + audio).forEach { Device(it) }
                 if (nonAudio.isEmpty()) return@SettingsGroup
                 ExpandSettingsItem(
-                    headline = "Other devices (${nonAudio.size})",
+                    headline = stringResource(CommonR.string.other_devices, nonAudio.size),
                     expanded = expanded,
                     onClick = onExpand,
                     modifier = Modifier.testTag(BluetoothDevicesTags.otherDevices),
@@ -177,19 +178,19 @@ private fun BluetoothDevices(
             }
             if (others.isNotEmpty()) {
                 SettingsSectionHeader(
-                    if (activate) "Already selected to suspend scanning" else "Already selected to activate scanning"
+                    if (activate) stringResource(CommonR.string.already_selected_to_suspend_scanning) else stringResource(CommonR.string.already_selected_to_activate_scanning)
                 )
                 SettingsSectionNote(
-                    if (activate) "The devices below have already been selected in the other settings page to suspend scanning."
-                    else "The devices below have already been selected in the other settings page to activate scanning."
+                    if (activate) stringResource(CommonR.string.the_devices_below_have_already_been_selected)
+                    else stringResource(CommonR.string.the_devices_below_have_already_been_selected_2)
                 )
                 SettingsGroup { others.forEach { Device(it, enabled = false) } }
             }
             // Separated from the lists above, so that it doesn't read as one more device
             SettingsGroup(Modifier.padding(top = 24.dp)) {
                 TextSettingsItem(
-                    headline = "Missing a device?",
-                    supporting = PAIRING_HINT,
+                    headline = stringResource(CommonR.string.missing_a_device),
+                    supporting = stringResource(PAIRING_HINT),
                     onClick = openBluetoothSettings,
                     modifier = Modifier.testTag(BluetoothDevicesTags.missingDevice),
                 )
@@ -204,16 +205,16 @@ private fun BluetoothDevices(
  */
 internal fun bluetoothDevicesSummary(paired: List<PairedDevice>?, selected: Set<String>): List<AnnotatedString> =
     when (paired) {
-        null -> listOf("Bluetooth is off")
+        null -> listOf(localized(CommonR.string.bluetooth_is_off))
         else -> paired
             .filter { it.address in selected }
             .map { it.name }
             .sortedBy { it.lowercase() }
             .let { names ->
                 when (names.size) {
-                    0 -> listOf("No device selected")
+                    0 -> listOf(localized(CommonR.string.no_device_selected))
                     1 -> names
-                    else -> listOf(names.joinToString(", "), "${names.size} devices")
+                    else -> listOf(names.joinToString(", "), localized(CommonR.string.devices, names.size))
                 }
             }
     }.map(::AnnotatedString)

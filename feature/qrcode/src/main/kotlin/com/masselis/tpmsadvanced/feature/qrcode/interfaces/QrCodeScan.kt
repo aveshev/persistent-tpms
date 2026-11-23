@@ -1,3 +1,5 @@
+@file:Suppress("MaxLineLength")
+
 package com.masselis.tpmsadvanced.feature.qrcode.interfaces
 
 import android.Manifest.permission.CAMERA
@@ -45,6 +47,9 @@ import com.masselis.tpmsadvanced.core.ui.MissingPermission
 import com.masselis.tpmsadvanced.feature.qrcode.interfaces.QRCodeViewModel.Event
 import com.masselis.tpmsadvanced.feature.qrcode.model.QrCodeResult
 import com.masselis.tpmsadvanced.feature.qrcode.ioc.Bindings.Companion.QrCodeViewModel
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
+import com.masselis.tpmsadvanced.core.common.localized
 
 
 @OptIn(ExperimentalPermissionsApi::class)
@@ -69,8 +74,8 @@ public fun QrCodeScan(
     val permissionState = rememberMultiplePermissionsState(listOf(CAMERA))
     when {
         permissionState.allPermissionsGranted.not() -> MissingPermission(
-            text = "Persistent TPMS need you to approve a permission to scan the QR Code",
-            refusedText = "This app requires camera permission to scan QR, please enable it in settings",
+            text = localized(CommonR.string.persistent_tpms_need_you_to_approve_a),
+            refusedText = localized(CommonR.string.this_app_requires_camera_permission_to_scan),
             permissionState = permissionState,
             autoRequest = true,
             modifier = modifier,
@@ -133,7 +138,7 @@ private fun Preview(
                 is Event.Found -> onFound(event.result)
 
                 Event.LeaveBecauseCameraUnavailable -> {
-                    snackbarHostState.showSnackbar("Your device should to have a camera to continue")
+                    snackbarHostState.showSnackbar(localized(CommonR.string.needs_camera))
                     navController.popBackStack()
                 }
             }
@@ -173,7 +178,7 @@ private fun QrCodeOverlay(
             }
         }
         Text(
-            text = if (isUnknownCode) "Not a known TPMS QR code" else "Point the camera at the sensors' QR code",
+            text = if (isUnknownCode) stringResource(CommonR.string.not_a_known_tpms_qr_code) else stringResource(CommonR.string.point_the_camera_at_the_sensors_qr),
             color = Color.White,
             textAlign = TextAlign.Center,
             modifier = Modifier

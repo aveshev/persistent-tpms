@@ -166,7 +166,9 @@ private final class SpeechRecorder: NSObject, AVSpeechSynthesizerDelegate {
     func record(_ text: String, _ completion: @escaping (Bool) -> Void) {
         self.completion = completion
         try? FileManager.default.removeItem(at: url)
-        synthesizer.write(AVSpeechUtterance(string: text)) { [weak self] buffer in
+        let utterance = AVSpeechUtterance(string: text)
+        utterance.voice = .alerts
+        synthesizer.write(utterance) { [weak self] buffer in
             guard let buffer = buffer as? AVAudioPCMBuffer else { return }
             // Its callbacks may come on another queue
             DispatchQueue.main.async { self?.received(buffer) }

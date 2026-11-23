@@ -44,6 +44,9 @@ import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.TyreDisplay
 import com.masselis.tpmsadvanced.feature.main.usecase.TyreStatsStateFlow.State
 import kotlin.math.absoluteValue
 import kotlin.math.roundToInt
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
+import com.masselis.tpmsadvanced.core.common.localized
 
 /**
  * The page opened from the "Sensor readings text size" item of [DisplaySettings], like the system's font size
@@ -145,7 +148,7 @@ private fun TextSize(
     }
     @Suppress("MaxLineLength")
     SettingsSectionNote(
-        "Applies only to sensor readouts, on top of the system font size. If the chosen font size does not fit on the screen, it will be reduced to fit.",
+        stringResource(CommonR.string.applies_only_to_sensor_readouts_on_top),
         Modifier.padding(top = 8.dp),
     )
 }
@@ -165,7 +168,7 @@ private val TEXT_SCALES = listOf(.85f, 1f, 1.15f, 1.3f, 1.5f, 1.8f, 2f)
 /** How a text size reads in the settings: "Default", or a percentage */
 @Suppress("MagicNumber")
 internal val Float.textSizeLabel: String
-    get() = if (this == 1f) "Default" else "${(this * 100).roundToInt()}%"
+    get() = if (this == 1f) localized(CommonR.string.text_default) else "${(this * 100).roundToInt()}%"
 
 @Preview
 @Composable

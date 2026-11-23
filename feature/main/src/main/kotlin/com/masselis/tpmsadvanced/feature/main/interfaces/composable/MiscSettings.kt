@@ -14,6 +14,9 @@ import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.DebugSettings
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.PressureLossSettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.DebugSettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.PressureLossSettingsViewModel
+import com.masselis.tpmsadvanced.core.common.AppLanguage
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * The "Misc" group of the app settings: the demo mode, the switch of the debug options, whose page
@@ -48,23 +51,25 @@ internal fun MiscSettings(
     val sensorFlags by viewModel.showSensorFlags.collectAsState()
     val activities by viewModel.showDetectedActivities.collectAsState()
     val announcements by viewModel.announceScanStatus.collectAsState()
+    val language by AppLanguage.current.collectAsState()
     val balanced by viewModel.balancedAfterFirstReading.collectAsState()
     val selected = listOfNotNull(
         // Same order as their page
         "Sensor ID".takeIf { sensorId },
         "Sensor flags".takeIf { sensorFlags },
-        "Detected activities".takeIf { activities },
-        "Status announcements".takeIf { announcements },
-        "Balanced scanning".takeIf { balanced },
+        stringResource(CommonR.string.detected_activities).takeIf { activities },
+        stringResource(CommonR.string.status_announcements).takeIf { announcements },
+        stringResource(CommonR.string.language).takeIf { language != AppLanguage.SYSTEM },
+        stringResource(CommonR.string.balanced_scanning).takeIf { balanced },
     )
     SettingsGroup(modifier) {
         DemoModeSettingsItem()
         if (developer) SwitchNavigationSettingsItem(
-            headline = "Debug",
+            headline = stringResource(CommonR.string.debug),
             // Also while off: what turning it on would show
             supporting = selected
                 .takeIf { it.isNotEmpty() }
-                ?.let { listOf(it.joinToString(", "), "${it.first()} and more") }
+                ?.let { listOf(it.joinToString(", "), stringResource(CommonR.string.and_more, it.first())) }
                 .orEmpty()
                 .map(::AnnotatedString),
             checked = debugOptions,
@@ -77,8 +82,8 @@ internal fun MiscSettings(
             modifier = Modifier.testTag(MiscSettingsTags.debug),
         )
         SwitchNavigationSettingsItem(
-            headline = "Pressure loss",
-            supporting = listOf(AnnotatedString("Experimental")),
+            headline = stringResource(CommonR.string.pressure_loss),
+            supporting = listOf(AnnotatedString(stringResource(CommonR.string.experimental))),
             checked = pressureLoss,
             onCheckedChange = { pressureLossViewModel.enabled.value = it },
             onClick = openPressureLoss,

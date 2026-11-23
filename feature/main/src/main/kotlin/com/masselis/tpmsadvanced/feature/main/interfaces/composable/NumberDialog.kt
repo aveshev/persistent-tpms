@@ -33,6 +33,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.masselis.tpmsadvanced.feature.main.R
 import kotlinx.coroutines.delay
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * Edits a number expressed in the user's [unit], typed in or nudged by [step] with the −/+ buttons.
@@ -77,7 +79,7 @@ internal fun NumberDialog(
                         onClick = { nudge(input.decreased(current)) },
                         enabled = input.canDecrease(current),
                     ) {
-                        Icon(ImageVector.vectorResource(R.drawable.remove_24px), "Decrease")
+                        Icon(ImageVector.vectorResource(R.drawable.remove_24px), stringResource(CommonR.string.decrease))
                     }
                     OutlinedTextField(
                         value = text,
@@ -98,11 +100,11 @@ internal fun NumberDialog(
                         onClick = { nudge(input.increased(current)) },
                         enabled = input.canIncrease(current),
                     ) {
-                        Icon(ImageVector.vectorResource(R.drawable.add_24px), "Increase")
+                        Icon(ImageVector.vectorResource(R.drawable.add_24px), stringResource(CommonR.string.increase))
                     }
                 }
                 Text(
-                    text = "From ${format(range.start)} to ${format(range.endInclusive)} $unit",
+                    text = stringResource(CommonR.string.from_to, format(range.start), format(range.endInclusive), unit),
                     style = MaterialTheme.typography.bodySmall,
                     color = if (isValid) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error,
                     // Aligned with the field's text, after the decrease button
@@ -114,7 +116,7 @@ internal fun NumberDialog(
             TextButton(onClick = { confirm() }, enabled = isValid) { Text("OK") }
         },
         dismissButton = {
-            TextButton(onClick = onDismissRequest) { Text("Cancel") }
+            TextButton(onClick = onDismissRequest) { Text(stringResource(CommonR.string.cancel)) }
         },
         modifier = modifier,
     )

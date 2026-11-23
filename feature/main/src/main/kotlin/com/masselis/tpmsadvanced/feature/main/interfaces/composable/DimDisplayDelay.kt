@@ -16,6 +16,9 @@ import com.masselis.tpmsadvanced.core.ui.SettingsSectionHeader
 import com.masselis.tpmsadvanced.core.ui.SwitchSettingsItem
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.TyreDisplaySettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.TyreDisplaySettingsViewModel
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
+import com.masselis.tpmsadvanced.core.common.localizedPlural
 
 /** The page opened from the "Dim when idle" item of [DisplaySettings] */
 @Composable
@@ -53,9 +56,9 @@ private fun DimDisplayDelay(
 ) = Column(modifier) {
     @Suppress("MaxLineLength")
     SettingsIntro(
-        "Lowers the screen's brightness on the main screen once nothing new was alerted or warned about for a while. A red or critical alert going on keeps it bright, a new alert or warning brings it back up. When dimmed, a first touch only brightens the screen, lift your finger and touch again to use the app."
+        stringResource(CommonR.string.lowers_the_screen_s_brightness_on_the)
     )
-    SettingsSectionHeader("Dim after")
+    SettingsSectionHeader(stringResource(CommonR.string.dim_after))
     SettingsGroup {
         DIM_DISPLAY_SECONDS.forEach { option ->
             RadioSettingsItem(
@@ -66,10 +69,10 @@ private fun DimDisplayDelay(
             )
         }
     }
-    SettingsSectionHeader("Brightness")
+    SettingsSectionHeader(stringResource(CommonR.string.brightness))
     SettingsGroup {
         SegmentedSettingsItem(
-            headline = "Divide brightness by",
+            headline = stringResource(CommonR.string.divide_brightness_by),
             options = DIVISORS,
             selected = divisor,
             onSelect = onDivisor,
@@ -77,11 +80,11 @@ private fun DimDisplayDelay(
             modifier = Modifier.testTag(TyreDisplaySettingsTags.dimDisplayDivisor),
         )
     }
-    SettingsSectionHeader("In a pocket")
+    SettingsSectionHeader(stringResource(CommonR.string.in_a_pocket))
     SettingsGroup {
         SwitchSettingsItem(
-            headline = "Block touches in a pocket",
-            supporting = "Turns the screen black and ignores touches",
+            headline = stringResource(CommonR.string.block_touches_in_a_pocket),
+            supporting = stringResource(CommonR.string.turns_the_screen_black_and_ignores_touches),
             checked = pocketGuard,
             onCheckedChange = onPocketGuard,
             modifier = Modifier.testTag(TyreDisplaySettingsTags.pocketGuard),
@@ -92,9 +95,8 @@ private fun DimDisplayDelay(
 /** "30 seconds", "1 minute", "2 minutes", for a delay in seconds */
 @Suppress("MagicNumber")
 internal fun Int.asDimDelay(): String = when {
-    this < 60 -> "$this seconds"
-    this == 60 -> "1 minute"
-    else -> "${this / 60} minutes"
+    this < 60 -> localizedPlural(CommonR.plurals.seconds, this, this)
+    else -> (this / 60).let { localizedPlural(CommonR.plurals.minutes, it, it) }
 }
 
 @Suppress("MagicNumber")

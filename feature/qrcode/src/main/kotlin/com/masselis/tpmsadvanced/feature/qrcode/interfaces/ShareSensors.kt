@@ -28,6 +28,8 @@ import com.masselis.tpmsadvanced.feature.main.interfaces.composable.asSensorId
 import com.masselis.tpmsadvanced.feature.qrcode.interfaces.ShareSensorsViewModel.State
 import com.masselis.tpmsadvanced.feature.qrcode.ioc.Bindings.Companion.ShareSensorsViewModel
 import java.util.UUID
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * A QR code holding the sensors of the vehicle [vehicleUuid], for another phone to assign them all
@@ -53,14 +55,13 @@ public fun ShareSensors(
             State.Loading -> {}
 
             is State.NoSensor -> Text(
-                text = "${state.vehicle.name} has no sensor assigned yet, there's nothing to share",
+                text = stringResource(CommonR.string.has_no_sensor_assigned_yet_there_s, state.vehicle.name),
                 textAlign = TextAlign.Center,
             )
 
             is State.Ready -> {
                 Text(
-                    text = "On the other phone, tap a wheel without a sensor, choose “Scan QR code” " +
-                        "and point the camera at this code: every sensor is assigned at once",
+                    text = stringResource(CommonR.string.on_the_other_phone_tap_a_wheel),
                     textAlign = TextAlign.Center,
                 )
                 QrCode(
@@ -78,7 +79,7 @@ public fun ShareSensors(
                                 appendLoc(shared.sensor.location, withType = false, capitalized = true)
                                 append(": ")
                                 append(shared.sensor.id.asSensorId(shared.sensor.brand))
-                                if (shared.calibration.adjusts) append(", calibrated")
+                                if (shared.calibration.adjusts) append(stringResource(CommonR.string.calibrated))
                             },
                             style = MaterialTheme.typography.bodyMedium,
                         )

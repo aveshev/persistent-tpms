@@ -11,10 +11,20 @@ import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.Activat
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanSuspensionUseCase.Reason
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanSuspensionUseCase.Reason.IDLE
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanSuspensionUseCase.Reason.WIFI
+import com.masselis.tpmsadvanced.core.test.mockLocalizedAsEnglish
+import io.mockk.unmockkAll
+import org.junit.After
+import org.junit.Before
 import org.junit.Test
 import kotlin.test.assertEquals
 
 internal class ScanDecisionTest {
+
+    @Before
+    fun setup() = mockLocalizedAsEnglish()
+
+    @After
+    fun tearDown() = unmockkAll()
 
     @Test
     fun `nothing enabled is idle`() {
