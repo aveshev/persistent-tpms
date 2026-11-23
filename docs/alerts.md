@@ -403,7 +403,8 @@ notification, the **backup**, says what the loops would, sounding without the ap
   entitlement Apple grants on request.
 - Left from before the app was relaunched, it goes on until the loops next change, the alerts it
   says still being notified: the loops forget their alerts as the Android app's do when its process
-  ends.
+  ends. With no red or critical notification left at launch (cleared, their sensor removed, or by a
+  build without the backup, which can't stop it), it's cancelled.
 
 ## In the app
 

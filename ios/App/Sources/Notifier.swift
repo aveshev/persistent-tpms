@@ -417,6 +417,13 @@ final class Notifier {
         }
     }
 
+    /// A red or critical alert's notification still shows, which the speech backup goes on for
+    func isAlertShowing() async -> Bool {
+        await center.deliveredNotifications().contains { notification in
+            (notification.request.content.userInfo[Self.levelKey] as? Int).flatMap(AlertLevel.init(rawValue:)).map { $0 >= .red } == true
+        }
+    }
+
     func isRidePromptShowing() async -> Bool {
         await center.deliveredNotifications().contains { $0.request.identifier == Self.ridePromptId }
     }

@@ -99,6 +99,9 @@ final class Monitor: ObservableObject {
         if isRestored == false { isTemporaryMonitoring = false }
         speaker.configure(settings: settings)
         notifier.speaker = speaker
+        Task { @MainActor [notifier, speaker] in
+            if await notifier.isAlertShowing() == false { speaker.dropLeftoverBackup() }
+        }
         if Demo.isOn {
             do {
                 let database = try Database()

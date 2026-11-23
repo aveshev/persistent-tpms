@@ -145,6 +145,17 @@ final class AlertSpeaker: ObservableObject {
         }
     }
 
+    /// The backup left from before this launch, its alerts no longer notified: cleared meanwhile,
+    /// their sensor removed, or by a build without the backup, which couldn't stop it. Kept when
+    /// something already scheduled it anew.
+    func dropLeftoverBackup() {
+        guard isBackupKnown == false else { return }
+        isBackupKnown = true
+        backupPlan = nil
+        rideLog("speech backup left from before cancelled")
+        backup.cancel()
+    }
+
     /// Drops the silenced alerts. The reminders start a period after something enters them, and
     /// over once they empty.
     private func scheduled() {
