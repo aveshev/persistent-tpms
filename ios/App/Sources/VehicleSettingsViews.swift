@@ -329,13 +329,11 @@ struct VehiclePressureSettingsView: View {
         let rear = vehicle.separateRearPressure ? vehicle.rearLowPressure.flatMap { low in vehicle.rearHighPressure.map { low...max(low, $0) } } : nil
         let spare = vehicle.separateSparePressure ? vehicle.spareLowPressure.flatMap { low in vehicle.spareHighPressure.map { low...max(low, $0) } } : nil
         return Form {
-            Section {
+            PageIntro {
                 TyreLegend(
                     text: "When a sensor reports pressure outside of the range set here, it will raise an alert and blink the affected tyre indicator in red. If it's more than 20% above the maximum, or more than 25% below the minimum, it will be a critical alert. Getting within 3% of the minimum or maximum will raise a warning.",
                     entries: [(.fill(Theme.primary), "In range"), (.alerting, "Out of range"), (.critical, "Critical")]
                 )
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets())
             }
             if canSeparateRear || canSeparateSpare {
                 Section {
@@ -471,7 +469,7 @@ struct VehicleTemperatureSettingsView: View {
         let fineEnd = Temperature(celsius: high.celsius - min(AlertThresholds.amberTemperatureBelow, half))
         let critical = Temperature(celsius: high.celsius + AlertThresholds.crimsonTemperatureAbove)
         return Form {
-            Section {
+            PageIntro {
                 TyreLegend(
                     text: "A tyre indicator is blue up to the cold temperature, where the rubber gets too stiff, and turns green over the next \(degrees(Self.warmUp)). It stays green until \(degrees(AlertThresholds.amberTemperatureBelow)) below hot, then turns towards red. Going above hot will raise an alert and blink the affected tyre indicator in red. Going \(degrees(AlertThresholds.crimsonTemperatureAbove)) above hot will raise a critical alert.",
                     entries: [
@@ -481,8 +479,6 @@ struct VehicleTemperatureSettingsView: View {
                         (.critical, "Critical\n\(critical.numberString(unit)) \(unit.symbol)"),
                     ]
                 )
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets())
             }
             Section("Temperatures") {
                 // Cold stays below hot so the colours keep their order
@@ -650,11 +646,7 @@ struct SensorCalibrationView: View {
         let read = monitor.tyres[Monitor.TyreKey(vehicleId: vehicle.id, location: sensor.location)]?.latestRead.flatMap { $0.kpa > Self.minExampleKpa ? $0 : nil }
         let example = read ?? Pressure(kpa: (vehicle.lowPressure.kpa + vehicle.highPressure.kpa) / 2)
         Form {
-            Section {
-                Text("If a sensor is reporting incorrect pressure values, you can adjust it here.\nKeep the multiplier at default (×1.00), unless you're really sure you need to change it.")
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
-            }
+            PageIntro(text: "If a sensor is reporting incorrect pressure values, you can adjust it here.\nKeep the multiplier at default (×1.00), unless you're really sure you need to change it.")
             Section {
                 Toggle("Pressure calibration", isOn: $draft.draft.isEnabled)
             }
