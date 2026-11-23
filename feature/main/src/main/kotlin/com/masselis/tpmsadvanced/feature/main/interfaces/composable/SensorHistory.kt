@@ -207,7 +207,10 @@ private fun ReadingRow(
                 .format(DateTimeFormatter.ofLocalizedTime(FormatStyle.MEDIUM))
         },
         style = MaterialTheme.typography.bodyMedium,
-        modifier = Modifier.weight(1.2f),
+        // On one line, its column wide enough for a 12-hour time
+        maxLines = 1,
+        softWrap = false,
+        modifier = Modifier.weight(1.6f),
     )
     Text(
         text = buildString {
