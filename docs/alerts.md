@@ -373,8 +373,10 @@ the navigation.
 iOS only runs the app in the background when a sensor is heard, a few seconds each time, so the
 loops only go on then: the critical loop's 20 seconds become each packet, every 5 minutes for some
 sensors (TC.TPMS), and out of range, after the ride or with the app swiped away, nothing is said at
-all. So a scheduled notification, the **backup**, says what the loops would, sounding without the
-app running:
+all. A sensor heard leaves the app only a few seconds, which waiting out the notification's sound
+and starting the speech can outlast: so while something is due now, the app asks iOS for more time
+in the background (`beginBackgroundTask`), let go once it's said. Between packets, a scheduled
+notification, the **backup**, says what the loops would, sounding without the app running:
 
 - **Its sound is the loops' own**: the phrase, recorded with the same voice, or the tones. With the
   alert sound off but vibration on, a silent sound, which vibrates. One notification for every

@@ -2,6 +2,7 @@ import AudioToolbox
 import AVFoundation
 import Foundation
 import TPMSCore
+import UIKit
 
 /// Says the red and critical alerts or plays their tones, and vibrates, like the Android app's
 /// AlertSpeaker, see docs/alerts.md: a red one twice at each of its readings, then every alert in one
@@ -66,6 +67,8 @@ final class AlertSpeaker: ObservableObject {
     private var isBackupKnown = false
     /// When the loops last said something, which a backup heard since replaces
     private var lastSaid: Date?
+    /// Held while something is due now, see [holdBackgroundTime]
+    private var backgroundTask = UIBackgroundTaskIdentifier.invalid
 
     private static let crimsonPeriod: TimeInterval = 20
     private static let crimsonDuration: TimeInterval = 10 * 60
@@ -214,6 +217,7 @@ final class AlertSpeaker: ObservableObject {
         while Task.isCancelled == false {
             scheduled()
             let now = Date()
+            holdBackgroundTime(isDue(now))
             if let ends = notificationSoundEnds, ends > now {
                 try? await Task.sleep(for: .milliseconds(100))
                 continue
@@ -244,6 +248,35 @@ final class AlertSpeaker: ObservableObject {
             }
         }
         loop = nil
+        holdBackgroundTime(false)
+    }
+
+    /// Something to say now or within a second, or a notification's sound to wait out first
+    private func isDue(_ now: Date) -> Bool {
+        let soon = now.addingTimeInterval(1)
+        return announcements.isEmpty == false
+            || notificationSoundEnds.map { $0 > now } == true
+            || (crimsons(now).isEmpty == false && (nextCrimson.map { $0 <= soon } ?? true))
+            || (reminders(now).isEmpty == false && nextReminder.map { $0 <= soon } == true)
+    }
+
+    /// Keeps the app running in the background until what's due is said. Woken by a sensor, iOS
+    /// leaves it a few seconds, which waiting out the notification's sound and starting the speech
+    /// can outlast: suspended meanwhile, the phrase waited for the next packet, minutes away for some
+    /// sensors, and was said late, out of date. Let go once nothing is due, between the loops'
+    /// phrases, or when iOS ends it.
+    private func holdBackgroundTime(_ isHeld: Bool) {
+        if isHeld, backgroundTask == .invalid {
+            backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "AlertSpeech") { [weak self] in
+                rideLog("background time ended by iOS")
+                self?.holdBackgroundTime(false)
+            }
+            rideLog("background time held")
+        } else if isHeld == false, backgroundTask != .invalid {
+            rideLog("background time let go")
+            UIApplication.shared.endBackgroundTask(backgroundTask)
+            backgroundTask = .invalid
+        }
     }
 
     /// Every phrase once, the critical ones first, the whole said twice
