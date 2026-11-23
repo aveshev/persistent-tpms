@@ -292,6 +292,16 @@ final class SharedSensorsUriTests: XCTestCase {
         XCTAssertEqual(QrCodeResult.parse(shared.uri), .shared(shared))
     }
 
+    func testATcTpmsSensorIsWrittenTheWayAndroidWritesIt() {
+        // The same code as SharedSensorsTest.kt's: a TC.TPMS sensor's ID comes from the advertisement,
+        // so an iPhone shares it too
+        let shared = SharedSensors(kind: .motorcycle, name: "Moto", sensors: [
+            SharedSensor(id: 0x005AD8, location: .axle(.rear), brand: .tcTpms, isCalibrated: true, offsetKpa: 34.5, multiplier: 1),
+        ])
+        XCTAssertEqual(shared.uri, "tpmsadvanced://sensors?v=1&d=AgRNb3RvAQAAWtgFBQNCCgAAP4AAAA")
+        XCTAssertEqual(QrCodeResult.parse(shared.uri), .shared(shared))
+    }
+
     func testTheValuesOfAnUncalibratedSensorAreLeftOut() {
         // 1 kind + 1 length + 1 name + 1 count + 4 id + 1 location + 1 brand + 1 flags: 11 bytes
         let shared = SharedSensors(kind: .car, name: "x", sensors: [

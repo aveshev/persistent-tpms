@@ -10,7 +10,10 @@ import com.masselis.tpmsadvanced.data.vehicle.interfaces.DatabaseExport
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.ReadingDatabase
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorDatabase
 import com.masselis.tpmsadvanced.feature.background.interfaces.AlertNotifier
+import com.masselis.tpmsadvanced.feature.background.interfaces.MonitorService
 import com.masselis.tpmsadvanced.feature.background.interfaces.MonitoringController
+import com.masselis.tpmsadvanced.feature.background.interfaces.RideNotifier
+import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.RideNotificationSettingsViewModel
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.AlertSilenceViewModel
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.AlertingVehiclesViewModel
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.AlertsSettingsViewModel
@@ -45,6 +48,7 @@ import com.masselis.tpmsadvanced.feature.background.usecase.SilenceAlertsUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.StoredTyreAlertsUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.UnexpectedStopUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.WifiConnectionUseCase
+import com.masselis.tpmsadvanced.data.vehicle.usecase.DemoOrBleScannerUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.VehicleListUseCase
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesTo
@@ -287,6 +291,27 @@ public interface Bindings {
         GlobalScope + Dispatchers.Default.limitedParallelism(1),
     )
 
+    @OptIn(DelicateCoroutinesApi::class)
+    @Provides
+    @SingleIn(AppScope::class)
+    private fun rideNotifier(
+        appPreferences: AppPreferences,
+        scanPolicyUseCase: ScanPolicyUseCase,
+        demoOrBleScannerUseCase: DemoOrBleScannerUseCase,
+    ): RideNotifier = RideNotifier(
+        appPreferences,
+        scanPolicyUseCase.decision,
+        demoOrBleScannerUseCase.isDemo,
+        isAppVisibleFlow,
+        MonitorService.isMonitoring,
+        GlobalScope + Dispatchers.Default.limitedParallelism(1),
+    )
+
+    @Provides
+    private fun rideNotificationSettingsViewModel(
+        appPreferences: AppPreferences,
+    ): RideNotificationSettingsViewModel = RideNotificationSettingsViewModel(appPreferences)
+
     @Provides
     private fun persistentScanningViewModel(
         appPreferences: AppPreferences,
@@ -349,8 +374,13 @@ public interface Bindings {
     ): AlertSilenceViewModel = AlertSilenceViewModel(silenceAlertsUseCase)
 
     @Provides
-    private fun alertingVehiclesViewModel(alertSpeaker: AlertSpeaker): AlertingVehiclesViewModel =
-        AlertingVehiclesViewModel(AlertingVehiclesUseCase(alertSpeaker))
+    private fun alertingVehiclesUseCase(alertSpeaker: AlertSpeaker): AlertingVehiclesUseCase =
+        AlertingVehiclesUseCase(alertSpeaker)
+
+    @Provides
+    private fun alertingVehiclesViewModel(
+        alertingVehiclesUseCase: AlertingVehiclesUseCase,
+    ): AlertingVehiclesViewModel = AlertingVehiclesViewModel(alertingVehiclesUseCase)
 
     @Provides
     private fun scanStatusAnnouncementsViewModel(
@@ -368,6 +398,8 @@ public interface Bindings {
         internal val unexpectedStopUseCase: UnexpectedStopUseCase,
         internal val scanStatusAnnouncer: () -> ScanStatusAnnouncer,
         internal val alertNotifier: () -> AlertNotifier,
+        internal val rideNotifier: () -> RideNotifier,
+        internal val rideNotificationSettingsViewModel: () -> RideNotificationSettingsViewModel,
         internal val alertSnoozeUseCase: AlertSnoozeUseCase,
         internal val alertSpeaker: AlertSpeaker,
         internal val backgroundViewModel: () -> BackgroundViewModel,
@@ -388,5 +420,8 @@ public interface Bindings {
             featureBackgroundInternal.persistentScanningSettingsViewModel()
 
         internal fun BeaconsViewModel() = featureBackgroundInternal.beaconsViewModel()
+
+        internal fun RideNotificationSettingsViewModel() =
+            featureBackgroundInternal.rideNotificationSettingsViewModel()
     }
 }

@@ -45,6 +45,9 @@ import com.masselis.tpmsadvanced.feature.background.R
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.SettingsOnScreenEffect
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.BeaconsViewModel
 import com.masselis.tpmsadvanced.feature.background.ioc.Bindings.Companion.BeaconsViewModel
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
+import com.masselis.tpmsadvanced.core.common.localized
 
 /**
  * The page opened from the "Bluetooth beacon nearby" item of [ActivateScanConditions], new beacons
@@ -133,17 +136,17 @@ private fun Beacons(
     modifier: Modifier = Modifier,
 ) = Column(modifier) {
     SettingsIntro(
-        "Some newer cars and motorcycles feature always-on or on-while-riding BLE beacons that can be used to activate scanning. These likely won't show up on your phone's Bluetooth pairing screen, but you can add them here.\n\nNOTE: AirTags and similar personal trackers use proprietary protocols, hide their names and randomize their addresses, so they aren't supported."
+        stringResource(CommonR.string.some_newer_cars_and_motorcycles_feature_always)
     )
-    SettingsSectionHeader("Activate scanning when nearby")
+    SettingsSectionHeader(stringResource(CommonR.string.activate_scanning_when_nearby))
     SettingsGroup {
         if (nearby == null) TextSettingsItem(
-            headline = "Bluetooth is off",
-            supporting = "Turn it on to see which beacon is nearby",
+            headline = stringResource(CommonR.string.bluetooth_is_off),
+            supporting = stringResource(CommonR.string.turn_it_on_to_see_which_beacon),
             onClick = onTurnOnBluetooth,
             modifier = Modifier.testTag(BeaconsTags.bluetoothOff),
         )
-        if (beacons.isEmpty()) SettingsItem { Text("No beacon added yet") }
+        if (beacons.isEmpty()) SettingsItem { Text(stringResource(CommonR.string.no_beacon_added_yet)) }
         // The last added first
         beacons.asReversed().forEach { beacon ->
             val isRemoved = beacon.address in removed
@@ -154,13 +157,13 @@ private fun Beacons(
                     beacon.address.takeIf { beacon.displayName != it }?.let(::AnnotatedString),
                     nearby?.let { nearby ->
                         // Nearby: its signal, in the green of what's going well
-                        (nearby[beacon.address]?.let { "$it dBm" } ?: "Was nearby".takeIf { beacon.address in wasNearby })
+                        (nearby[beacon.address]?.let { stringResource(CommonR.string.dbm_2, it) } ?: stringResource(CommonR.string.was_nearby).takeIf { beacon.address in wasNearby })
                             ?.let { text ->
                                 buildAnnotatedString {
                                     withStyle(SpanStyle(color = MaterialTheme.colorScheme.primary)) { append(text) }
                                 }
                             }
-                            ?: AnnotatedString("Not nearby")
+                            ?: AnnotatedString(stringResource(CommonR.string.not_nearby))
                     },
                 )
                     .takeIf { it.isNotEmpty() }
@@ -169,19 +172,19 @@ private fun Beacons(
                 modifier = Modifier.testTag("${BeaconsTags.beacon}_${beacon.address}"),
             ) {
                 if (isRemoved) {
-                    TextButton(onClick = { onUndo(beacon.address) }) { Text("Undo") }
+                    TextButton(onClick = { onUndo(beacon.address) }) { Text(stringResource(CommonR.string.undo)) }
                 } else {
                     Row {
                         IconButton(onClick = { onRename(beacon.address) }) {
                             Icon(
                                 imageVector = ImageVector.vectorResource(R.drawable.edit_24px),
-                                contentDescription = "Rename ${beacon.displayName}",
+                                contentDescription = stringResource(CommonR.string.rename, beacon.displayName),
                             )
                         }
                         IconButton(onClick = { onRemove(beacon.address) }) {
                             Icon(
                                 imageVector = ImageVector.vectorResource(R.drawable.delete_24px),
-                                contentDescription = "Remove ${beacon.displayName}",
+                                contentDescription = stringResource(CommonR.string.remove_2, beacon.displayName),
                             )
                         }
                     }
@@ -192,18 +195,18 @@ private fun Beacons(
     // Separated from the list above, so that it doesn't read as one more beacon
     SettingsGroup(Modifier.padding(top = 24.dp)) {
         TextSettingsItem(
-            headline = "Add a beacon",
-            supporting = "Lists the Bluetooth devices around",
+            headline = stringResource(CommonR.string.add_a_beacon),
+            supporting = stringResource(CommonR.string.lists_the_bluetooth_devices_around),
             onClick = openBeaconScan,
             modifier = Modifier.testTag(BeaconsTags.addBeacon),
         )
     }
     if (overridesSuspend == null) return@Column
-    SettingsSectionHeader("Options")
+    SettingsSectionHeader(stringResource(CommonR.string.options))
     SettingsGroup {
         SwitchSettingsItem(
-            headline = "Override suspend conditions",
-            supporting = "(except phone idle)",
+            headline = stringResource(CommonR.string.override_suspend_conditions),
+            supporting = stringResource(CommonR.string.except_phone_idle),
             checked = overridesSuspend,
             onCheckedChange = onOverridesSuspend,
             modifier = Modifier.testTag(BeaconsTags.overridesSuspend),
@@ -217,22 +220,22 @@ private fun RenameDialog(beacon: Beacon, onRename: (String) -> Unit, onDismiss: 
     var name by rememberSaveable { mutableStateOf(beacon.label ?: beacon.advertisedName.orEmpty()) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Rename beacon") },
+        title = { Text(stringResource(CommonR.string.rename_beacon)) },
         text = {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
                 singleLine = true,
-                label = { Text("Name") },
+                label = { Text(stringResource(CommonR.string.name)) },
                 placeholder = { Text(beacon.advertisedName ?: beacon.address) },
                 modifier = Modifier.testTag(BeaconsTags.renameField),
             )
         },
         confirmButton = {
-            TextButton(onClick = { onRename(name); onDismiss() }) { Text("Save") }
+            TextButton(onClick = { onRename(name); onDismiss() }) { Text(stringResource(CommonR.string.save)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(CommonR.string.cancel)) }
         },
     )
 }
@@ -244,9 +247,9 @@ internal fun beaconsSummary(beacons: List<Beacon>): List<AnnotatedString> = beac
     .map { it.displayName }
     .let { names ->
         when (names.size) {
-            0 -> listOf("No beacon added")
+            0 -> listOf(localized(CommonR.string.no_beacon_added))
             1 -> names
-            else -> listOf(names.joinToString(", "), "${names.size} beacons")
+            else -> listOf(names.joinToString(", "), localized(CommonR.string.beacons, names.size))
         }
     }
     .map(::AnnotatedString)

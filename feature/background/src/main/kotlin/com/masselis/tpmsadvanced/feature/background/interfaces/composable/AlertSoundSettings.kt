@@ -18,6 +18,8 @@ import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.AlertSound.S
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.AlertSound.TONES
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.AlertsSettingsViewModel
 import com.masselis.tpmsadvanced.feature.background.ioc.Bindings
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /** The page opened from the "Alert sound" item of [AlertsSettings], choosing the sound once it's on */
 @Composable
@@ -43,20 +45,20 @@ private fun AlertSoundSettings(
 ) = Column(modifier) {
     @Suppress("MaxLineLength")
     SettingsIntro(
-        "Plays in addition to the red and critical alerts' notifications, and repeats while those alerts stay active: every 10 minutes for red, every 20 seconds at first for critical, then every 10 minutes.\n\nStopping or pausing monitoring stops the repeats too, until a new alerting sensor update is received.",
+        stringResource(CommonR.string.plays_in_addition_to_the_red_and),
         Modifier.padding(bottom = 16.dp),
     )
     SettingsGroup {
         RadioSettingsItem(
-            headline = "Speech",
-            supporting = "Says \"Tyre pressure\", \"Tyre hot\" or \"Sensor battery\" out loud",
+            headline = stringResource(CommonR.string.speech),
+            supporting = stringResource(CommonR.string.says_tyre_pressure_tyre_hot_or_sensor),
             selected = alertSound == SPEECH,
             onClick = { onAlertSound(SPEECH) },
             modifier = Modifier.testTag("${AlertsSettingsTags.alertSoundOption}_$SPEECH"),
         )
         RadioSettingsItem(
-            headline = "Tones",
-            supporting = "A tone pattern, faster and higher pitched for a critical alert",
+            headline = stringResource(CommonR.string.tones),
+            supporting = stringResource(CommonR.string.a_tone_pattern_faster_and_higher_pitched),
             selected = alertSound == TONES,
             onClick = { onAlertSound(TONES) },
             modifier = Modifier.testTag("${AlertsSettingsTags.alertSoundOption}_$TONES"),

@@ -113,6 +113,7 @@ public fun Tyre.toAtmosphere(calibration: PressureCalibration?): TyreAtmosphere 
     isAlarm,
     flags,
     batteryPercent,
+    rssi,
 ).let { atmosphere ->
     calibration
         ?.let { atmosphere.copy(pressure = it.applyTo(atmosphere.pressure)) }

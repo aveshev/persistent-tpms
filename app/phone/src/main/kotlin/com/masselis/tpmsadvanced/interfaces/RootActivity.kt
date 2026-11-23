@@ -1,5 +1,7 @@
 package com.masselis.tpmsadvanced.interfaces
 
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.compose.setContent
 import androidx.appcompat.app.AppCompatActivity
@@ -19,8 +21,13 @@ import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.Theme.SYSTEM
 import com.masselis.tpmsadvanced.interfaces.composable.Main
 import com.masselis.tpmsadvanced.interfaces.composable.TpmsAdvancedTheme
 import com.masselis.tpmsadvanced.ioc.Bindings
+import com.masselis.tpmsadvanced.core.common.AppLanguage
+import com.masselis.tpmsadvanced.core.common.applyAppLanguage
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 import java.util.UUID
 
 public class RootActivity : AppCompatActivity() {
@@ -28,6 +35,11 @@ public class RootActivity : AppCompatActivity() {
     private val counter = ScreenOnCounter.Activity()
 
     private var hasConsumedIntent by saved { false }
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(newBase)
+        applyAppLanguage()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Set before super.onCreate() so that the first frame already has the chosen theme. A change
@@ -40,13 +52,23 @@ public class RootActivity : AppCompatActivity() {
             .theme
             .onEach { AppCompatDelegate.setDefaultNightMode(it.nightMode) }
             .launchIn(lifecycleScope)
+        // Every text is read again in the chosen language
+        AppLanguage
+            .current
+            .drop(1)
+            .onEach { recreate() }
+            .launchIn(lifecycleScope)
+        // The language is a debug option: with them off, the app follows the phone. After the
+        // above, which would miss a change from the first value
+        Bindings
+            .appPreferences
+            .debugOptionsInUse
+            .filter { it.not() }
+            .onEach { AppLanguage.current.value = AppLanguage.SYSTEM }
+            .launchIn(lifecycleScope)
 
         val expectedVehicle = intent
-            ?.data
-            ?.pathSegments
-            ?.firstOrNull()
-            // Exported and browsable: any link can open this activity, with anything as its path
-            ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
+            ?.expectedVehicle
             ?.takeIf { hasConsumedIntent.not() }
             ?.also { hasConsumedIntent = true }
 
@@ -58,6 +80,22 @@ public class RootActivity : AppCompatActivity() {
             }
         }
     }
+
+    // singleTask: a vehicle's shortcut or alert opened while this activity exists, or whose task
+    // is kept in the recent apps, comes here instead of onCreate()
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        intent
+            .expectedVehicle
+            ?.also { lifecycleScope.launch { Bindings.currentVehicleUseCase.setAsCurrent(it) } }
+    }
+
+    private val Intent.expectedVehicle
+        get() = data
+            ?.pathSegments
+            ?.firstOrNull()
+            // Exported and browsable: any link can open this activity, with anything as its path
+            ?.let { runCatching { UUID.fromString(it) }.getOrNull() }
 
     private val Theme.nightMode
         get() = when (this) {

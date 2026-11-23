@@ -31,8 +31,9 @@ Android's settings, or uninstalling the app.
 
 - **Nearby devices / Bluetooth**: to receive the signals broadcast by your tyre sensors.
 - **Location**: Android requires the location permission to scan for Bluetooth devices on older
-  versions, and to read the name of the Wi-Fi network you are connected to. The app does not
-  record or use your position.
+  versions, and to read the name of the Wi-Fi network you are connected to. On Android 10 and 11,
+  the background monitor's notification keeps that permission in effect while the app is closed,
+  so that the scan keeps receiving the sensors. The app does not record or use your position.
 - **Background location**: lets the background monitor read the connected Wi-Fi network's name
   while the app is closed. Monitoring pauses while the phone is on Wi-Fi, except on the networks
   you list as exceptions (such as a car's hotspot). The names you add to that list are stored on

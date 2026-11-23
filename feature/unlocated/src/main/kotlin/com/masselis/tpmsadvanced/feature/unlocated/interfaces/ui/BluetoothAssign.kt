@@ -1,7 +1,13 @@
+@file:Suppress("MaxLineLength")
+
 package com.masselis.tpmsadvanced.feature.unlocated.interfaces.ui
 
 import com.masselis.tpmsadvanced.core.ui.appendBold
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.asSensorId
+import com.masselis.tpmsadvanced.feature.main.interfaces.composable.label
+import com.masselis.tpmsadvanced.data.unit.model.PressureUnit
+import com.masselis.tpmsadvanced.data.unit.model.TemperatureUnit
+import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.AnnotatedString
@@ -45,6 +51,11 @@ import com.masselis.tpmsadvanced.feature.unlocated.interfaces.viewmodel.Bluetoot
 import com.masselis.tpmsadvanced.feature.unlocated.ioc.Bindings.Companion.BluetoothAssignViewModel
 import com.masselis.tpmsadvanced.feature.unlocated.model.AssignStep
 import java.util.UUID
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
+import com.masselis.tpmsadvanced.core.common.localized
+import com.masselis.tpmsadvanced.core.common.localizedPlural
+import androidx.annotation.PluralsRes
 
 /**
  * Assigns [location] a sensor found by Bluetooth: the user puts it on the wheel, takes it off and
@@ -80,6 +91,8 @@ private fun Steps(
     modifier: Modifier = Modifier,
 ) {
     val step = state.step
+    val pressureUnit by viewModel.pressureUnit.collectAsState()
+    val temperatureUnit by viewModel.temperatureUnit.collectAsState()
     // The step's instruction in the middle, its actions anchored at the bottom
     Column(modifier = modifier.fillMaxSize().testTag(BluetoothAssignTags.root)) {
         Column(
@@ -100,7 +113,7 @@ private fun Steps(
             // Once assigned, the page tells it in full
             if (state.isAssigned.not()) Text(
                 text = buildAnnotatedString {
-                    append("Assigning to ")
+                    append(stringResource(CommonR.string.assigning_to))
                     appendWheelOn(location, state.vehicle)
                 },
                 style = MaterialTheme.typography.titleSmall,
@@ -111,41 +124,45 @@ private fun Steps(
             if (state.isAssigned) Instruction(
                 buildAnnotatedString {
                     (step as? AssignStep.Found)
-                        ?.also { append("Sensor ${it.sensorId.asSensorId(state.foundBrand)} assigned to ") }
+                        ?.also { append(stringResource(CommonR.string.sensor_assigned_to, it.sensorId.asSensorId(state.foundBrand))) }
                     appendWheelOn(location, state.vehicle)
                 }
             )
-            else if (dialog == Dialog.OneFound) Instruction(
-                "One sensor found",
-                buildString {
-                    append("Assign it to the ")
-                    appendLoc(location)
-                    append(", or check again to make sure?")
-                },
-            )
-            else if (dialog is Dialog.ManyFound) Instruction(
-                "${dialog.count} on-wheel sensors found",
-                "Let's figure out which one to assign",
-            )
+            else if (dialog == Dialog.OneFound) {
+                Instruction(
+                    stringResource(CommonR.string.one_sensor_found),
+                    stringResource(CommonR.string.assign_it_or_check, buildString { appendLoc(location) }),
+                )
+                (step as? AssignStep.PutOn)?.also { Sensors(it.found, state.heard, pressureUnit, temperatureUnit) }
+            }
+            else if (dialog is Dialog.ManyFound) {
+                Instruction(
+                    stringResource(CommonR.string.on_wheel_sensors_found, dialog.count),
+                    stringResource(CommonR.string.let_s_figure_out_which_one_to),
+                )
+                (step as? AssignStep.PutOn)?.also { Sensors(it.found, state.heard, pressureUnit, temperatureUnit) }
+            }
             else when (step) {
-                AssignStep.Ask -> Instruction("Is the sensor you want to assign on the wheel right now?")
+                AssignStep.Ask -> Instruction(stringResource(CommonR.string.is_the_sensor_you_want_to_assign))
 
                 is AssignStep.PutOn -> {
-                    Instruction("Put the sensor on the wheel", FORCES_UPDATE)
-                    Listening("Listening for on-wheel sensors…", step.found.size.sensors("on-wheel"))
+                    Instruction(stringResource(CommonR.string.put_the_sensor_on_the_wheel), FORCES_UPDATE)
+                    Listening(stringResource(CommonR.string.listening_for_on_wheel_sensors), step.found.size.sensors(CommonR.plurals.on_wheel_sensors_found))
+                    Sensors(step.found, state.heard, pressureUnit, temperatureUnit)
                 }
 
                 is AssignStep.TakeOff -> {
-                    Instruction("Remove the sensor from the wheel", FORCES_UPDATE)
-                    Listening("Listening for off-wheel sensors…", step.off.size.sensors("off-wheel"))
+                    Instruction(stringResource(CommonR.string.remove_the_sensor_from_the_wheel), FORCES_UPDATE)
+                    Listening(stringResource(CommonR.string.listening_for_off_wheel_sensors), step.off.size.sensors(CommonR.plurals.off_wheel_sensors_found))
+                    Sensors(step.off, state.heard, pressureUnit, temperatureUnit)
                 }
 
                 is AssignStep.PutBack -> {
-                    Instruction("Put the sensor back on the wheel", FORCES_UPDATE)
-                    Listening("Listening for the sensor to come back on…", null)
+                    Instruction(stringResource(CommonR.string.put_the_sensor_back_on_the_wheel), FORCES_UPDATE)
+                    Listening(stringResource(CommonR.string.listening_for_the_sensor_to_come_back), null)
                 }
 
-                is AssignStep.Found -> Instruction("Sensor found")
+                is AssignStep.Found -> Instruction(stringResource(CommonR.string.sensor_found))
             }
         }
         HorizontalDivider()
@@ -160,31 +177,31 @@ private fun Steps(
             if (state.isAssigned) Button(
                 onClick = viewModel::done,
                 modifier = Modifier.fillMaxWidth().testTag(BluetoothAssignTags.done),
-            ) { Text("Done") }
+            ) { Text(stringResource(CommonR.string.done)) }
             else if (dialog == Dialog.OneFound) {
                 OutlinedButton(
                     onClick = viewModel::checkAgain,
                     modifier = Modifier.fillMaxWidth().testTag(BluetoothAssignTags.checkAgain),
-                ) { Text("Check again") }
+                ) { Text(stringResource(CommonR.string.check_again)) }
                 Button(
                     onClick = viewModel::assignFound,
                     modifier = Modifier.fillMaxWidth().testTag(BluetoothAssignTags.assign),
-                ) { Text("Assign") }
+                ) { Text(stringResource(CommonR.string.assign)) }
             }
             else if (dialog is Dialog.ManyFound) Button(
                 onClick = viewModel::checkAgain,
                 modifier = Modifier.fillMaxWidth().testTag(BluetoothAssignTags.checkAgain),
-            ) { Text("Continue") }
+            ) { Text(stringResource(CommonR.string.text_continue)) }
             else when (step) {
                 AssignStep.Ask -> {
                     OutlinedButton(
                         onClick = { viewModel.answer(isOnWheel = false) },
                         modifier = Modifier.fillMaxWidth().testTag(BluetoothAssignTags.inHand),
-                    ) { Text("No, not yet") }
+                    ) { Text(stringResource(CommonR.string.no_not_yet)) }
                     Button(
                         onClick = { viewModel.answer(isOnWheel = true) },
                         modifier = Modifier.fillMaxWidth().testTag(BluetoothAssignTags.onWheel),
-                    ) { Text("Yes, it's on the wheel") }
+                    ) { Text(stringResource(CommonR.string.yes_it_s_on_the_wheel)) }
                 }
 
                 is AssignStep.PutOn -> {
@@ -192,7 +209,7 @@ private fun Steps(
                     if (state.offersLowPressure && step.found.isEmpty() && step.low.isNotEmpty()) TextButton(
                         onClick = viewModel::lowPressure,
                         modifier = Modifier.testTag(BluetoothAssignTags.lowPressure),
-                    ) { Text("Low pressure tyre?") }
+                    ) { Text(stringResource(CommonR.string.low_pressure_tyre)) }
                     Continue(enabled = step.found.isNotEmpty(), onClick = viewModel::next)
                 }
 
@@ -210,7 +227,7 @@ private fun Continue(enabled: Boolean, onClick: () -> Unit) = Button(
     onClick = onClick,
     enabled = enabled,
     modifier = Modifier.fillMaxWidth().testTag(BluetoothAssignTags.next),
-) { Text("Continue") }
+) { Text(stringResource(CommonR.string.text_continue)) }
 
 private const val FORCES_UPDATE = "This will force it to send an update"
 
@@ -225,12 +242,12 @@ private fun Dialogs(vehicle: Vehicle?, dialog: Dialog?, viewModel: BluetoothAssi
 
         is Dialog.BoundElsewhere -> AlertDialog(
             onDismissRequest = viewModel::dismissDialog,
-            title = { Text("Already assigned") },
+            title = { Text(stringResource(CommonR.string.already_assigned)) },
             text = {
                 Text(buildAnnotatedString {
-                    append("Warning: this sensor is already assigned to ")
+                    append(stringResource(CommonR.string.sensor_already_assigned_to))
                     appendBold(dialog.vehicle.name)
-                    append(".\n\nReassign it to ")
+                    append(stringResource(CommonR.string.reassign_it_to))
                     appendBold(vehicle?.name.orEmpty())
                     append("?")
                 })
@@ -239,9 +256,9 @@ private fun Dialogs(vehicle: Vehicle?, dialog: Dialog?, viewModel: BluetoothAssi
                 TextButton(
                     onClick = viewModel::confirmBoundElsewhere,
                     modifier = Modifier.testTag(BluetoothAssignTags.assign),
-                ) { Text("Reassign") }
+                ) { Text(stringResource(CommonR.string.reassign)) }
             },
-            dismissButton = { TextButton(onClick = viewModel::dismissDialog) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = viewModel::dismissDialog) { Text(stringResource(CommonR.string.cancel)) } },
         )
     }
 }
@@ -274,14 +291,14 @@ private fun Instruction(text: AnnotatedString, detail: String? = null) {
  * wheel is just "the wheel".
  */
 private fun AnnotatedString.Builder.appendWheelOn(location: Location, vehicle: Vehicle?) {
-    append("the ")
-    if (location == Location.Single) append("wheel")
+    append(localized(CommonR.string.wheel_on_the))
+    if (location == Location.Single) append(localized(CommonR.string.loc_wheel))
     else {
         appendBold(buildString { appendLoc(location, withType = false) })
-        append(" wheel")
+        append(localized(CommonR.string.loc_wheel_suffix))
     }
     vehicle?.also {
-        append(" on ")
+        append(localized(CommonR.string.wheel_on))
         appendBold(it.name)
     }
 }
@@ -297,9 +314,44 @@ private fun Listening(text: String, found: String?) {
     }
 }
 
+/**
+ * A line per sensor in [ids], from its last reading in [heard]: its brand and ID, the one Android
+ * identifies it by for those which advertise none, then the pressure and temperature it last read,
+ * as the sensor reads them
+ */
+@Composable
+private fun Sensors(
+    ids: Set<Int>,
+    heard: Map<Int, Tyre>,
+    pressureUnit: PressureUnit,
+    temperatureUnit: TemperatureUnit,
+) {
+    val tyres = ids.mapNotNull { heard[it] }
+    if (tyres.isNotEmpty()) Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.testTag(BluetoothAssignTags.sensors),
+    ) {
+        tyres.forEach { tyre ->
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    "${tyre.brand.label} ${tyre.sensorId.asSensorId(tyre.brand)}",
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                Text(
+                    listOf(tyre.pressure.string(pressureUnit), tyre.temperature.string(temperatureUnit))
+                        .joinToString(" · "),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
 /** "1 on-wheel sensor found", "2 on-wheel sensors found", nothing until one is */
-private fun Int.sensors(kind: String): String? =
-    takeIf { it > 0 }?.let { "$it $kind sensor${if (it > 1) "s" else ""} found" }
+private fun Int.sensors(@PluralsRes kind: Int): String? =
+    takeIf { it > 0 }?.let { localizedPlural(kind, it, it) }
 
 @Suppress("ConstPropertyName")
 public object BluetoothAssignTags {
@@ -311,4 +363,5 @@ public object BluetoothAssignTags {
     public const val assign: String = "BluetoothAssignTags_assign"
     public const val checkAgain: String = "BluetoothAssignTags_checkAgain"
     public const val done: String = "BluetoothAssignTags_done"
+    public const val sensors: String = "BluetoothAssignTags_sensors"
 }

@@ -1,3 +1,5 @@
+@file:Suppress("MaxLineLength")
+
 package com.masselis.tpmsadvanced.feature.background.interfaces.ui
 
 import androidx.compose.foundation.layout.Row
@@ -26,6 +28,8 @@ import com.masselis.tpmsadvanced.feature.background.R
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningViewModel
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision
 import com.masselis.tpmsadvanced.feature.background.usecase.rationale
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 @Composable
 internal fun PersistentScanningBell(
@@ -71,11 +75,12 @@ private fun PersistentScanningBell(
                 else R.drawable.notifications
             ),
             contentDescription = when (state) {
-                BellState.NeedsPermission -> "Persistent scanning needs permissions, tap to grant them"
-                BellState.Active -> "Background scanning is active"
-                BellState.Always -> "Background scanning is always active"
-                BellState.Suspended -> "Background scanning is suspended"
-                BellState.Idle -> "Background scanning is idle"
+                BellState.NeedsPermission -> stringResource(CommonR.string.persistent_scanning_needs_permissions_tap_to_grant)
+                BellState.Active -> stringResource(CommonR.string.background_scanning_is_active)
+                BellState.Always -> stringResource(CommonR.string.background_scanning_is_always_active)
+                BellState.Bluetooth -> stringResource(CommonR.string.background_scanning_is_active_for_a_bluetooth)
+                BellState.Suspended -> stringResource(CommonR.string.background_scanning_is_suspended)
+                BellState.Idle -> stringResource(CommonR.string.background_scanning_is_idle)
             },
             tint = state.color,
         )
@@ -87,8 +92,8 @@ internal val BellState.color: Color
     @Composable
     get() = when (this) {
         BellState.NeedsPermission -> MaterialTheme.colorScheme.error
-        BellState.Active -> MaterialTheme.colorScheme.primary
-        BellState.Always -> Blue
+        BellState.Active, BellState.Always -> MaterialTheme.colorScheme.primary
+        BellState.Bluetooth -> Blue
         BellState.Suspended -> Orange
         // The theme's content colour, a plain white would vanish on the light theme
         BellState.Idle -> LocalContentColor.current

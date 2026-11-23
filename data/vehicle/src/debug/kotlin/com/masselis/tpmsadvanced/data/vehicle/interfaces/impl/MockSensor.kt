@@ -125,7 +125,7 @@ internal enum class MockSensor {
      * first manufacturer data byte: 0x00 (the default) with a steady pressure, 0x01 after it rose,
      * 0x02 after it fell.
      */
-    BEKUBEE_TC_TPMS {
+    TC_TPMS {
         override fun advertisement(reading: Reading): ByteArray = byteArrayOf(
             (reading.flags?.within("flags", 0..255) ?: 0x00).toByte(),
             (reading.battery ?: 30).within("battery", 0..255).toByte(),
@@ -136,7 +136,7 @@ internal enum class MockSensor {
                 .roundToInt()
                 .plus(146)
                 .let { byteArrayOf((it shr 8).toByte(), it.toByte()) },
-            // The vendor's half of the address, captured from a real sensor (see BekubeeTcTpmsTest)
+            // The vendor's half of the address, captured from a real sensor (see TcTpmsTest)
             0x34,
             0x30,
             0x07,

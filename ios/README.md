@@ -24,7 +24,10 @@ as the Android tests.
 - `App/Sources`: the app.
   - `Scanner`: CoreBluetooth, in the foreground and the background.
   - `Monitor`: the app's state, what's received, stored and alerted on.
-  - `Notifier`: one notification per tyre and alert class.
+  - `Notifier`: one notification per tyre and alert class, and the ride notification.
+  - `RidePrompts`, `RideNotificationViews`, `GoingForARideIntent`: the ride notification's triggers,
+    settings and Shortcuts action. `Packages/TPMSCore`'s `RideTriggers` and `RideBeacon` hold their
+    rules, tested on the Mac.
   - The screens: `MainView` and `VehicleView` (the vehicle's drawing, its tyres and readouts, like
     Android's `Vehicle.kt` and `TyreStat.kt`), `DimWhenIdle`, `TyreDetailView`, `AssignSensorSheet`,
     `BluetoothAssignView`, `QrCodeScanView`, `ManageSensorsView`, `ShareSensorsView`, `AddVehicleView`,
@@ -57,10 +60,79 @@ as the Android tests.
 ## Lite on iOS
 
 Android's Lite scans in the background only while a Bluetooth device it's told about is
-connected or a beacon is near. iOS gives apps neither the classic Bluetooth connections (the
-car's audio) nor a way to wake on them. Background scanning is cheap on iOS, filtered in the
-Bluetooth chip by service UUID, so the iOS app simply listens in the background whenever a
-sensor is assigned (Persistent mode, on by default).
+connected or a beacon is near. Background scanning is cheap on iOS, filtered in the Bluetooth chip
+by service UUID, so the iOS app simply listens in the background whenever a sensor is assigned
+(Persistent mode, on by default). But it has no higher scan mode to switch on, so what starts a
+ride there is a notification instead.
+
+With Persistent mode off, the top bar's minimize button keeps scanning in the background until tapped
+again, like Android's manual monitoring. An iOS app can't close itself, so a toast tells the user to
+leave it, and with no foreground notification to stop it from, the button turns into a cancel button.
+Swiping the app away ends it, like Android's restart; a relaunch by Bluetooth state restoration keeps
+it. With Persistent mode on, Android's bell takes the button's place: green while scanning is always
+active (the only mode iOS has), red and crossed out while something keeps it from alerting (Bluetooth
+off or not allowed, no sensor assigned, notifications off in the app or in iOS's Settings). Tapped, it
+tells which, with a way to fix it.
+
+### Ride notification
+
+"Going for a ride? Open Persistent TPMS to monitor tire pressure": opening the app gets the full scan
+rate for as long as it's open and the phone unlocked. Silent, and time sensitive, so Driving Focus,
+which comes on as a ride starts, doesn't hold it back.
+Off until its switch on the Persistent mode page is turned on, which asks for the permission to notify
+and, the first time, turns on the sensor trigger. Each trigger is optional, under "Notify when ...".
+Only the sensor one needs Persistent scanning, and is greyed out without it. Nothing while the app is
+open, which also removes it.
+
+There's only ever one, and no fixed limit on how often. A trigger firing while it's showing leaves it
+as it is and keeps it current for another hour. A trigger firing with none showing, or with one left
+stale by an hour without any firing, posts a new one: the old one is removed first, so it comes with a
+banner at the top of the list. iOS can't expire a notification and a suspended app has no timer, so an
+unopened one is only removed when something next wakes the app, which can be much later than the hour.
+
+`RideTriggers` compares stored times when a report arrives, a suspended app running no timer. A
+trigger fires when heard after 30 minutes away from the vehicle, and only a signal from -85 dBm counts as hearing
+it, like Android's beacons. So a bike out of reach of the house reads as absent, and a stop shorter
+than that doesn't prompt again.
+
+| Trigger | Wakes the app with | Needs | Ends after a swipe away |
+|---|---|---|---|
+| Sensor | The scan already running | Persistent scanning, no setup | Yes |
+| Beacon | Its service UUID added to the scan | A device advertising one | Yes |
+| Shortcuts | An automation running the "Going for a ride" App Intent | Setting it up in Shortcuts | No |
+
+- **Sensor.** Heard after a long gap, each vehicle on its own. A single report is enough: most sensors
+  only send once the wheel turns (a parked Wicarlink every 5.5 minutes, which a walk past rarely
+  catches), so this comes as the ride starts rather than before it.
+- **Beacon, picked in a foreground scan with no filter.** Tyre sensors and devices with neither name
+  nor 128-bit service aren't listed: nearly all rotate their address and couldn't be recognised after,
+  and iOS doesn't show which do, so one with a fixed address is left out too. Each row shows the start
+  of its identifier, to tell devices apart. The page works like Android's (`BeaconList`): it keeps
+  scanning while seen, and its order only changes when reloading or sorting. Those with only a name or
+  manufacturer data aren't listed either, as iOS reports nothing about them in the background
+  (iBeacons and AirTags too). Each report has a signal strength and nothing is taken from the beacon.
+  A report needs confirming by a second one, 5 seconds to 5
+  minutes later, like Android's two packets, the window wider for the background's slower reports.
+- **Several beacons, like Android's page.** Listed with their signal, "Was nearby" or "Not nearby"
+  (`BeaconPresence`), renamed, and removed with an undo until the page is left, which turns the trigger
+  off with none left. They count as one for the notification: two on a vehicle make a single one, and
+  one heard all day hides the others coming back, so a beacon at home can hide one on the bike.
+- **No beacon by connection.** A connectable device advertising no service could wake the app by a
+  connection request left pending by its identifier. iOS keeps listening for it until the device shows
+  up, competing with the tyres' scan for as long as the beacon is away, and for good once its
+  identifier changed. Probably why an iPhone holding one pending for 11 days caught 14 of 20 tyre
+  bursts on a ride, app open, where an S9 beside it caught all 20. Such beacons were dropped, a saved one is
+  removed, and a leftover connection is cancelled on launch.
+- **Beacons with a rotating private address.** iOS gives only an identifier specific to this iPhone,
+  which changes with the address. A beacon is still recognised by its name or its own 128-bit
+  service, not by a 16-bit one, which stands for a whole kind of device.
+- **Shortcuts.** Only an automation sees classic Bluetooth devices (a car's audio, many headsets),
+  which apps can't list. iOS has no API for an app to create one or pre-select its device, so the page
+  has a `ShortcutsLink`, a guide calling out Run Immediately, and with the debug options on "Last
+  triggered", recorded when the action runs since the app can't see the automation. The action also
+  restarts the scan.
+
+iBeacon region monitoring is left out: it needs "Always" location access.
 
 ### What it has
 
@@ -93,19 +165,39 @@ The settings and menus follow Android's, screen by screen:
   - Readings: units, time since last update with its details, battery.
   - Alerts: notifications, alert sound (speech or tones), vibration. Pressure, temperature, battery
     (red once it stays so 10 minutes), the sensor's own alarm.
-  - Background monitoring: Persistent mode.
-  - Import a database, exported by Android or iOS.
+  - Background monitoring: Persistent mode, with the ride notification.
   - About, with Android's 10 taps on the version for the Debug page: sensor ID, sensor flags, export
     database.
   - Misc: demo mode, pressure loss while riding (experimental, like on Android).
 
 ### Differences from Android
 
-- **The alert sound is off by default** (speech on Android) until it's been tried on a phone. iOS
-  runs the app in the background only when a sensor is heard, so it may play late or not at all there.
+- **The alert sound is speech by default, like on Android**, but iOS runs the app in the background
+  only when a sensor is heard, so it may play late or not at all there.
 - **A red or critical alert stops holding the screen bright 30 minutes after its last reading.** Android
-  only holds live readings, until dismissed, which iOS has no notification action for yet. Without a
+  only holds live readings, until dismissed. Without a
   limit, an old reading kept in the database would stop the screen ever dimming.
+- **Alert notifications follow Android's rules (`AlertAction`, `AlertSnoozes`, docs/alerts.md)**: the 5 s
+  wait before raising, the 3 min hold, sounding, folding a leak into a red pressure, snoozes, re-evaluating
+  on a threshold change, and the wording. What iOS changes:
+  - The "Dismiss" actions take a long press. Clearing one (swiped left, Clear) counts as its shorter
+    period, as a swipe away does on Android: seen on an iPhone 13 Pro, iOS 18, iOS relaunching the app
+    to tell it. Clear All in Notification Center leaves the ones above its line, the recent ones.
+  - Tapping a notification removes it, which Android's doesn't: it comes back with the next reading,
+    silently for amber. Red and crimson sound at every reading anyway.
+  - Which notifications show is only known at a reading: a sensor gone quiet, or an app swiped away,
+    brings nothing back.
+  - A suspended app runs no timer: a hold ending applies its reading when something next wakes the app.
+  - No channel per level for the user to set up, and a notification's time is when it was posted, not
+    the reading's: iOS has neither. Speech waits a fixed 2 s for a notification's sound, which iOS doesn't
+    report the end of.
+- **Quick actions for Android's launcher shortcuts**: touching and holding the app's icon lists the
+  vehicles, the first 4 with a name, as iOS shows no more, and opens the main screen on the one picked.
+  The Android app's links, `tpmsadvanced://vehicle/<uuid>` (`VehicleLink`), open the same way.
+- **Red and crimson notifications are time sensitive**, going through a Focus as Android's alert channels
+  go through Do Not Disturb only when the user lets them. The user can turn that off per app in iOS's settings.
+- **Swiping the app away stops the monitoring** until it's opened again, which the Persistent mode page
+  says. Android's service keeps running.
 - **Persistent mode is a menu line that opens its page**: an iOS menu line can't hold a switch.
 - **Shared Pecham and Bekubee KY sensors are left out of the QR code**: their IDs are this phone's own,
   they're assigned by Bluetooth.
@@ -119,10 +211,11 @@ The settings and menus follow Android's, screen by screen:
 
 ### Left out
 
-- **Android Auto, shortcuts**: CarPlay needs Apple's approval for this category.
-- **Scan conditions** (Bluetooth devices, beacons, Wi-Fi, stay active, suspend when idle), the monitoring
-  button and the debug options about scanning: iOS gives an app nothing to act on, and its background
-  scanning is cheap enough to leave on.
+- **Android Auto**: CarPlay needs Apple's approval for this category.
+- **Scan conditions** (Bluetooth devices, beacons, Wi-Fi, stay active, suspend when idle) and the debug
+  options about scanning: a background app has no higher scan rate to switch on, and its background
+  scanning is cheap enough to leave on. Bluetooth devices and beacons trigger the ride notification
+  instead.
 - **An app icon** and **localisation**.
 
 ## Building

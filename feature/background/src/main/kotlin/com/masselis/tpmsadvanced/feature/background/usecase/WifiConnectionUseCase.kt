@@ -24,6 +24,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.onEach
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import com.masselis.tpmsadvanced.core.common.localized
 
 @SuppressLint("MissingPermission")
 internal class WifiConnectionUseCase {
@@ -58,7 +60,7 @@ internal class WifiConnectionUseCase {
         .onEach { state ->
             when (state) {
                 is State.Connected -> logger.d { "Connected to a WiFi, its name is readable: ${state.ssid != null}" }
-                State.Disconnected -> logger.d { "Not connected to a WiFi" }
+                State.Disconnected -> logger.d { localized(CommonR.string.not_connected_to_a_wifi) }
             }
         }
 

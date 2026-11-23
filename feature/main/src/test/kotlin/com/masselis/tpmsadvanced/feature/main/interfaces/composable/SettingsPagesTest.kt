@@ -7,6 +7,9 @@ import androidx.compose.ui.platform.LocalInspectionMode
 import app.cash.paparazzi.Paparazzi
 import com.android.ide.common.rendering.api.SessionParams
 import com.masselis.tpmsadvanced.core.test.MainDispatcherRule
+import com.masselis.tpmsadvanced.core.test.mockLocalizedAsEnglish
+import io.mockk.unmockkAll
+import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -30,10 +33,14 @@ internal class SettingsPagesTest {
 
     @Before
     fun setup() {
+        mockLocalizedAsEnglish()
         // Another test of this module may have changed them, and they decide how numbers are written
         Locale.setDefault(Locale.US)
         TimeZone.setDefault(TimeZone.getTimeZone("UTC"))
     }
+
+    @After
+    fun tearDown() = unmockkAll()
 
     // Shows what blinks in its first phase, as previews do, instead of the current one
     private fun snapshot(content: @Composable () -> Unit) = paparazzi.snapshot {

@@ -25,6 +25,8 @@ import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.ClearBoundSen
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleBindings.Companion.ClearBoundSensorsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent.Factory.Companion.key
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /** A [SettingsGroup] item unbinding all the vehicle's sensors, once confirmed */
 @Composable
@@ -39,10 +41,10 @@ internal fun ClearBoundSensorsButton(
     val vehicle by component.vehicleStateFlow.collectAsState()
     var confirmClear by rememberSaveable { mutableStateOf(false) }
     TextSettingsItem(
-        headline = "Clear all sensors",
+        headline = stringResource(CommonR.string.clear_all_sensors),
         supporting = when (state) {
-            State.ClearingPossible -> "Removes every sensor assigned to this vehicle"
-            State.AlreadyCleared -> "No sensor is assigned to this vehicle"
+            State.ClearingPossible -> stringResource(CommonR.string.removes_every_sensor_assigned_to_this_vehicle)
+            State.AlreadyCleared -> stringResource(CommonR.string.no_sensor_is_assigned_to_this_vehicle)
         },
         onClick = { confirmClear = true },
         enabled = state is State.ClearingPossible,
@@ -54,9 +56,9 @@ internal fun ClearBoundSensorsButton(
         text = {
             Text(
                 buildAnnotatedString {
-                    append("Clear all sensors from ")
+                    append(stringResource(CommonR.string.clear_all_sensors_from))
                     appendBold(vehicle.name)
-                    append("?\nThis cannot be undone.")
+                    append(stringResource(CommonR.string.this_cannot_be_undone))
                 }
             )
         },
@@ -64,13 +66,13 @@ internal fun ClearBoundSensorsButton(
             TextButton(
                 onClick = { confirmClear = false },
                 modifier = Modifier.testTag(ClearBoundSensorsButtonTags.cancel),
-            ) { Text("Cancel") }
+            ) { Text(stringResource(CommonR.string.cancel)) }
         },
         confirmButton = {
             TextButton(
                 onClick = { viewModel.clear(); confirmClear = false },
                 modifier = Modifier.testTag(confirm),
-            ) { Text("Clear all") }
+            ) { Text(stringResource(CommonR.string.clear_all)) }
         },
     )
 }

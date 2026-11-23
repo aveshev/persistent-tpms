@@ -9,6 +9,8 @@ import com.masselis.tpmsadvanced.core.ui.SettingsGroup
 import com.masselis.tpmsadvanced.data.unit.model.PressureUnit
 import com.masselis.tpmsadvanced.data.unit.model.TemperatureUnit
 import com.masselis.tpmsadvanced.feature.unit.ioc.Bindings.Companion.UnitsViewModel
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /** The app-wide units, as items to put in a [SettingsGroup] */
 @Composable
@@ -21,14 +23,14 @@ internal fun UnitsSettingsItems(
     val pressure by viewModel.pressure.collectAsState()
     val temperature by viewModel.temperature.collectAsState()
     SegmentedSettingsItem(
-        headline = "Pressure in",
+        headline = stringResource(CommonR.string.pressure_in),
         options = PressureUnit.entries,
         selected = pressure,
         onSelect = { viewModel.pressure.value = it },
         label = { it.symbol() },
     )
     SegmentedSettingsItem(
-        headline = "Temperature in",
+        headline = stringResource(CommonR.string.temperature_in),
         options = TemperatureUnit.entries,
         selected = temperature,
         onSelect = { viewModel.temperature.value = it },

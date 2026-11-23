@@ -84,6 +84,10 @@ WHERE vehicleId = :vehicleId AND location = :location AND timestamp <= (
 latestTimestamp:
 SELECT MAX(timestamp) AS timestamp FROM Reading;
 
+-- Each vehicle's latest reading, to tell which were used last
+latestByVehicle:
+SELECT vehicleId, MAX(timestamp) AS timestamp FROM Reading GROUP BY vehicleId;
+
 -- A sensor's history, newest first, wherever it was read: its readings follow it on a move (see
 -- parkSensor), and the ones left on a vehicle or a tyre it was reassigned from are kept there. Not
 -- the ones parked in the middle of a move.

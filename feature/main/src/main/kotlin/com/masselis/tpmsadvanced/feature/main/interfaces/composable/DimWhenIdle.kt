@@ -3,12 +3,14 @@ package com.masselis.tpmsadvanced.feature.main.interfaces.composable
 import android.annotation.SuppressLint
 import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES.P
+import android.os.Build.VERSION_CODES.Q
 import android.os.PowerManager
 import android.os.PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK
 import android.os.PowerManager.RELEASE_FLAG_WAIT_FOR_NO_PROXIMITY
 import android.view.WindowManager.LayoutParams.BRIGHTNESS_OVERRIDE_NONE
 import android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
 import android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+import android.view.inspector.WindowInspector
 import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -44,6 +46,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -70,13 +73,18 @@ import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
 import com.masselis.tpmsadvanced.feature.main.usecase.TyreStatsStateFlow.State
 import kotlin.math.roundToInt
 import kotlin.random.Random
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.delay
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * Lowers the screen's brightness over [content] once nothing happened for as long as the settings
  * say, see [DimDisplayDelay]: no touch, no new warning or alert of the shown vehicle's tyres. While
- * [isAlerting], a red or critical alert of any vehicle going on, it stays bright.
+ * [isAlerting], a red or critical alert of any vehicle going on, it stays bright. So it does while
+ * none of the app's windows has the focus, the notification shade pulled down over it: dimmed, the
+ * shade would be too. On Android 10 and up only, the app's own dialogs taking the focus otherwise.
  *
  * Dimmed, the screen is at the brightness the system would give it divided as the settings say,
  * see [SystemBrightness]. At its lowest already, the screen is made darker over [content] too, which
@@ -111,7 +119,7 @@ public fun DimWhenIdle(
     content,
 )
 
-@Suppress("LongMethod", "CyclomaticComplexMethod", "MaxLineLength")
+@Suppress("LongMethod", "CyclomaticComplexMethod", "MaxLineLength", "ComplexCondition")
 @Composable
 internal fun DimWhenIdle(
     isAlerting: Boolean,
@@ -126,6 +134,18 @@ internal fun DimWhenIdle(
     val divisor by settings.dimDisplayDivisor.collectAsState()
     // Back from another app, or with the screen turned back on, it starts bright
     val isResumed = LocalLifecycleOwner.current.lifecycle.currentStateAsState().value.isAtLeast(RESUMED)
+    // The main screen's window loses the focus to the shade, but also to the dialogs over it, which are
+    // the app's own windows: only lost to the shade when none of them has it either. Followed until the
+    // main screen gets it back, the dialogs' own focus not being told, and the wait lets one get it.
+    val isWindowFocused = LocalWindowInfo.current.isWindowFocused
+    var isAppFocused by remember { mutableStateOf(true) }
+    LaunchedEffect(isWindowFocused, isResumed) {
+        isAppFocused = true
+        if (SDK_INT >= Q && isWindowFocused.not() && isResumed) while (true) {
+            delay(FOCUS_CHECK)
+            isAppFocused = WindowInspector.getGlobalWindowViews().any { it.hasWindowFocus() }
+        }
+    }
     val warnings = vehicleComponent.vehicle.kind.locations
         .flatMap { location ->
             (vehicleComponent.TyreComponent(location).tyreStatsStateFlow.collectAsState().value as? State.Detected)
@@ -156,7 +176,7 @@ internal fun DimWhenIdle(
             onDispose { lifecycle.removeObserver(observer) }
         }
     }
-    LaunchedEffect(isEnabled, seconds, isAlerting, isResumed, wakes) {
+    LaunchedEffect(isEnabled, seconds, isAlerting, isResumed, isAppFocused, wakes) {
         when {
             isTurning && isResumed.not() -> Unit
             // Turned dimmed, it stays so
@@ -164,7 +184,7 @@ internal fun DimWhenIdle(
             else -> {
                 isTurning = false
                 isDimmed = false
-                if (isEnabled && isAlerting.not() && isResumed) {
+                if (isEnabled && isAlerting.not() && isResumed && isAppFocused) {
                     delay(seconds.seconds)
                     isDimmed = true
                 }
@@ -333,7 +353,7 @@ private fun TurnedOff() = Surface(
     modifier = Modifier.testTag(DimWhenIdleTags.turnedOff),
 ) {
     Text(
-        text = "Screen was turned off by\n\"Block touches in a pocket\"",
+        text = stringResource(CommonR.string.screen_was_turned_off_by_block_touches),
         // In proportion to the size it's shown at
         style = MaterialTheme.typography.headlineSmall.copy(lineHeight = TURNED_OFF_LINE),
         textAlign = TextAlign.Center,
@@ -356,7 +376,7 @@ private fun BlockedTouches() {
         }
     }
     Text(
-        text = "Proximity sensor active\nTouches are blocked",
+        text = stringResource(CommonR.string.proximity_sensor_active_touches_are_blocked),
         color = Color.White,
         style = MaterialTheme.typography.titleLarge,
         textAlign = TextAlign.Center,
@@ -381,6 +401,9 @@ internal fun Map<Pair<Location, AlertClass>, AlertLevel>.raisesFrom(
 
 /** How dark the screen is made over its content, dimmed at the lowest brightness already */
 private const val DARKENED_ALPHA = 0.3f
+
+/** How often, while the main screen's window doesn't have the focus, whether another of the app's has */
+private val FOCUS_CHECK = 300.milliseconds
 
 /** How long after brightening again the proximity sensor is still watched */
 private val POCKET_GRACE = 1.seconds

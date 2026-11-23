@@ -75,7 +75,7 @@ struct AssignSensorSheet: View {
                 case .qrCode:
                     QrCodeScanView(vehicle: vehicle, location: location, monitor: monitor, scanBluetooth: { path = [.bluetooth] }, onDone: { dismiss() })
                 case .bluetooth:
-                    BluetoothAssignView(vehicle: vehicle, location: location, monitor: monitor, onDone: { dismiss() })
+                    BluetoothAssignView(vehicle: vehicle, location: location, monitor: monitor, settings: settings, onDone: { dismiss() })
                 }
             }
         }

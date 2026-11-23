@@ -10,6 +10,8 @@ import com.masselis.tpmsadvanced.core.ui.SwitchSettingsItem
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.DemoModeSwitchViewModel
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.DemoModeSwitchViewModel.State
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.DemoModeSwitchViewModel
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /** Switches between made-up sensors and the real ones, see [MiscSettings] */
 @Composable
@@ -31,10 +33,10 @@ internal fun DemoModeSettingsItem(
     onDemoMode: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) = SwitchSettingsItem(
-    headline = "Demo mode",
+    headline = stringResource(CommonR.string.demo_mode),
     checked = demoMode,
     onCheckedChange = onDemoMode,
-    supporting = "Changing restarts the app",
+    supporting = stringResource(CommonR.string.changing_restarts_the_app),
     modifier = modifier.testTag(DemoModeSettingsTags.demoMode),
 )
 

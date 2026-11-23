@@ -6,7 +6,9 @@ import android.app.PendingIntent.getActivity
 import android.app.PendingIntent.getBroadcast
 import android.app.Service
 import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION
 import android.os.Build.VERSION.SDK_INT
+import android.os.Build.VERSION_CODES
 import android.os.Build.VERSION_CODES.Q
 import androidx.core.app.NotificationChannelCompat
 import androidx.core.app.NotificationCompat
@@ -63,6 +65,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.transformLatest
 import kotlin.time.Duration.Companion.minutes
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import com.masselis.tpmsadvanced.core.common.localized
 
 /**
  * The monitor service's notification, telling the status of the scan. The tyres' alerts are
@@ -77,6 +81,7 @@ internal class ServiceNotifier(
     vehicleListUseCase: VehicleListUseCase,
     scanPolicyUseCase: ScanPolicyUseCase,
     tyreScanStatus: Flow<ScanStatus?>,
+    rideNotifier: RideNotifier,
 ) {
     private val logger = Logger.withTag("ServiceNotifier")
     private val notificationManager = NotificationManagerCompat.from(appContext)
@@ -85,7 +90,7 @@ internal class ServiceNotifier(
         notificationManager.createNotificationChannel(
             NotificationChannelCompat
                 .Builder(channelNameWhenOk, IMPORTANCE_LOW)
-                .setName("Monitor service")
+                .setName(localized(CommonR.string.monitor_service))
                 .build()
         )
         // Was the alerts' channel, before they had their own notifications: a user who silenced it
@@ -93,7 +98,7 @@ internal class ServiceNotifier(
         notificationManager.createNotificationChannel(
             NotificationChannelCompat
                 .Builder(channelNameForFailure, IMPORTANCE_MAX)
-                .setName("Monitor service failure")
+                .setName(localized(CommonR.string.monitor_service_failure))
                 .build()
         )
         notificationManager.deleteNotificationChannel(OLD_CHANNEL_FOR_LOW_BATTERY)
@@ -115,7 +120,11 @@ internal class ServiceNotifier(
                             .flatMap { vehicle ->
                                 VehicleComponent(vehicle).let { component ->
                                     vehicle.kind.locations.map {
-                                        component.TyreComponent(it).tyreAtmosphereUseCase.listen()
+                                        component
+                                            .TyreComponent(it)
+                                            .tyreAtmosphereUseCase
+                                            .listen()
+                                            .onEach { atmosphere -> rideNotifier.sensorHeard(vehicle.uuid, atmosphere) }
                                     }
                                 }
                             }
@@ -148,29 +157,22 @@ internal class ServiceNotifier(
                     )
                     .setContentText(
                         when (state) {
-                            Starting -> "Background scanning is starting"
+                            Starting -> localized(CommonR.string.background_scanning_is_starting)
                             // Without persistent scanning, the service runs from the manual start
                             // to the manual stop
                             is Active ->
-                                if (MANUAL in state.decision.causes) "Monitoring in the background"
+                                if (MANUAL in state.decision.causes) localized(CommonR.string.monitoring_in_the_background)
                                 else state.decision.explanation()
 
-                            BluetoothOff -> "Background scanning is waiting for Bluetooth to be turned on"
-                            LocationOff -> "Background scanning is waiting for Location to be turned on, " +
-                                "Android needs it for Bluetooth scans on this phone"
+                            BluetoothOff -> localized(CommonR.string.background_scanning_is_waiting_for_bluetooth_to)
+                            LocationOff -> localized(CommonR.string.background_scanning_is_waiting_for_location_to)
+                            is ScanRetrying -> localized(CommonR.string.the_android_system_refused_the_bluetooth_scan, state.reason)
 
-                            is ScanRetrying -> "The Android system refused the Bluetooth scan (error " +
-                                "${state.reason}), background scanning tries again shortly"
+                            is ScanKeepsFailing -> localized(CommonR.string.the_android_system_keeps_refusing_the_bluetooth, state.reason)
 
-                            is ScanKeepsFailing -> "The Android system keeps refusing the Bluetooth scan " +
-                                "(error ${state.reason}), the tyres aren't monitored. Background scanning " +
-                                "keeps trying"
+                            is ScanFailure -> localized(CommonR.string.this_phone_can_t_scan_for_bluetooth, state.reason)
 
-                            is ScanFailure -> "This phone can't scan for Bluetooth devices (error " +
-                                "${state.reason}), the tyres can't be monitored in the background"
-
-                            MonitoringFailure -> "Background monitoring stopped because of an unexpected " +
-                                "error, restart the app to monitor again"
+                            MonitoringFailure -> localized(CommonR.string.background_monitoring_stopped_because_of_an_unexpected)
 
                             is Suspended -> state.decision.explanation()
                             Idle -> ScanDecision.Idle.explanation()
@@ -203,7 +205,7 @@ internal class ServiceNotifier(
                             ) addAction(
                                 NotificationCompat.Action.Builder(
                                     null,
-                                    "Stop",
+                                    localized(CommonR.string.stop),
                                     getBroadcast(
                                         appContext,
                                         requestCode,
@@ -219,7 +221,7 @@ internal class ServiceNotifier(
                             MonitoringFailure -> addAction(
                                 NotificationCompat.Action.Builder(
                                     null,
-                                    "Restart app",
+                                    localized(CommonR.string.restart_app),
                                     getBroadcast(
                                         appContext,
                                         requestCode,
@@ -240,7 +242,13 @@ internal class ServiceNotifier(
                         notificationId,
                         it,
                         // https://developer.android.com/about/versions/14/changes/fgs-types-required#connected-device
-                        if (SDK_INT >= Q) FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE else 0
+                        // On Android 10 and 11, a scan gets results only with location access,
+                        // which this type extends to the background: see MonitorService
+                        when (SDK_INT) {
+                            Q, VERSION_CODES.R -> FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE or FOREGROUND_SERVICE_TYPE_LOCATION
+                            in Q..Int.MAX_VALUE -> FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+                            else -> 0
+                        }
                     )
                 } catch (e: SecurityException) {
                     // The system refuses a connectedDevice foreground service when Bluetooth scan

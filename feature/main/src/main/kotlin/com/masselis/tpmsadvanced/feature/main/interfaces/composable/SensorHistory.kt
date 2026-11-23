@@ -26,10 +26,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import com.masselis.tpmsadvanced.core.common.localizedPlural
 import com.masselis.tpmsadvanced.core.ui.viewModel
 import com.masselis.tpmsadvanced.data.unit.model.PressureUnit.BAR
 import com.masselis.tpmsadvanced.data.unit.model.TemperatureUnit.CELSIUS
@@ -54,6 +56,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
+import com.masselis.tpmsadvanced.core.common.R as CommonR
 
 /**
  * Every stored reading of [sensorId], newest first, wherever it was read: the history follows the
@@ -71,6 +74,7 @@ public fun SensorHistory(
     }
     val state by viewModel.stateFlow.collectAsState()
     val context = LocalContext.current
+    val chooserTitle = stringResource(CommonR.string.export_to_csv)
     val scope = rememberCoroutineScope()
     SensorHistory(
         state = state,
@@ -85,7 +89,7 @@ public fun SensorHistory(
                             .putExtra(Intent.EXTRA_STREAM, uri)
                             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     }
-                    ?.let { Intent.createChooser(it, "Export to CSV") }
+                    ?.let { Intent.createChooser(it, chooserTitle) }
                     ?.also { context.startActivity(it) }
             }
         },
@@ -118,17 +122,17 @@ private fun SensorHistory(
                 Text(
                     text = buildString {
                         state.sensor
-                            ?.also { appendLoc(it.location, capitalized = true); append(" · ") }
-                            ?: append("No longer assigned · ")
-                        append(state.readings.size)
-                        append(if (state.readings.size == 1) " reading" else " readings")
+                            ?.also { appendLoc(it.location, capitalized = true) }
+                            ?: append(stringResource(CommonR.string.no_longer_assigned))
+                        append(" · ")
+                        state.readings.size.also { append(localizedPlural(CommonR.plurals.readings_count, it, it)) }
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.testTag(SensorHistoryTags.count),
                 )
                 if (state.calibration?.adjusts == true) Text(
-                    text = "Pressures corrected by this sensor's current calibration",
+                    text = stringResource(CommonR.string.pressures_corrected_by_this_sensor_s_current),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -139,7 +143,7 @@ private fun SensorHistory(
                 modifier = Modifier.weight(1f).fillMaxWidth().padding(16.dp),
             ) {
                 Text(
-                    text = "No readings stored for this sensor yet",
+                    text = stringResource(CommonR.string.no_readings_stored_for_this_sensor_yet),
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -168,7 +172,7 @@ private fun SensorHistory(
             .fillMaxWidth()
             .padding(16.dp)
             .testTag(SensorHistoryTags.export),
-    ) { Text("Export to CSV") }
+    ) { Text(stringResource(CommonR.string.export_to_csv)) }
 }
 
 @Composable
@@ -184,7 +188,11 @@ private fun DayHeader(day: LocalDate) = Text(
 
 /** Its time, then its pressure, flagged when the sensor raised its alarm, temperature and battery */
 @Composable
-private fun ReadingRow(reading: Tyre.Located, state: State.Loaded) = Row(
+private fun ReadingRow(
+    reading: Tyre.Located,
+    state: State.Loaded,
+    leak: String = stringResource(CommonR.string.leak),
+) = Row(
     horizontalArrangement = Arrangement.spacedBy(8.dp),
     verticalAlignment = Alignment.CenterVertically,
     modifier = Modifier
@@ -204,7 +212,7 @@ private fun ReadingRow(reading: Tyre.Located, state: State.Loaded) = Row(
     Text(
         text = buildString {
             append(reading.pressure.string(state.pressureUnit))
-            if (reading.isAlarm) append(" Leak?")
+            if (reading.isAlarm) append(" $leak")
         },
         style = MaterialTheme.typography.bodyMedium,
         color = if (reading.isAlarm) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
