@@ -180,6 +180,7 @@
     <string name="every">every %1$s</string>
     <string name="every_5_5_minutes_whether_the_vehicle">Every 5.5 minutes, whether the vehicle moves or not, and whenever pressure changes significantly. Reads the pressure in steps of 0.1 bar (about 1.5 psi): a tyre between two steps can read one step lower when cold, and the next one up once warm</string>
     <string name="every_minute_while_the_wheel_rotates_while">Every minute while the wheel rotates. While stationary, only when the pressure is below ~22 psi, and in either case, whenever pressure changes significantly. Reads the pressure in steps of about 0.45 psi (3.1 kPa), shown rounded to 0.1 psi: a steady tyre can go back and forth by one step</string>
+    <string name="every_reading_stored_for_this_sensor">Every reading stored for this sensor</string>
     <string name="except_phone_idle">(except phone idle)</string>
     <string name="except_some_wifis">...except some WiFis</string>
     <string name="excepted_wifis">Excepted WiFis</string>
@@ -187,6 +188,7 @@
     <string name="experimental">Experimental</string>
     <string name="experimental_shows_leak_under_a_tyre_losing">Experimental. Shows \"Leak?\" under a tyre losing pressure while riding, and notifies about it: its pressure falling from its highest reading of the ride by at least the minimum drop, on two readings in a row, while the tyre isn\'t cooling down.\n\nRiding warms a tyre up, which only raises its pressure, so a fall is air getting out. A leak too slow to show within a ride is left to the low pressure alert, once the tyre is cold. Letting air out shows as a loss too.</string>
     <string name="explanation_of_the_colours">Explanation of the colours</string>
+    <string name="export_to_csv">Export to CSV</string>
     <string name="for_duration">for %1$s</string>
     <string name="for_min">For %1$s min</string>
     <string name="for_min_after_the_last_condition_ends">For %1$s min after the last condition ends</string>
@@ -204,6 +206,7 @@
     <string name="has_no_sensors_or_readings_yet">%1$s has no sensors or readings yet.</string>
     <string name="hide">Hide %1$s</string>
     <string name="high">HIGH!</string>
+    <string name="history">History</string>
     <string name="hot">Hot\n%1$s</string>
     <string name="hot_2">Hot</string>
     <string name="hot_from">%1$s, hot from %2$s</string>
@@ -326,10 +329,12 @@
     <string name="no_beacon_nearby">No beacon nearby</string>
     <string name="no_bluetooth_settings_screen_were_found_on">No bluetooth settings screen were found on your device, please disable bluetooth by yourself</string>
     <string name="no_device_selected">No device selected</string>
+    <string name="no_longer_assigned">No longer assigned</string>
     <string name="no_new_beacons">No new beacons</string>
     <string name="no_not_yet">No, not yet</string>
     <string name="no_paired_device">No paired device</string>
     <string name="no_reading">No reading</string>
+    <string name="no_readings_stored_for_this_sensor_yet">No readings stored for this sensor yet</string>
     <string name="no_sensor_is_assigned_to_this_vehicle">No sensor is assigned to this vehicle</string>
     <string name="no_sensors_yet">No sensors yet</string>
     <string name="no_wifi_excepted_yet">No WiFi excepted yet</string>
@@ -388,6 +393,7 @@
     <string name="pressure_loss">Pressure loss</string>
     <string name="pressure_loss_alert">Pressure loss alert</string>
     <string name="pressure_low">Pressure low</string>
+    <string name="pressures_corrected_by_this_sensor_s_current">Pressures corrected by this sensor\'s current calibration</string>
     <string name="printed_on_the_sensors_box_card_or">Printed on the sensors\' box, card or cap, or shared by another phone</string>
     <string name="privacy_policy">Privacy policy</string>
     <string name="proximity_sensor_active_touches_are_blocked">Proximity sensor active\nTouches are blocked</string>
@@ -458,6 +464,7 @@
     <string name="sensor_battery_getting_low">Sensor battery getting low</string>
     <string name="sensor_battery_low">Sensor battery low</string>
     <string name="sensor_found">Sensor found</string>
+    <string name="sensor_history">Sensor history</string>
     <string name="sensor_readings_text_size">Sensor readings text size</string>
     <string name="sensor_readings_update_details">Sensor readings update details</string>
     <string name="sensors">Sensors</string>
@@ -608,6 +615,10 @@
     <plurals name="on_wheel_sensors_found">
         <item quantity="one">%1$d on-wheel sensor found</item>
         <item quantity="other">%1$d on-wheel sensors found</item>
+    </plurals>
+    <plurals name="readings_count">
+        <item quantity="one">%1$d reading</item>
+        <item quantity="other">%1$d readings</item>
     </plurals>
     <plurals name="seconds">
         <item quantity="one">%1$d second</item>

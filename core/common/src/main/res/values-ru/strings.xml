@@ -179,6 +179,7 @@
     <string name="every">каждые %1$s</string>
     <string name="every_5_5_minutes_whether_the_vehicle">Каждые 5,5 минуты, независимо от движения, и при значительном изменении давления. Измеряет давление с шагом 0,1 бар (около 1,5 psi): шина между двумя шагами может показывать на шаг меньше на холодную и на шаг больше после прогрева</string>
     <string name="every_minute_while_the_wheel_rotates_while">Каждую минуту, пока колесо вращается. На стоянке только при давлении ниже ~22 psi, и в обоих случаях при значительном изменении давления. Измеряет давление с шагом около 0,45 psi (3,1 кПа), с округлением до 0,1 psi: давление стабильной шины может колебаться на один шаг</string>
+    <string name="every_reading_stored_for_this_sensor">Все сохранённые показания этого датчика</string>
     <string name="except_phone_idle">(кроме бездействия телефона)</string>
     <string name="except_some_wifis">...кроме некоторых сетей</string>
     <string name="excepted_wifis">Сети WiFi-исключения</string>
@@ -186,6 +187,7 @@
     <string name="experimental">Экспериментально</string>
     <string name="experimental_shows_leak_under_a_tyre_losing">Экспериментально. Показывает «Утечка?» под шиной, теряющей давление в поездке, и уведомляет об этом: давление два показания подряд ниже максимума за поездку как минимум на заданную величину, и при этом шина не остывает.\n\nВ поездке шина нагревается, и давление только растёт, поэтому падение означает выход воздуха. Слишком медленную утечку покажет оповещение о низком давлении, когда шина остынет. Стравливание воздуха тоже считается потерей.</string>
     <string name="explanation_of_the_colours">Объяснение цветов</string>
+    <string name="export_to_csv">Экспорт в CSV</string>
     <string name="for_duration">на %1$s</string>
     <string name="for_min">%1$s мин</string>
     <string name="for_min_after_the_last_condition_ends">%1$s мин после окончания последнего условия</string>
@@ -203,6 +205,7 @@
     <string name="has_no_sensors_or_readings_yet">В %1$s пока нет датчиков и показаний.</string>
     <string name="hide">Скрыть: %1$s</string>
     <string name="high">ВЫСОКО!</string>
+    <string name="history">История</string>
     <string name="hot">Жарко\n%1$s</string>
     <string name="hot_2">Жарко</string>
     <string name="hot_from">%1$s, жарко от %2$s</string>
@@ -325,10 +328,12 @@
     <string name="no_beacon_nearby">Рядом нет маячков</string>
     <string name="no_bluetooth_settings_screen_were_found_on">На устройстве не найден экран настроек Bluetooth, выключите Bluetooth самостоятельно</string>
     <string name="no_device_selected">Устройства не выбраны</string>
+    <string name="no_longer_assigned">Больше не назначен</string>
     <string name="no_new_beacons">Новых маячков нет</string>
     <string name="no_not_yet">Нет, ещё нет</string>
     <string name="no_paired_device">Нет сопряжённых устройств</string>
     <string name="no_reading">Нет данных</string>
+    <string name="no_readings_stored_for_this_sensor_yet">Сохранённых показаний этого датчика пока нет</string>
     <string name="no_sensor_is_assigned_to_this_vehicle">У этого транспорта нет датчиков</string>
     <string name="no_sensors_yet">Датчиков пока нет</string>
     <string name="no_wifi_excepted_yet">Исключений WiFi пока нет</string>
@@ -387,6 +392,7 @@
     <string name="pressure_loss">Потеря давления</string>
     <string name="pressure_loss_alert">Оповещение о потере давления</string>
     <string name="pressure_low">Низкое давление</string>
+    <string name="pressures_corrected_by_this_sensor_s_current">Давление поправлено текущей калибровкой этого датчика</string>
     <string name="printed_on_the_sensors_box_card_or">Напечатан на коробке, карточке или колпачке датчиков либо показан на другом телефоне</string>
     <string name="privacy_policy">Политика конфиденциальности</string>
     <string name="proximity_sensor_active_touches_are_blocked">Датчик приближения активен\nКасания заблокированы</string>
@@ -457,6 +463,7 @@
     <string name="sensor_battery_getting_low">Батарея датчика садится</string>
     <string name="sensor_battery_low">Батарея датчика разряжена</string>
     <string name="sensor_found">Датчик найден</string>
+    <string name="sensor_history">История датчика</string>
     <string name="sensor_readings_text_size">Размер текста показаний</string>
     <string name="sensor_readings_update_details">Как обновляются показания датчиков</string>
     <string name="sensors">Датчики</string>
@@ -613,6 +620,12 @@
         <item quantity="few">Найдено %1$d датчика на колёсах</item>
         <item quantity="many">Найдено %1$d датчиков на колёсах</item>
         <item quantity="other">Найдено %1$d датчика на колёсах</item>
+    </plurals>
+    <plurals name="readings_count">
+        <item quantity="one">%1$d показание</item>
+        <item quantity="few">%1$d показания</item>
+        <item quantity="many">%1$d показаний</item>
+        <item quantity="other">%1$d показания</item>
     </plurals>
     <plurals name="seconds">
         <item quantity="one">%1$d секунду</item>

@@ -3,6 +3,7 @@
 package com.masselis.tpmsadvanced.interfaces.composable
 
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.SensorCalibrationSettings
+import com.masselis.tpmsadvanced.feature.main.interfaces.composable.SensorHistory
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.spring
@@ -254,6 +255,7 @@ internal fun VehicleHome(
                                 navController.navigateTo(Path.BluetoothAssign(vehicleUuid, locations.indexOf(it)))
                             },
                             calibrate = { navController.navigateTo(Path.Calibration(vehicleUuid, it)) },
+                            history = { navController.navigateTo(Path.SensorHistory(vehicleUuid, it)) },
                             moveToVehicle = { location, toVehicle ->
                                 navController.navigateTo(Path.MoveToVehicle(vehicleUuid, locations.indexOf(location), toVehicle))
                             },
@@ -297,6 +299,15 @@ internal fun VehicleHome(
                         SensorCalibrationSettings(
                             sensorId = requireNotNull(entry.arguments).getInt("sensorId"),
                             onLeave = { navController.popBackStack() },
+                            modifier = modifier
+                        )
+                    }
+                    composable(
+                        route = Path.SensorHistory.route(vehicleUuid),
+                        arguments = listOf(navArgument("sensorId") { type = NavType.IntType }),
+                    ) { entry ->
+                        SensorHistory(
+                            sensorId = requireNotNull(entry.arguments).getInt("sensorId"),
                             modifier = modifier
                         )
                     }
