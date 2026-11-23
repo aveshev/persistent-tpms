@@ -219,7 +219,9 @@ private struct QrOverlay: View {
                 .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
-                .frame(maxWidth: .infinity)
+                // Kept between the frame and the bottom, the largest text sizes shrinking to fit
+                .minimumScaleFactor(0.3)
+                .frame(width: geometry.size.width, height: max(geometry.size.height - square.maxY - 48, 0))
                 .position(x: geometry.size.width / 2, y: square.maxY + (geometry.size.height - square.maxY) / 2)
         }
         .ignoresSafeArea()

@@ -27,6 +27,8 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.Persist
 import com.masselis.tpmsadvanced.feature.background.ioc.Bindings.Companion.PersistentScanningSettingsViewModel
 import com.masselis.tpmsadvanced.core.common.R as CommonR
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 /**
  * Lite's "Background scanning" group: its only conditions are right under the persistent scanning
@@ -154,7 +156,9 @@ internal enum class AlwaysOnWarning { EnablingWithoutTrigger, LastTriggerRemoved
 internal fun AlwaysOnWarning(onKeepAlwaysOn: () -> Unit, onDisable: () -> Unit, onDismiss: () -> Unit) = AlertDialog(
     text = {
         Text(
-            stringResource(CommonR.string.when_no_bluetooth_connections_or_beacons_are)
+            stringResource(CommonR.string.when_no_bluetooth_connections_or_beacons_are),
+            // Scrolls when the largest font sizes make it taller than the dialog
+            Modifier.verticalScroll(rememberScrollState()),
         )
     },
     onDismissRequest = onDismiss,
