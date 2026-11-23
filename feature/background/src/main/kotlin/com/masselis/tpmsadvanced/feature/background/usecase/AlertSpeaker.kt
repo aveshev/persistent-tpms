@@ -96,8 +96,14 @@ internal class AlertSpeaker(
         val isRepeating: Boolean = false,
         /** The alerts up to this level aren't said, nor kept to be said later */
         val silenced: AlertLevel? = null,
+        /** When each text was last said to the end, an announcement saying it again soon after is dropped */
+        val said: Map<String, TimeMark> = emptyMap(),
     ) {
         val isIdle get() = announcements.isEmpty() && repeated.isEmpty() && isSpeaking.not()
+
+        /** An announcement's [phrase], said as it says it, was said less than [SAID_AGAIN_AFTER] ago */
+        fun isJustSaid(phrase: String) = said["$phrase. $phrase."]
+            ?.let { (it + SAID_AGAIN_AFTER).hasNotPassedNow() } == true
 
         /** What the crimson loop says */
         val crimson get() = repeated.values.filter(Repeated::isCrimsonLoop)
@@ -291,6 +297,12 @@ internal class AlertSpeaker(
             queue.update { it.scheduled() }
             val current = queue.value
             when {
+                // A burst of readings each announces it, the next ones often while it's said
+                current.announcements.firstOrNull()?.takeIf { current.isJustSaid(it.phrase) } != null ->
+                    current.announcements.first().phrase.let { phrase ->
+                        queue.update { queue -> queue.copy(announcements = queue.announcements.filter { it.phrase != phrase }) }
+                    }
+
                 current.announcements.isNotEmpty() -> current.announcements.first().let { announcement ->
                     val phrase = announcement.phrase
                     awaitNotificationSound(current.sounded)
@@ -378,7 +390,15 @@ internal class AlertSpeaker(
                 say(text, usage)
             }
         } finally {
-            queue.update { it.copy(isSpeaking = false) }
+            queue.update { queue ->
+                queue.copy(
+                    isSpeaking = false,
+                    said = queue
+                        .said
+                        .filterValues { (it + SAID_AGAIN_AFTER).hasNotPassedNow() }
+                        .plus(text to timeSource.markNow()),
+                )
+            }
         }
     }
 
@@ -483,6 +503,9 @@ internal class AlertSpeaker(
         val CRIMSON_PERIOD = 20.seconds
         val CRIMSON_DURATION = 10.minutes
         val REMINDER_PERIOD = 10.minutes
+
+        /** An announcement is dropped when its phrase was said to the end less than this before */
+        val SAID_AGAIN_AFTER = 15.seconds
 
         /** Only the classes reaching red are said */
         val SPOKEN = setOf(PRESSURE, TEMPERATURE, BATTERY)

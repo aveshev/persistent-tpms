@@ -67,6 +67,8 @@ final class AlertSpeaker: ObservableObject {
     private var isBackupKnown = false
     /// When the loops last said something, which a backup heard since replaces
     private var lastSaid: Date?
+    /// When each text was last said to the end, an announcement saying it again soon after is dropped
+    private var said = [String: Date]()
     /// Held while something is due now, see [holdBackgroundTime]
     private var backgroundTask = UIBackgroundTaskIdentifier.invalid
 
@@ -74,6 +76,8 @@ final class AlertSpeaker: ObservableObject {
     private static let crimsonDuration: TimeInterval = 10 * 60
     private static let reminderPeriod: TimeInterval = 10 * 60
     static let silenceDuration: TimeInterval = 10 * 60
+    /// An announcement is dropped when its phrase was said to the end less than this before
+    private static let saidAgainAfter: TimeInterval = 15
     /// Android waits for the sound to end, which iOS doesn't tell an app: about what its sound lasts
     private static let notificationSound: TimeInterval = 2
 
@@ -224,7 +228,11 @@ final class AlertSpeaker: ObservableObject {
             }
             if let announcement = announcements.first {
                 announcements.removeAll { $0.phrase == announcement.phrase }
-                await say("\(announcement.phrase). \(announcement.phrase).", isCrimson: announcement.isCrimson)
+                let text = "\(announcement.phrase). \(announcement.phrase)."
+                // A burst of readings each announces it, the next ones often while it's said
+                if said[text].map({ now.timeIntervalSince($0) < Self.saidAgainAfter }) != true {
+                    await say(text, isCrimson: announcement.isCrimson)
+                }
             } else if crimsons(now).isEmpty == false, nextCrimson.map({ $0 <= now }) ?? true {
                 // Every period from the start of the phrases, however long they take
                 nextCrimson = now.addingTimeInterval(Self.crimsonPeriod)
@@ -302,6 +310,7 @@ final class AlertSpeaker: ObservableObject {
         rideLog(isPlayed ? "said: \(text)" : "couldn't say: \(text)")
         guard isPlayed else { return }
         lastSaid = Date()
+        said = said.filter { Date().timeIntervalSince($0.value) < Self.saidAgainAfter }.merging([text: Date()]) { $1 }
         scheduleBackup(Date(), isSaid: true)
     }
 }
