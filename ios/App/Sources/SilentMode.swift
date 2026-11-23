@@ -10,6 +10,8 @@ enum SilentMode {
     private static let length = 0.3
     /// Ended sooner, it didn't play
     private static let silentBelow = 0.1
+    /// Ended later, the app was likely suspended meanwhile: the time tells nothing
+    private static let ringerBelow = 1.5
     /// Not ended by then, something else went wrong
     private static let timeout = 2.0
 
@@ -52,7 +54,7 @@ enum SilentMode {
         }
         AudioServicesPlaySystemSoundWithCompletion(id) {
             let elapsed = Date().timeIntervalSince(start)
-            DispatchQueue.main.async { finish(elapsed < silentBelow, elapsed) }
+            DispatchQueue.main.async { finish(elapsed < silentBelow ? true : elapsed < ringerBelow ? false : nil, elapsed) }
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + timeout) { finish(nil, nil) }
     }
