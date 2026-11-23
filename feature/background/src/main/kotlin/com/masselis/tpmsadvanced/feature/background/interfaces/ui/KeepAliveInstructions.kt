@@ -1,3 +1,5 @@
+@file:Suppress("MaxLineLength")
+
 package com.masselis.tpmsadvanced.feature.background.interfaces.ui
 
 import android.content.Intent
@@ -43,6 +45,8 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.KeepAli
 import com.masselis.tpmsadvanced.feature.background.ioc.Bindings
 import com.masselis.tpmsadvanced.feature.background.usecase.KeepAliveInstructionsUseCase.Companion.BASE_URL
 import com.masselis.tpmsadvanced.feature.background.usecase.KeepAliveInstructionsUseCase.Instructions
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * Full screen instructions from dontkillmyapp.com for the phone's brand, so that the user doesn't
@@ -88,17 +92,17 @@ private fun KeepAliveInstructions(
             title = {
                 Text(
                     text = (state as? State.Loaded)
-                        ?.let { "Keep monitoring running on ${it.instructions.vendorName}" }
-                        ?: "Keep monitoring running"
+                        ?.let { stringResource(CommonR.string.keep_monitoring_running_on, it.instructions.vendorName) }
+                        ?: stringResource(CommonR.string.keep_monitoring_running)
                 )
             },
             navigationIcon = {
                 IconButton(onClick = onDismissRequest) {
-                    Icon(ImageVector.vectorResource(R.drawable.close_24px), contentDescription = "Close")
+                    Icon(ImageVector.vectorResource(R.drawable.close_24px), contentDescription = stringResource(CommonR.string.close))
                 }
             },
             actions = {
-                TextButton(onClick = onOpenWebsite) { Text(text = "Website") }
+                TextButton(onClick = onOpenWebsite) { Text(text = stringResource(CommonR.string.website)) }
             },
         )
     },
@@ -123,11 +127,10 @@ private fun KeepAliveInstructions(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                text = "The instructions for your phone could not be loaded. Check your " +
-                        "connection, or read them on dontkillmyapp.com.",
+                text = stringResource(CommonR.string.the_instructions_for_your_phone_could_not),
                 textAlign = TextAlign.Center,
             )
-            Button(onClick = onRetry) { Text(text = "Try again") }
+            Button(onClick = onRetry) { Text(text = stringResource(CommonR.string.try_again)) }
         }
 
         is State.Loaded -> MaterialTheme.colorScheme.let { colors ->

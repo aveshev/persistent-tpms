@@ -34,6 +34,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         // Also when iOS relaunches the app in the background for a sensor, through Bluetooth state
         // restoration: the scan has to start again before this returns
         Monitor.shared.start(isRestored: launchOptions?[.bluetoothCentrals] != nil)
+        #if DEBUG
+        // Listening from launch when kept on, see NearbyServicesView
+        _ = NearbyServicesLog.shared
+        #endif
         // A quick action per vehicle, like the Android app's launcher shortcuts (ShortcutUseCase)
         // Ranked like them too: the alerting vehicles, then the latest read
         quickActions = Publishers.CombineLatest3(Monitor.shared.$vehicles, Monitor.shared.$ongoing, Monitor.shared.$tyres)
@@ -81,9 +85,13 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     }
 
     /// Shown while the app is open too, like on Android: the user may not be looking at the tyre. A
-    /// silent update only changes what's in the list.
+    /// silent update only changes what's in the list. The speech's backup isn't: the app open says it
+    /// itself.
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        completionHandler(notification.request.content.sound == nil ? [.list] : [.banner, .list, .sound])
+        completionHandler(
+            notification.request.identifier == SpeechBackup.identifier ? []
+                : notification.request.content.sound == nil ? [.list] : [.banner, .list, .sound]
+        )
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {

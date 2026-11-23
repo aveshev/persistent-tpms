@@ -26,6 +26,8 @@ import com.masselis.tpmsadvanced.feature.main.ioc.tyre.TyreBindings.Companion.Ty
 import com.masselis.tpmsadvanced.feature.main.ioc.tyre.TyreComponent.Companion.TyreComponent
 import com.masselis.tpmsadvanced.feature.main.ioc.tyre.TyreComponent.Companion.keyed
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /** The readout of [location], or what to tap to assign it a sensor while it has none */
 @Composable
@@ -75,7 +77,7 @@ private fun TapToAssign(
         modifier = modifier.testTag(TyreReadoutTags.tapToAssign(location)),
     ) {
         Text(
-            text = "Tap to\nassign",
+            text = stringResource(CommonR.string.tap_to_assign),
             color = MaterialTheme.colorScheme.primary,
             fontSize = 20.sp,
             fontWeight = FontWeight.SemiBold,

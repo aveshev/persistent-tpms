@@ -7,6 +7,8 @@ import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.Activat
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.BLUETOOTH
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanSuspensionUseCase.Reason
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanSuspensionUseCase.Reason.IDLE
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import com.masselis.tpmsadvanced.core.common.localized
 
 internal sealed interface ScanDecision {
 
@@ -64,36 +66,36 @@ internal fun ScanDecision.explanation(tier: AppTier = AppTier.current): String =
     is ScanDecision.Active -> when {
         // Nothing to explain besides the user's own choice, the "due to" wording would sound odd
         ALWAYS in causes && tier == LITE ->
-            "Background scanning is always active because no Bluetooth device or beacon is set to activate it"
+            localized(CommonR.string.always_active_lite)
 
-        ALWAYS in causes -> "Background scanning is active because you chose it to be always active"
-        else -> "Background scanning is active due to ${
-            causes.joinToString(", ") {
+        ALWAYS in causes -> localized(CommonR.string.always_active)
+        else -> causes
+            .joinToString(", ") {
                 when (it) {
                     BLUETOOTH -> bluetoothDevices.connectedLabel()
                     BEACON -> beacons.nearbyLabel()
                     else -> it.label
                 }
             }
-        }"
+            .let { localized(CommonR.string.active_due_to, it) }
     }
 
     is ScanDecision.Suspended ->
-        "Background scanning is suspended due to ${
-            reasons.joinToString(", ") {
+        reasons
+            .joinToString(", ") {
                 when (it) {
-                    Reason.IDLE -> "the phone being idle"
-                    Reason.WIFI -> "WiFi being connected"
+                    Reason.IDLE -> localized(CommonR.string.reason_idle)
+                    Reason.WIFI -> localized(CommonR.string.reason_wifi)
                     Reason.BLUETOOTH -> bluetoothDevices.connectedLabel()
                 }
             }
-        }"
+            .let { localized(CommonR.string.suspended_due_to, it) }
 
     // Lite's only conditions, told as such
     ScanDecision.Idle -> if (tier == LITE) {
-        "Background scanning is idle: none of the selected Bluetooth devices is connected and none of the added beacons is nearby"
+        localized(CommonR.string.idle_lite)
     } else {
-        "Background scanning is idle: no activate condition is currently fulfilled"
+        localized(CommonR.string.idle_pro)
     }
 }
 
@@ -102,35 +104,35 @@ internal fun ScanDecision.rationale(tier: AppTier = AppTier.current): String = w
     is ScanDecision.Active -> explanation(tier)
     // The foreground UI scans by itself, whatever the decision is
     is ScanDecision.Suspended, ScanDecision.Idle ->
-        "${explanation(tier)}.\nNote: Scanning is still active while the app is opened!"
+        localized(CommonR.string.scanning_while_open, explanation(tier))
 }
 
 private val ScanDecision.ActivateCause.label
     get() = when (this) {
-        ScanDecision.ActivateCause.MANUAL -> "monitoring being started manually"
-        ScanDecision.ActivateCause.CABLE -> "charging with a cable"
-        ScanDecision.ActivateCause.WIRELESS -> "charging wirelessly"
-        ScanDecision.ActivateCause.ANDROID_AUTO -> "Android Auto being connected"
+        ScanDecision.ActivateCause.MANUAL -> localized(CommonR.string.cause_manual)
+        ScanDecision.ActivateCause.CABLE -> localized(CommonR.string.cause_cable)
+        ScanDecision.ActivateCause.WIRELESS -> localized(CommonR.string.cause_wireless)
+        ScanDecision.ActivateCause.ANDROID_AUTO -> localized(CommonR.string.cause_auto)
         // Told with the devices' names, see connectedLabel()
-        BLUETOOTH -> "a Bluetooth device being connected"
+        BLUETOOTH -> localized(CommonR.string.cause_bluetooth)
         // Told with the beacons' names, see nearbyLabel()
-        BEACON -> "a Bluetooth beacon being nearby"
-        ScanDecision.ActivateCause.STAY_ACTIVE -> "staying active after the last activate condition ended"
-        ALWAYS -> "the activate conditions being turned off"
+        BEACON -> localized(CommonR.string.cause_beacon)
+        ScanDecision.ActivateCause.STAY_ACTIVE -> localized(CommonR.string.cause_stay)
+        ALWAYS -> localized(CommonR.string.cause_always)
     }
 
 /** "A being connected", "A and B being connected", "A, B and C being connected" */
 private fun List<String>.connectedLabel(): String =
     // The device disconnected in the meantime, its name is gone before the decision changes
-    namesLabel(fallback = "a Bluetooth device") + " being connected"
+    localized(CommonR.string.names_connected, namesLabel(fallback = localized(CommonR.string.a_bluetooth_device)))
 
 /** "A being nearby", "A and B being nearby", "A, B and C being nearby" */
 private fun List<String>.nearbyLabel(): String =
     // The beacon went away in the meantime, its name is gone before the decision changes
-    namesLabel(fallback = "a Bluetooth beacon") + " being nearby"
+    localized(CommonR.string.names_nearby, namesLabel(fallback = localized(CommonR.string.a_bluetooth_beacon)))
 
 private fun List<String>.namesLabel(fallback: String): String = when (size) {
     0 -> fallback
     1 -> single()
-    else -> "${dropLast(1).joinToString(", ")} and ${last()}"
+    else -> localized(CommonR.string.names_and, dropLast(1).joinToString(", "), last())
 }

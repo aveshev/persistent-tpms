@@ -1,6 +1,12 @@
 package com.masselis.tpmsadvanced.feature.main.interfaces.composable
 
 import android.annotation.SuppressLint
+import android.media.AudioAttributes.USAGE_NOTIFICATION
+import android.media.AudioAttributes.USAGE_NOTIFICATION_EVENT
+import android.media.AudioAttributes.USAGE_NOTIFICATION_RINGTONE
+import android.media.AudioManager
+import android.media.AudioManager.AudioPlaybackCallback
+import android.media.AudioPlaybackConfiguration
 import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES.P
 import android.os.Build.VERSION_CODES.Q
@@ -76,6 +82,8 @@ import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.delay
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * Lowers the screen's brightness over [content] once nothing happened for as long as the settings
@@ -83,6 +91,9 @@ import kotlinx.coroutines.delay
  * [isAlerting], a red or critical alert of any vehicle going on, it stays bright. So it does while
  * none of the app's windows has the focus, the notification shade pulled down over it: dimmed, the
  * shade would be too. On Android 10 and up only, the app's own dialogs taking the focus otherwise.
+ * A notification sounding, whichever app's, brightens it like a touch, its heads-up shown over the
+ * dimmed screen too, unless the pocket guard turned the screen off. Notifications which
+ * only vibrate or make no sound can't be told without the notification access, and don't.
  *
  * Dimmed, the screen is at the brightness the system would give it divided as the settings say,
  * see [SystemBrightness]. At its lowest already, the screen is made darker over [content] too, which
@@ -209,6 +220,23 @@ internal fun DimWhenIdle(
         onDispose { proximity.stop() }
     }
     val isBlocked = proximity.isCovered
+    // Each sound is a player of its own, created for it: there are more notification players then.
+    // Not while the screen is off in a pocket, read from the sensor as it is then: the callback
+    // outlives the composition that would give it isBlocked.
+    val audioManager = LocalContext.current.let { remember(it) { it.getSystemService(AudioManager::class.java) } }
+    if (isResumed) DisposableEffect(audioManager) {
+        var sounding = audioManager?.activePlaybackConfigurations?.notifying ?: 0
+        val callback = object : AudioPlaybackCallback() {
+            override fun onPlaybackConfigChanged(configs: List<AudioPlaybackConfiguration>) {
+                configs.notifying
+                    .also { if (it > sounding && proximity.isCovered.not()) wakes++ }
+                    .also { sounding = it }
+            }
+        }
+        // On the main thread, without a handler
+        audioManager?.registerAudioPlaybackCallback(callback, null)
+        onDispose { audioManager?.unregisterAudioPlaybackCallback(callback) }
+    }
     val powerManager = LocalContext.current.let { remember(it) { it.getSystemService(PowerManager::class.java) } }
     val canTurnScreenOff = remember(powerManager) {
         powerManager?.isWakeLockLevelSupported(PROXIMITY_SCREEN_OFF_WAKE_LOCK) == true
@@ -351,7 +379,7 @@ private fun TurnedOff() = Surface(
     modifier = Modifier.testTag(DimWhenIdleTags.turnedOff),
 ) {
     Text(
-        text = "Screen was turned off by\n\"Block touches in a pocket\"",
+        text = stringResource(CommonR.string.screen_was_turned_off_by_block_touches),
         // In proportion to the size it's shown at
         style = MaterialTheme.typography.headlineSmall.copy(lineHeight = TURNED_OFF_LINE),
         textAlign = TextAlign.Center,
@@ -374,7 +402,7 @@ private fun BlockedTouches() {
         }
     }
     Text(
-        text = "Proximity sensor active\nTouches are blocked",
+        text = stringResource(CommonR.string.proximity_sensor_active_touches_are_blocked),
         color = Color.White,
         style = MaterialTheme.typography.titleLarge,
         textAlign = TextAlign.Center,
@@ -402,6 +430,12 @@ private const val DARKENED_ALPHA = 0.3f
 
 /** How often, while the main screen's window doesn't have the focus, whether another of the app's has */
 private val FOCUS_CHECK = 300.milliseconds
+
+/** How many of the playing sounds are notifications' */
+private val List<AudioPlaybackConfiguration>.notifying: Int
+    get() = count { it.audioAttributes.usage in NOTIFICATION_USAGES }
+
+private val NOTIFICATION_USAGES = setOf(USAGE_NOTIFICATION, USAGE_NOTIFICATION_EVENT, USAGE_NOTIFICATION_RINGTONE)
 
 /** How long after brightening again the proximity sensor is still watched */
 private val POCKET_GRACE = 1.seconds

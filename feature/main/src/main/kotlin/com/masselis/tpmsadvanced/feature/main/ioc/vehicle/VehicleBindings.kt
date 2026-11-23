@@ -7,6 +7,7 @@ import com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorDatabase
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.VehicleDatabase
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.ManageSensorsViewModel
+import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.SensorHistoryViewModel
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.impl.ClearBoundSensorsViewModelImpl
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.impl.DeleteVehicleViewModelImpl
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.impl.VehicleSettingsViewModelImpl
@@ -126,6 +127,7 @@ public interface VehicleBindings {
         internal val vehicleSettingsViewModel: () -> VehicleSettingsViewModelImpl,
         internal val deleteVehicleViewModel: () -> DeleteVehicleViewModelImpl,
         internal val manageSensorsViewModel: () -> ManageSensorsViewModel,
+        internal val sensorHistoryViewModel: SensorHistoryViewModel.Factory,
     )
 
     public companion object {
@@ -141,5 +143,8 @@ public interface VehicleBindings {
         internal fun VehicleComponent.DeleteVehicleViewModel() = internal.deleteVehicleViewModel()
 
         internal fun VehicleComponent.ManageSensorsViewModel() = internal.manageSensorsViewModel()
+
+        internal fun VehicleComponent.SensorHistoryViewModel(sensorId: Int) =
+            internal.sensorHistoryViewModel(sensorId)
     }
 }

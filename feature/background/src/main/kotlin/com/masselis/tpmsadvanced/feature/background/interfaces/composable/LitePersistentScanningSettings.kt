@@ -25,6 +25,8 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.ui.SettingsOnScre
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.rememberMonitoringPermissions
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningSettingsViewModel
 import com.masselis.tpmsadvanced.feature.background.ioc.Bindings.Companion.PersistentScanningSettingsViewModel
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * Lite's "Background scanning" group: its only conditions are right under the persistent scanning
@@ -152,19 +154,18 @@ internal enum class AlwaysOnWarning { EnablingWithoutTrigger, LastTriggerRemoved
 internal fun AlwaysOnWarning(onKeepAlwaysOn: () -> Unit, onDisable: () -> Unit, onDismiss: () -> Unit) = AlertDialog(
     text = {
         Text(
-            "When no Bluetooth connections or beacons are configured to activate persistent scanning, it will run background scanning all or nearly all the time, which increases battery drain.\n\n" +
-                "Consider figuring out which Bluetooth device or beacon can be used for that purpose in your vehicle, or use manual (non-persistent) mode if you want to avoid that."
+            stringResource(CommonR.string.when_no_bluetooth_connections_or_beacons_are)
         )
     },
     onDismissRequest = onDismiss,
     confirmButton = {
         TextButton(onClick = onKeepAlwaysOn, Modifier.testTag(PersistentScanningSettingsTags.keepAlwaysOn)) {
-            Text("Keep always on")
+            Text(stringResource(CommonR.string.keep_always_on))
         }
     },
     dismissButton = {
         TextButton(onClick = onDisable, Modifier.testTag(PersistentScanningSettingsTags.disablePersistent)) {
-            Text("Disable persistent scanning")
+            Text(stringResource(CommonR.string.disable_persistent_scanning))
         }
     },
 )
@@ -196,10 +197,10 @@ private fun LitePersistentScanningSettings(
     SettingsGroup {
         PersistentScanningItem(persistentScanning, onPersistentScanning, status, openPersistentScanning)
     }
-    SettingsSectionHeader("Scan when")
+    SettingsSectionHeader(stringResource(CommonR.string.scan_when))
     SettingsGroup {
         SwitchNavigationSettingsItem(
-            headline = "Bluetooth device connected",
+            headline = stringResource(CommonR.string.bluetooth_device_connected),
             supporting = bluetoothSummary,
             checked = bluetooth,
             onCheckedChange = onBluetooth,
@@ -209,7 +210,7 @@ private fun LitePersistentScanningSettings(
             modifier = Modifier.testTag(PersistentScanningSettingsTags.activateOnBluetooth),
         )
         SwitchNavigationSettingsItem(
-            headline = "Bluetooth beacon nearby",
+            headline = stringResource(CommonR.string.bluetooth_beacon_nearby),
             supporting = beaconSummary,
             checked = beacon,
             onCheckedChange = onBeacon,
@@ -219,10 +220,10 @@ private fun LitePersistentScanningSettings(
             modifier = Modifier.testTag(PersistentScanningSettingsTags.activateOnBeacon),
         )
         SwitchNavigationSettingsItem(
-            headline = "Stay active",
+            headline = stringResource(CommonR.string.stay_active),
             supporting = listOf(
-                "For $stayActiveMinutes min after the last condition ends",
-                "For $stayActiveMinutes min",
+                stringResource(CommonR.string.for_min_after_the_last_condition_ends, stayActiveMinutes),
+                stringResource(CommonR.string.for_min, stayActiveMinutes),
             ).map(::AnnotatedString),
             checked = stayActive,
             // Only extends the conditions above, meaningless without any of them
@@ -232,11 +233,11 @@ private fun LitePersistentScanningSettings(
             modifier = Modifier.testTag(PersistentScanningSettingsTags.stayActive),
         )
     }
-    SettingsSectionHeader("Suspend")
+    SettingsSectionHeader(stringResource(CommonR.string.suspend))
     SettingsGroup {
         SwitchSettingsItem(
-            headline = "Suspend when idle",
-            supporting = "Screen off or locked, not charging, no movement",
+            headline = stringResource(CommonR.string.suspend_when_idle),
+            supporting = stringResource(CommonR.string.screen_off_or_locked_not_charging_no),
             checked = suspendInDoze,
             onCheckedChange = onSuspendInDoze,
             modifier = Modifier.testTag(PersistentScanningSettingsTags.suspendInDoze),

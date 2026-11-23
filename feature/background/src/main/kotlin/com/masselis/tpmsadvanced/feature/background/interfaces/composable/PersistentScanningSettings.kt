@@ -15,6 +15,9 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.ui.SettingsOnScre
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.rememberMonitoringPermissions
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningSettingsViewModel
 import com.masselis.tpmsadvanced.feature.background.ioc.Bindings.Companion.PersistentScanningSettingsViewModel
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
+import com.masselis.tpmsadvanced.core.common.localized
 
 /**
  * The "Background scanning" group of the app settings. The details of the activate and the suspend
@@ -128,7 +131,7 @@ private fun PersistentScanningSettings(
     PersistentScanningItem(persistentScanning, onPersistentScanning, status, openPersistentScanning)
     // Greyed out rather than hidden while persistent scanning is off, like Android's settings do
     SwitchNavigationSettingsItem(
-        headline = "Activate scan conditions",
+        headline = stringResource(CommonR.string.activate_scan_conditions),
         supporting = activateSummary.map(::AnnotatedString),
         checked = activateConditions,
         enabled = persistentScanning,
@@ -137,7 +140,7 @@ private fun PersistentScanningSettings(
         modifier = Modifier.testTag(PersistentScanningSettingsTags.activateConditions),
     )
     SwitchNavigationSettingsItem(
-        headline = "Suspend scan conditions",
+        headline = stringResource(CommonR.string.suspend_scan_conditions),
         supporting = suspendSummary.map(::AnnotatedString),
         checked = suspendConditions,
         enabled = persistentScanning,
@@ -155,8 +158,8 @@ internal fun PersistentScanningItem(
     status: BellState?,
     openPersistentScanning: () -> Unit,
 ) = SwitchNavigationSettingsItem(
-    headline = "Persistent scanning",
-    supporting = listOf(status.statusText("Status: ")),
+    headline = stringResource(CommonR.string.persistent_scanning),
+    supporting = listOf(status.statusText(stringResource(CommonR.string.status))),
     checked = persistentScanning,
     onCheckedChange = onPersistentScanning,
     onClick = openPersistentScanning,
@@ -180,14 +183,14 @@ private fun activateSummary(
 ): List<String> = listOfNotNull(
     // Same order as their page
     "Bluetooth".takeIf { bluetooth },
-    "Beacon".takeIf { beacon },
-    "Cable charging".takeIf { cable },
-    "Wireless charging".takeIf { wireless },
+    localized(CommonR.string.beacon).takeIf { beacon },
+    localized(CommonR.string.cable_charging).takeIf { cable },
+    localized(CommonR.string.wireless_charging).takeIf { wireless },
     "Android Auto".takeIf { androidAuto },
 )
     .takeIf { enabled && it.isNotEmpty() }
-    ?.summary(then = stayActiveMinutes?.let { "then $it min" })
-    ?: listOf("Always (drains battery)")
+    ?.summary(then = stayActiveMinutes?.let { localized(CommonR.string.then_min, it) })
+    ?: listOf(localized(CommonR.string.always_drains_battery))
 
 /**
  * From the most detailed to the shortest, the item shows the first one that fits a single line.
@@ -201,18 +204,18 @@ private fun suspendSummary(
     bluetooth: Boolean,
 ): List<String> = listOfNotNull(
     // Same order as their page
-    (if (wifiException) "WiFi, with exceptions" else "WiFi").takeIf { wifi },
+    (if (wifiException) localized(CommonR.string.wifi_with_exceptions) else "WiFi").takeIf { wifi },
     "Bluetooth".takeIf { bluetooth },
-    "Phone idle".takeIf { doze },
+    localized(CommonR.string.phone_idle).takeIf { doze },
 )
     .takeIf { enabled && it.isNotEmpty() }
     ?.summary()
-    ?: listOf("Never (drains battery)")
+    ?: listOf(localized(CommonR.string.never_drains_battery))
 
 private fun List<String>.summary(then: String? = null): List<String> = listOf(
     (this + listOfNotNull(then)).joinToString(", "),
     // "WiFi, with exceptions and more" would be ambiguous: the details are for the long version
-    "${first().substringBefore(",")} and more",
+    localized(CommonR.string.and_more, first().substringBefore(",")),
 )
 
 @Preview

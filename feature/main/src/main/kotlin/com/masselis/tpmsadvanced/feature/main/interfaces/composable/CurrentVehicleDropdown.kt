@@ -103,6 +103,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import com.masselis.tpmsadvanced.core.common.R as CommonR
+import androidx.compose.ui.res.stringResource
 
 /**
  * The vehicle picker, [onVehicleAdded] being called with the uuid of a vehicle once added. The
@@ -242,7 +244,7 @@ private fun ExposedDropdownMenuBoxScope.VehicleListDropdownMenu(
             )
         }
         DropdownMenuItem(
-            text = { Text(text = "Add a vehicle", Modifier.weight(1f)) },
+            text = { Text(text = stringResource(CommonR.string.add_a_vehicle), Modifier.weight(1f)) },
             trailingIcon = {
                 Icon(
                     ImageVector.vectorResource(R.drawable.add_circle_24px),
@@ -289,7 +291,7 @@ private fun AddVehicle(
     val isCompact = isWide && isNameFocused
     val title = @Composable {
         Text(
-            text = "Add a new vehicle",
+            text = stringResource(CommonR.string.add_a_new_vehicle),
             style = MaterialTheme.typography.headlineSmall,
             color = AlertDialogDefaults.titleContentColor,
             modifier = Modifier.padding(bottom = 16.dp)
@@ -297,7 +299,7 @@ private fun AddVehicle(
     }
     val nameField = @Composable {
         OutlinedTextField(
-            label = { Text(text = "Vehicle name") },
+            label = { Text(text = stringResource(CommonR.string.vehicle_name)) },
             value = vehicleName,
             onValueChange = { vehicleName = it },
             singleLine = true,
@@ -342,13 +344,13 @@ private fun AddVehicle(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = when (kind) {
-                            CAR -> "Car"
-                            CAR_WITH_SPARE -> "Car with a spare tyre"
-                            MOTORCYCLE -> "Motorcycle"
-                            TADPOLE_THREE_WHEELER -> "Tadpole three-wheeler"
-                            DELTA_THREE_WHEELER -> "Delta three-wheeler"
-                            SINGLE_AXLE_TRAILER -> "Single axle trailer"
-                            MONOWHEEL -> "Monowheel"
+                            CAR -> stringResource(CommonR.string.car)
+                            CAR_WITH_SPARE -> stringResource(CommonR.string.car_with_a_spare_tyre)
+                            MOTORCYCLE -> stringResource(CommonR.string.motorcycle)
+                            TADPOLE_THREE_WHEELER -> stringResource(CommonR.string.tadpole_three_wheeler)
+                            DELTA_THREE_WHEELER -> stringResource(CommonR.string.delta_three_wheeler)
+                            SINGLE_AXLE_TRAILER -> stringResource(CommonR.string.single_axle_trailer)
+                            MONOWHEEL -> stringResource(CommonR.string.monowheel)
                         },
                         color = AlertDialogDefaults.textContentColor,
                     )
@@ -360,13 +362,13 @@ private fun AddVehicle(
         Row(modifier = modifier) {
             TextButton(
                 onClick = onDismissRequest,
-                content = { Text("Cancel") },
+                content = { Text(stringResource(CommonR.string.cancel)) },
                 modifier = Modifier.testTag(cancelButton)
             )
             TextButton(
                 enabled = vehicleName.isBlank().not() && currentKind != null,
                 onClick = { onVehicleAdd(vehicleName, currentKind!!) },
-                content = { Text(text = "Add") },
+                content = { Text(text = stringResource(CommonR.string.add_2)) },
                 modifier = Modifier.testTag(addButton)
             )
         }
