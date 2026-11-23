@@ -78,6 +78,8 @@ public fun ManageSensors(
     scanBluetooth: (Location) -> Unit,
     /** Opens the calibration of the sensor with this id */
     calibrate: (Int) -> Unit,
+    /** Opens the history of the sensor with this id */
+    history: (Int) -> Unit,
     moveToVehicle: (Location, UUID) -> Unit,
     modifier: Modifier = Modifier,
     /** In a wide window, see [isWideWindow], the top bar makes way: the page shows its own */
@@ -90,6 +92,7 @@ public fun ManageSensors(
         scanQrCode = scanQrCode,
         scanBluetooth = scanBluetooth,
         calibrate = calibrate,
+        history = history,
         moveToVehicle = moveToVehicle,
         modifier = modifier,
         navigationIcon = navigationIcon,
@@ -109,6 +112,7 @@ internal fun SensorsPage(
     scanQrCode: (Location) -> Unit,
     scanBluetooth: (Location) -> Unit,
     calibrate: (Int) -> Unit,
+    history: (Int) -> Unit,
     moveToVehicle: (Location, UUID) -> Unit,
     modifier: Modifier,
     navigationIcon: @Composable () -> Unit,
@@ -203,6 +207,7 @@ internal fun SensorsPage(
                         scanQrCode = scanQrCode,
                         scanBluetooth = scanBluetooth,
                         calibrate = calibrate,
+                        history = history,
                         // Once complete, the tyres show as usual: the arrows tell what's going to happen
                         move = incoming
                             ?.let { incoming ->

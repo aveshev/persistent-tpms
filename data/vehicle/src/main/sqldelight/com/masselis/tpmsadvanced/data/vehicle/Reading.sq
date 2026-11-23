@@ -83,3 +83,11 @@ WHERE vehicleId = :vehicleId AND location = :location AND timestamp <= (
 -- The latest reading of any tyre, to tell which of two apps' data is the newest
 latestTimestamp:
 SELECT MAX(timestamp) AS timestamp FROM Reading;
+
+-- A sensor's history, newest first, wherever it was read: its readings follow it on a move (see
+-- parkSensor), and the ones left on a vehicle or a tyre it was reassigned from are kept there. Not
+-- the ones parked in the middle of a move.
+allBySensor:
+SELECT * FROM Reading
+WHERE sensorId = ? AND timestamp > 0
+ORDER BY timestamp DESC;

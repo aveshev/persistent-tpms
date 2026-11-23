@@ -87,6 +87,19 @@ internal class ReadingDatabaseTest {
         )
     }
 
+    // Its readings of every tyre it was read on, the other sensors' left out
+    @Test
+    fun aSensorsHistoryIsAllItsReadingsNewestFirst() = runTest {
+        val frontRight = Location.Wheel(FRONT_RIGHT)
+        readingDatabase.insert(tyre(pecham), currentVehicleUuid)
+        readingDatabase.insert(tyre(pecham).copy(timestamp = 2.0, location = frontRight), currentVehicleUuid)
+        readingDatabase.insert(tyre(pecham).copy(timestamp = 3.0, sensorId = 43), currentVehicleUuid)
+        assertEquals(
+            listOf(2.0 to frontRight, 1.0 to Location.Wheel(FRONT_LEFT)),
+            readingDatabase.allBySensor(42).execute().map { it.timestamp to it.location },
+        )
+    }
+
     @Test
     fun aReadingWithoutRawIsNotStored() = runTest {
         readingDatabase.insert(tyre(null), currentVehicleUuid)

@@ -50,6 +50,14 @@ public class ReadingDatabase internal constructor(
         .allByLocation(vehicleId, location)
         .asList { it.decoded() }
 
+    /**
+     * Every stored reading of the sensor [sensorId], newest first, whichever vehicle and tyre it
+     * was read on: up to [CAP] for each tyre it was on
+     */
+    public fun allBySensor(sensorId: Int): QueryList<Tyre.Located> = queries
+        .allBySensor(sensorId)
+        .asList { it.decoded() }
+
     /** The readings of [location] stored after [timestamp], oldest first */
     public fun afterByLocation(
         location: Location,

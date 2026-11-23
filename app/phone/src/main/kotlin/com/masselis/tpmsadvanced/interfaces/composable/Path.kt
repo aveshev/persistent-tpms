@@ -147,6 +147,15 @@ internal sealed interface Path {
         }
     }
 
+    /** Every stored reading of the sensor [sensorId], wherever it was read */
+    data class SensorHistory(val vehicleUUID: UUID, val sensorId: Int) : Path {
+        override fun toString(): String = "vehicle/$vehicleUUID/sensor_history/$sensorId"
+
+        companion object {
+            fun route(vehicleUUID: UUID) = "vehicle/$vehicleUUID/sensor_history/{sensorId}"
+        }
+    }
+
     /**
      * Moves the sensor at [location] in the vehicle kind's locations to a wheel of the vehicle
      * [toVehicleUUID]
@@ -207,6 +216,7 @@ internal sealed interface Path {
                         "qrcode" -> QrCode(uuid, argument)
                         "bluetooth_assign" -> BluetoothAssign(uuid, argument)
                         "calibration" -> Calibration(uuid, argument)
+                        "sensor_history" -> SensorHistory(uuid, argument)
                         // A pattern has none, the page's own vehicle stands in
                         "move_to_vehicle" -> MoveToVehicle(
                             uuid,

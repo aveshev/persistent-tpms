@@ -77,6 +77,8 @@ internal fun TyreTapArea(
     canMove: Boolean,
     modifier: Modifier = Modifier,
     calibrate: (Int) -> Unit = {},
+    /** Opens the history of the sensor with this id */
+    history: (Int) -> Unit = {},
     onOutlinePositioned: ((Location, Rect) -> Unit)? = null,
     /**
      * Written on its border, it's then always framed: by its outline while it has one, thinly in
@@ -172,6 +174,7 @@ internal fun TyreTapArea(
                 moveToVehicle = { isOpen = false; isMovingToVehicle = true },
                 canMoveToVehicle = otherVehicles.isNotEmpty(),
                 calibrate = { isOpen = false; calibrate(assigned.sensor.id) },
+                history = { isOpen = false; history(assigned.sensor.id) },
                 delete = { isOpen = false; confirmDelete = true },
                 onDismissRequest = { isOpen = false },
             )
@@ -282,6 +285,7 @@ private fun ManageSensorDialog(
     moveToVehicle: () -> Unit,
     canMoveToVehicle: Boolean,
     calibrate: () -> Unit,
+    history: () -> Unit,
     delete: () -> Unit,
     onDismissRequest: () -> Unit,
     modifier: Modifier = Modifier,
@@ -330,6 +334,13 @@ private fun ManageSensorDialog(
                     modifier = Modifier.testTag(TyreTapAreaTags.calibrate),
                 )
                 DialogOption(
+                    icon = { Icon(ImageVector.vectorResource(R.drawable.history_24px), null) },
+                    title = "History",
+                    subtitle = "Every reading stored for this sensor",
+                    onClick = history,
+                    modifier = Modifier.testTag(TyreTapAreaTags.history),
+                )
+                DialogOption(
                     icon = { Icon(ImageVector.vectorResource(R.drawable.delete_24px), null) },
                     title = "Delete",
                     subtitle = buildString {
@@ -363,6 +374,7 @@ internal fun ManageSensorDialogPreview() {
         moveToVehicle = {},
         canMoveToVehicle = true,
         calibrate = {},
+        history = {},
         delete = {},
         onDismissRequest = {},
     )
@@ -376,6 +388,7 @@ internal object TyreTapAreaTags {
     const val move = "TyreTapAreaTags_move"
     const val moveToVehicle = "TyreTapAreaTags_moveToVehicle"
     const val calibrate = "TyreTapAreaTags_calibrate"
+    const val history = "TyreTapAreaTags_history"
     const val delete = "TyreTapAreaTags_delete"
     const val manageCancel = "TyreTapAreaTags_manageCancel"
     const val deleteDialog = "TyreTapAreaTags_deleteDialog"

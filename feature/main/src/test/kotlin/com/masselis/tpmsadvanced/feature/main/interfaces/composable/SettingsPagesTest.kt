@@ -91,6 +91,16 @@ internal class SettingsPagesTest {
     }
 
     @Test
+    fun sensorHistory() {
+        snapshot { SensorHistoryPreview() }
+    }
+
+    @Test
+    fun sensorHistoryEmpty() {
+        snapshot { SensorHistoryEmptyPreview() }
+    }
+
+    @Test
     fun sensorReadingsUpdateDetails() {
         snapshot { SensorReadingsUpdateDetailsPreview() }
     }

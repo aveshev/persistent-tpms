@@ -68,6 +68,7 @@ public fun MoveSensorToVehicle(
                     scanQrCode = {},
                     scanBluetooth = {},
                     calibrate = {},
+                    history = {},
                     moveToVehicle = { _, _ -> },
                     modifier = modifier,
                     navigationIcon = navigationIcon,

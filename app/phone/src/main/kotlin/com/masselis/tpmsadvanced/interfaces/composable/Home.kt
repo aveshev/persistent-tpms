@@ -1,6 +1,7 @@
 package com.masselis.tpmsadvanced.interfaces.composable
 
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.SensorCalibrationSettings
+import com.masselis.tpmsadvanced.feature.main.interfaces.composable.SensorHistory
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.spring
@@ -263,6 +264,7 @@ internal fun VehicleHome(
                                 navController.navigate("${Path.BluetoothAssign(vehicleUuid, locations.indexOf(it))}")
                             },
                             calibrate = { navController.navigate("${Path.Calibration(vehicleUuid, it)}") },
+                            history = { navController.navigate("${Path.SensorHistory(vehicleUuid, it)}") },
                             moveToVehicle = { location, toVehicle ->
                                 navController.navigate(
                                     "${Path.MoveToVehicle(vehicleUuid, locations.indexOf(location), toVehicle)}"
@@ -327,6 +329,15 @@ internal fun VehicleHome(
                         SensorCalibrationSettings(
                             sensorId = requireNotNull(entry.arguments).getInt("sensorId"),
                             onLeave = { navController.popBackStack() },
+                            modifier = modifier
+                        )
+                    }
+                    composable(
+                        route = Path.SensorHistory.route(vehicleUuid),
+                        arguments = listOf(navArgument("sensorId") { type = NavType.IntType }),
+                    ) { entry ->
+                        SensorHistory(
+                            sensorId = requireNotNull(entry.arguments).getInt("sensorId"),
                             modifier = modifier
                         )
                     }
@@ -628,6 +639,7 @@ private fun TopAppBar(
                 is Path.PressureSettings -> Text(text = "Pressure")
                 is Path.TemperatureSettings -> Text(text = "Temperature")
                 is Path.Calibration -> Text(text = "Calibrate sensor")
+                is Path.SensorHistory -> Text(text = "Sensor history")
                 is Path.BatterySettings -> Text(text = "Battery")
                 is Path.PressureLoss -> Text(text = "Pressure loss")
                 is Path.AppSettings -> Text(text = "App settings")
@@ -662,6 +674,7 @@ private fun TopAppBar(
                 is Path.PressureSettings,
                 is Path.TemperatureSettings,
                 is Path.Calibration,
+                is Path.SensorHistory,
                 is Path.BatterySettings,
                 is Path.PressureLoss,
                 is Path.AppSettings,
@@ -704,6 +717,7 @@ private fun TopAppBar(
                 is Path.PressureSettings,
                 is Path.TemperatureSettings,
                 is Path.Calibration,
+                is Path.SensorHistory,
                 is Path.BatterySettings,
                 is Path.PressureLoss,
                 is Path.AppSettings,

@@ -495,6 +495,8 @@ public class TyreTaps internal constructor(
     internal val startMove: (Location) -> Unit = {},
     /** Opens the calibration of the sensor with this id */
     internal val calibrate: (Int) -> Unit = {},
+    /** Opens the history of the sensor with this id */
+    internal val history: (Int) -> Unit = {},
     /** A vehicle with a single location has nowhere to move a sensor to */
     internal val canMove: Boolean = true,
     /** Where each location's tyre is in the window, to draw over the vehicle */
@@ -823,6 +825,7 @@ private fun Car(
                 move = taps.move,
                 startMove = taps.startMove,
                 calibrate = taps.calibrate,
+                history = taps.history,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -860,6 +863,7 @@ private fun Car(
                 move = taps.move,
                 startMove = taps.startMove,
                 calibrate = taps.calibrate,
+                history = taps.history,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -897,6 +901,7 @@ private fun Car(
                 move = taps.move,
                 startMove = taps.startMove,
                 calibrate = taps.calibrate,
+                history = taps.history,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -934,6 +939,7 @@ private fun Car(
                 move = taps.move,
                 startMove = taps.startMove,
                 calibrate = taps.calibrate,
+                history = taps.history,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1040,6 +1046,7 @@ private fun CarWithSpare(
                 move = taps.move,
                 startMove = taps.startMove,
                 calibrate = taps.calibrate,
+                history = taps.history,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1081,6 +1088,7 @@ private fun CarWithSpare(
                 move = taps.move,
                 startMove = taps.startMove,
                 calibrate = taps.calibrate,
+                history = taps.history,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1123,6 +1131,7 @@ private fun CarWithSpare(
                 move = taps.move,
                 startMove = taps.startMove,
                 calibrate = taps.calibrate,
+                history = taps.history,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1165,6 +1174,7 @@ private fun CarWithSpare(
                 move = taps.move,
                 startMove = taps.startMove,
                 calibrate = taps.calibrate,
+                history = taps.history,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1268,6 +1278,7 @@ private fun CarWithSpare(
                 move = taps.move,
                 startMove = taps.startMove,
                 calibrate = taps.calibrate,
+                history = taps.history,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 title = "Spare".takeIf { spareBeside },
@@ -1364,6 +1375,7 @@ private fun Monowheel(
                 move = taps.move,
                 startMove = taps.startMove,
                 calibrate = taps.calibrate,
+                history = taps.history,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1444,6 +1456,7 @@ private fun SingleAxleTrailer(
                 move = taps.move,
                 startMove = taps.startMove,
                 calibrate = taps.calibrate,
+                history = taps.history,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1481,6 +1494,7 @@ private fun SingleAxleTrailer(
                 move = taps.move,
                 startMove = taps.startMove,
                 calibrate = taps.calibrate,
+                history = taps.history,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1562,6 +1576,7 @@ private fun Motorcycle(
                 move = taps.move,
                 startMove = taps.startMove,
                 calibrate = taps.calibrate,
+                history = taps.history,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1599,6 +1614,7 @@ private fun Motorcycle(
                 move = taps.move,
                 startMove = taps.startMove,
                 calibrate = taps.calibrate,
+                history = taps.history,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1686,6 +1702,7 @@ private fun TadpoleThreadWheeler(
                 move = taps.move,
                 startMove = taps.startMove,
                 calibrate = taps.calibrate,
+                history = taps.history,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1723,6 +1740,7 @@ private fun TadpoleThreadWheeler(
                 move = taps.move,
                 startMove = taps.startMove,
                 calibrate = taps.calibrate,
+                history = taps.history,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1761,6 +1779,7 @@ private fun TadpoleThreadWheeler(
                 move = taps.move,
                 startMove = taps.startMove,
                 calibrate = taps.calibrate,
+                history = taps.history,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1849,6 +1868,7 @@ private fun DeltaThreeWheeler(
                 move = taps.move,
                 startMove = taps.startMove,
                 calibrate = taps.calibrate,
+                history = taps.history,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1886,6 +1906,7 @@ private fun DeltaThreeWheeler(
                 move = taps.move,
                 startMove = taps.startMove,
                 calibrate = taps.calibrate,
+                history = taps.history,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
@@ -1923,6 +1944,7 @@ private fun DeltaThreeWheeler(
                 move = taps.move,
                 startMove = taps.startMove,
                 calibrate = taps.calibrate,
+                history = taps.history,
                 canMove = taps.canMove,
                 onOutlinePositioned = taps.onOutlinePositioned,
                 modifier = Modifier
