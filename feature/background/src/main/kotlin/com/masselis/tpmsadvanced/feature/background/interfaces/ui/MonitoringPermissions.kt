@@ -35,6 +35,9 @@ import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.masselis.tpmsadvanced.core.common.appContext
 import com.masselis.tpmsadvanced.core.common.R as CommonR
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.Modifier
 
 /**
  * What a background monitoring service needs from the user: notifications allowed (and Bluetooth
@@ -262,7 +265,9 @@ private fun BatteryOptimizationAlert(
     AlertDialog(
         text = {
             Text(
-                text = stringResource(CommonR.string.to_keep_monitoring_your_tyres_reliably_in)
+                text = stringResource(CommonR.string.to_keep_monitoring_your_tyres_reliably_in),
+                // Scrolls when the largest font sizes make it taller than the dialog
+                modifier = Modifier.verticalScroll(rememberScrollState()),
             )
         },
         onDismissRequest = onDismissRequest,

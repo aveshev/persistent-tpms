@@ -320,12 +320,12 @@ struct BluetoothAssignView: View {
     }
 
     private func primary(_ title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) { Text(title).frame(maxWidth: .infinity) }
+        Button(action: action) { Text(title).lineLimit(1).minimumScaleFactor(0.5).frame(maxWidth: .infinity) }
             .buttonStyle(.borderedProminent)
     }
 
     private func secondary(_ title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) { Text(title).frame(maxWidth: .infinity) }
+        Button(action: action) { Text(title).lineLimit(1).minimumScaleFactor(0.5).frame(maxWidth: .infinity) }
             .buttonStyle(.bordered)
     }
 }

@@ -39,7 +39,11 @@ internal fun TyreLegend(
         modifier = Modifier.fillMaxWidth(),
     ) {
         entries.forEach { (state, caption) ->
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            // An equal share each, so large text wraps its caption rather than squeezing the others out
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.weight(1f),
+            ) {
                 Tyre(state, snackbarHostState, Modifier.height(96.dp))
                 Spacer(Modifier.height(8.dp))
                 Text(

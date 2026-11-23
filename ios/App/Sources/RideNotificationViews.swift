@@ -87,11 +87,7 @@ struct BeaconsView: View {
 
     var body: some View {
         Form {
-            Section {
-                Text("Some newer cars and motorcycles feature always-on or on-while-riding BLE beacons that can be used to send the ride notification. These likely won't show up on your phone's Bluetooth pairing screen, but you can add them here.\n\nNOTE: AirTags and similar personal trackers use proprietary protocols, hide their names and randomize their addresses, so they aren't supported.")
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
-            }
+            PageIntro(text: "Some newer cars and motorcycles feature always-on or on-while-riding BLE beacons that can be used to send the ride notification. These likely won't show up on your phone's Bluetooth pairing screen, but you can add them here.\n\nNOTE: AirTags and similar personal trackers use proprietary protocols, hide their names and randomize their addresses, so they aren't supported.")
             Section {
                 Toggle("Notify when near beacons", isOn: Binding(get: { settings.rideBeacon }, set: { monitor.setRideBeacon($0); refreshDenied() }))
             }
@@ -255,11 +251,7 @@ private struct BeaconPickerView: View {
 
     var body: some View {
         Form {
-            Section {
-                Text("Come close to your vehicle: the beacons with the strongest signal are shown at the top of the list.")
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
-            }
+            PageIntro(text: "Come close to your vehicle: the beacons with the strongest signal are shown at the top of the list.")
             Section("Scanning") {
                 if scan.isBluetoothOff {
                     SettingsRow("Bluetooth is off", "Turn it on to look for beacons")
