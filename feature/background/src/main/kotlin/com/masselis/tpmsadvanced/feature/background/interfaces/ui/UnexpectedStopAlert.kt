@@ -18,6 +18,9 @@ import com.masselis.tpmsadvanced.feature.background.usecase.UnexpectedStopUseCas
 import com.masselis.tpmsadvanced.feature.background.usecase.UnexpectedStopUseCase.UnexpectedStop
 import com.masselis.tpmsadvanced.core.common.R as CommonR
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.Modifier
 
 /**
  * Tells the user that persistent scanning stopped behind their back since the app was last opened,
@@ -49,7 +52,9 @@ internal fun UnexpectedStopAlert(
                                     Killed, Unknown -> stringResource(CommonR.string.stop_unknown)
                                 } +
                                 stringResource(CommonR.string.stop_end)
-                    }
+                    },
+                // Scrolls when the largest font sizes make it taller than the dialog
+                modifier = Modifier.verticalScroll(rememberScrollState()),
             )
         },
         onDismissRequest = onDismissRequest,
