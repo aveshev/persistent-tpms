@@ -264,7 +264,7 @@ struct ManageSensorsView: View {
                     monitor.move(vehicle, chain.moves(occupied: Set(monitor.sensors.filter { $0.vehicleId == vehicle.id }.map(\.location))))
                     stop()
                 } label: {
-                    Text("Move as shown").frame(maxWidth: .infinity)
+                    Text("Move as shown").lineLimit(1).minimumScaleFactor(0.4).frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
             } else if moving != nil {
@@ -286,11 +286,12 @@ struct ManageSensorsView: View {
     }
 
     private func prompt(_ text: String) -> some View {
-        Text(text).font(.headline).multilineTextAlignment(.center)
+        // The actions keep their height, so the largest text sizes shrink to fit it
+        Text(text).font(.headline).multilineTextAlignment(.center).lineLimit(1...2).minimumScaleFactor(0.4)
     }
 
     private func cancel(_ action: @escaping () -> Void) -> some View {
-        Button(action: action) { Text("Cancel").frame(maxWidth: .infinity) }
+        Button(action: action) { Text("Cancel").lineLimit(1).minimumScaleFactor(0.4).frame(maxWidth: .infinity) }
             .buttonStyle(.bordered)
     }
 }

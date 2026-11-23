@@ -227,11 +227,7 @@ struct PersistentModeView: View {
 
     var body: some View {
         Form {
-            Section {
-                Text("When on, keeps monitoring your tyres in the background, while the phone is locked too. That way you don't have to open the app each ride.\n\nNOTE: iOS throttles Bluetooth scanning in background, so the app will miss some sensor updates that would have been caught if it were open. Swiping the app away in the app switcher stops the monitoring until it's opened again.")
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
-            }
+            PageIntro(text: "When on, keeps monitoring your tyres in the background, while the phone is locked too. That way you don't have to open the app each ride.\n\nNOTE: iOS throttles Bluetooth scanning in background, so the app will miss some sensor updates that would have been caught if it were open. Swiping the app away in the app switcher stops the monitoring until it's opened again.")
             Section {
                 Toggle("Persistent scanning", isOn: Binding(
                     get: { settings.backgroundMonitoring },
@@ -388,11 +384,7 @@ struct TimeSinceUpdateView: View {
 
     var body: some View {
         Form {
-            Section {
-                Text("Most TPMS sensors send updates at regular time intervals while riding. However, in some cases the updates can get lost, because of signal obstruction, low sensor battery or other issues. Knowing when exactly the last update arrived from each sensor can help you diagnose these issues.")
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
-            }
+            PageIntro(text: "Most TPMS sensors send updates at regular time intervals while riding. However, in some cases the updates can get lost, because of signal obstruction, low sensor battery or other issues. Knowing when exactly the last update arrived from each sensor can help you diagnose these issues.")
             Section {
                 NavigationLink {
                     SensorReadingsUpdateDetailsView()
@@ -414,21 +406,13 @@ struct TimeSinceUpdateView: View {
 struct SensorReadingsUpdateDetailsView: View {
     var body: some View {
         Form {
-            Section {
-                Text("Sensors from different manufacturers differ in how often they send an update, and in whether they can tell that the wheel is rolling.")
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
-            }
+            PageIntro(text: "Sensors from different manufacturers differ in how often they send an update, and in whether they can tell that the wheel is rolling.")
             Section("Known schedules") {
                 SettingsRow("WiCarLink", tr("Every 5.5 minutes, whether the vehicle moves or not, and whenever pressure changes significantly. Reads the pressure in steps of 0.1 bar (about 1.5 psi): a tyre between two steps can read one step lower when cold, and the next one up once warm"))
                 SettingsRow("Pecham", tr("Every minute while the wheel rotates. While stationary, only when the pressure is below ~22 psi, and in either case, whenever pressure changes significantly. Reads the pressure in steps of about 0.45 psi (3.1 kPa), shown rounded to 0.1 psi: a steady tyre can go back and forth by one step"))
                 SettingsRow("TC.TPMS", tr("Every 5 minutes, whether the vehicle moves or not, and at once when the pressure changes by about 1.5 psi. Reads the pressure in steps of 0.1 psi"))
             }
-            Section("When updates seem to be missing") {
-                Text("If the app does not show the sensor updating as often as you think it should, it could be due to the following reasons:\n\n1. The sensor is not sending any updates at all. You can verify that by briefly taking it off the wheel: it should sense 0 pressure, which should force an update, and the app should show an alert. If it does not, either the sensor itself or its battery may be dead.\n\n2. The sensor is sending updates, but they are not getting to the phone. Changing the phone's position relative to the wheel may help, and so may replacing the sensor's battery with a fresh one. In the worst case, you may need a different sensor brand.\n\n3. The sensor reacts to pressure changes, but fails to detect wheel rotation (if it has rotation detection). Swapping it with a sensor that reports regularly helps tell this apart from #2: if it still doesn't send updates from where the other one does, it's likely faulty and should be replaced. You can use \"Manage sensors\" in the vehicle settings to quickly move them between the wheels.")
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
-            }
+            PageIntro("When updates seem to be missing", text: "If the app does not show the sensor updating as often as you think it should, it could be due to the following reasons:\n\n1. The sensor is not sending any updates at all. You can verify that by briefly taking it off the wheel: it should sense 0 pressure, which should force an update, and the app should show an alert. If it does not, either the sensor itself or its battery may be dead.\n\n2. The sensor is sending updates, but they are not getting to the phone. Changing the phone's position relative to the wheel may help, and so may replacing the sensor's battery with a fresh one. In the worst case, you may need a different sensor brand.\n\n3. The sensor reacts to pressure changes, but fails to detect wheel rotation (if it has rotation detection). Swapping it with a sensor that reports regularly helps tell this apart from #2: if it still doesn't send updates from where the other one does, it's likely faulty and should be replaced. You can use \"Manage sensors\" in the vehicle settings to quickly move them between the wheels.")
         }
         .navigationTitle("Sensor readings update details")
         .navigationBarTitleDisplayMode(.inline)
@@ -578,11 +562,7 @@ struct PressureLossSettingsView: View {
 
     var body: some View {
         Form {
-            Section {
-                Text("Experimental. Shows \"Leak?\" under a tyre losing pressure while riding, and notifies about it: its pressure falling from its highest reading of the ride by at least the minimum drop, on two readings in a row, while the tyre isn't cooling down.\n\nRiding warms a tyre up, which only raises its pressure, so a fall is air getting out. A leak too slow to show within a ride is left to the low pressure alert, once the tyre is cold. Letting air out shows as a loss too.")
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
-            }
+            PageIntro(text: "Experimental. Shows \"Leak?\" under a tyre losing pressure while riding, and notifies about it: its pressure falling from its highest reading of the ride by at least the minimum drop, on two readings in a row, while the tyre isn't cooling down.\n\nRiding warms a tyre up, which only raises its pressure, so a fall is air getting out. A leak too slow to show within a ride is left to the low pressure alert, once the tyre is cold. Letting air out shows as a loss too.")
             Section {
                 Toggle("Pressure loss alert", isOn: $settings.pressureLoss)
             }
