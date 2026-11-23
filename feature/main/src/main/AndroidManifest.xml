@@ -5,7 +5,7 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application>
-        <!-- Shares the database copies of the debug settings' export -->
+        <!-- Shares the database copies of the debug settings' export, and the sensor histories' CSV -->
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.database_export"

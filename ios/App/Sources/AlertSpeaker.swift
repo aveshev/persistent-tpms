@@ -2,13 +2,14 @@ import AudioToolbox
 import AVFoundation
 import Foundation
 import TPMSCore
+import UIKit
 
 /// Says the red and critical alerts or plays their tones, and vibrates, like the Android app's
 /// AlertSpeaker, see docs/alerts.md: a red one twice at each of its readings, then every alert in one
 /// of two loops. The critical ones are said every 20 seconds for 10 minutes after their latest
 /// reading, then every 10 minutes along with the red ones. Everything goes one at a time, nothing
 /// talks over anything. In the background iOS only lets the app run when a sensor is heard, so the
-/// loops only go on then.
+/// loops only go on then: SpeechBackup says what they would while the app can't.
 final class AlertSpeaker: ObservableObject {
     private struct Repeated {
         let alertClass: AlertClass
@@ -57,11 +58,26 @@ final class AlertSpeaker: ObservableObject {
     private var notificationSoundEnds: Date?
     private var loop: Task<Void, Never>?
     private lazy var voice = Voice()
+    private let backup = SpeechBackup()
+    /// What the backup says and how often, as last scheduled, see [scheduleBackup]
+    private var backupPlan: SpeechBackup.Plan?
+    /// False until this launch scheduled or cancelled it: one may be left from before, which the loops
+    /// forgot like everything else, as the Android app's do when its process ends. Left alone until
+    /// then, it goes on reminding of what's still notified.
+    private var isBackupKnown = false
+    /// When the loops last said something, which a backup heard since replaces
+    private var lastSaid: Date?
+    /// When each text was last said to the end, an announcement saying it again soon after is dropped
+    private var said = [String: Date]()
+    /// Held while something is due now, see [holdBackgroundTime]
+    private var backgroundTask = UIBackgroundTaskIdentifier.invalid
 
     private static let crimsonPeriod: TimeInterval = 20
     private static let crimsonDuration: TimeInterval = 10 * 60
     private static let reminderPeriod: TimeInterval = 10 * 60
     static let silenceDuration: TimeInterval = 10 * 60
+    /// An announcement is dropped when its phrase was said to the end less than this before
+    private static let saidAgainAfter: TimeInterval = 15
     /// Android waits for the sound to end, which iOS doesn't tell an app: about what its sound lasts
     private static let notificationSound: TimeInterval = 2
 
@@ -117,6 +133,29 @@ final class AlertSpeaker: ObservableObject {
         silence = nil
     }
 
+    /// Its notification swiped away: silences the speech, as the button does. One left from before
+    /// this launch, with nothing said meanwhile, just stops.
+    func dismissBackup() {
+        if level != nil {
+            silenceNow()
+        } else {
+            isBackupKnown = true
+            backupPlan = nil
+            backup.cancel()
+        }
+    }
+
+    /// The backup left from before this launch, its alerts no longer notified: cleared meanwhile,
+    /// their sensor removed, or by a build without the backup, which couldn't stop it. Kept when
+    /// something already scheduled it anew.
+    func dropLeftoverBackup() {
+        guard isBackupKnown == false else { return }
+        isBackupKnown = true
+        backupPlan = nil
+        rideLog("speech backup left from before cancelled")
+        backup.cancel()
+    }
+
     /// Drops the silenced alerts. The reminders start a period after something enters them, and
     /// over once they empty.
     private func scheduled() {
@@ -138,6 +177,40 @@ final class AlertSpeaker: ObservableObject {
         if next != nil, loop == nil {
             loop = Task { @MainActor [weak self] in await self?.speakQueue() }
         }
+        scheduleBackup(now)
+    }
+
+    /// The backup says the loop that comes next: the critical loop's phrase every minute while it
+    /// goes on, the reminders' otherwise. Scheduled anew when that changes, and after each phrase said
+    /// ([isSaid]), from which its period counts. Once the critical loop is over, it only steps down
+    /// to the reminders' when something wakes the app.
+    private func scheduleBackup(_ now: Date, isSaid: Bool = false) {
+        let plan: SpeechBackup.Plan? = settings.flatMap { settings in
+            if crimsons(now).isEmpty == false {
+                return SpeechBackup.Plan(text: spoken(crimsons(now)), isCrimson: true, period: SpeechBackup.crimsonPeriod, sound: settings.alertSound)
+            }
+            let reminders = reminders(now)
+            guard reminders.isEmpty == false else { return nil }
+            return SpeechBackup.Plan(text: spoken(reminders), isCrimson: reminders.contains(where: \.isCrimson), period: SpeechBackup.reminderPeriod, sound: settings.alertSound)
+        }
+        guard isSaid || isBackupKnown == false || plan != backupPlan else { return }
+        isBackupKnown = true
+        backupPlan = plan
+        rideLog(plan.map { "speech backup every \(Int($0.period)) s: \($0.text)" } ?? "speech backup cancelled")
+        if let plan { backup.schedule(plan) } else { backup.cancel() }
+    }
+
+    /// The backup sounded since the loops last said something, the ringer on: it was heard, the loop
+    /// counts its period from it rather than saying the same again. Silent mode only vibrates it, and
+    /// when SilentMode can't tell, the loop says it.
+    @MainActor private func backupHeard(within period: TimeInterval) async -> Date? {
+        guard let sounded = await backup.lastSounded(),
+              Date().timeIntervalSince(sounded) < period,
+              lastSaid.map({ sounded > $0 }) ?? true
+        else { return nil }
+        let isSilent = await withCheckedContinuation { continuation in SilentMode.check { isSilent, _ in continuation.resume(returning: isSilent) } }
+        rideLog("speech backup sounded \(Int(Date().timeIntervalSince(sounded))) s ago, silent mode: \(isSilent.map(String.init) ?? "can't tell")")
+        return isSilent == false ? sounded : nil
     }
 
     private func crimsons(_ now: Date) -> [Repeated] {
@@ -159,21 +232,34 @@ final class AlertSpeaker: ObservableObject {
         while Task.isCancelled == false {
             scheduled()
             let now = Date()
+            holdBackgroundTime(isDue(now))
             if let ends = notificationSoundEnds, ends > now {
                 try? await Task.sleep(for: .milliseconds(100))
                 continue
             }
             if let announcement = announcements.first {
                 announcements.removeAll { $0.phrase == announcement.phrase }
-                await say("\(announcement.phrase). \(announcement.phrase).", isCrimson: announcement.isCrimson)
+                let text = "\(announcement.phrase). \(announcement.phrase)."
+                // A burst of readings each announces it, the next ones often while it's said
+                if said[text].map({ now.timeIntervalSince($0) < Self.saidAgainAfter }) != true {
+                    await say(text, isCrimson: announcement.isCrimson)
+                }
             } else if crimsons(now).isEmpty == false, nextCrimson.map({ $0 <= now }) ?? true {
                 // Every period from the start of the phrases, however long they take
                 nextCrimson = now.addingTimeInterval(Self.crimsonPeriod)
-                await say(spoken(crimsons(now)), isCrimson: true)
+                if let heard = await backupHeard(within: Self.crimsonPeriod) {
+                    nextCrimson = heard.addingTimeInterval(Self.crimsonPeriod)
+                } else {
+                    await say(spoken(crimsons(now)), isCrimson: true)
+                }
             } else if let next = nextReminder, next <= now {
                 nextReminder = now.addingTimeInterval(Self.reminderPeriod)
                 let reminders = reminders(now)
-                if reminders.isEmpty == false { await say(spoken(reminders), isCrimson: reminders.contains(where: \.isCrimson)) }
+                if let heard = await backupHeard(within: Self.reminderPeriod) {
+                    nextReminder = heard.addingTimeInterval(Self.reminderPeriod)
+                } else if reminders.isEmpty == false {
+                    await say(spoken(reminders), isCrimson: reminders.contains(where: \.isCrimson))
+                }
             } else if level == nil {
                 break
             } else {
@@ -181,6 +267,35 @@ final class AlertSpeaker: ObservableObject {
             }
         }
         loop = nil
+        holdBackgroundTime(false)
+    }
+
+    /// Something to say now or within a second, or a notification's sound to wait out first
+    private func isDue(_ now: Date) -> Bool {
+        let soon = now.addingTimeInterval(1)
+        return announcements.isEmpty == false
+            || notificationSoundEnds.map { $0 > now } == true
+            || (crimsons(now).isEmpty == false && (nextCrimson.map { $0 <= soon } ?? true))
+            || (reminders(now).isEmpty == false && nextReminder.map { $0 <= soon } == true)
+    }
+
+    /// Keeps the app running in the background until what's due is said. Woken by a sensor, iOS
+    /// leaves it a few seconds, which waiting out the notification's sound and starting the speech
+    /// can outlast: suspended meanwhile, the phrase waited for the next packet, minutes away for some
+    /// sensors, and was said late, out of date. Let go once nothing is due, between the loops'
+    /// phrases, or when iOS ends it.
+    private func holdBackgroundTime(_ isHeld: Bool) {
+        if isHeld, backgroundTask == .invalid {
+            backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "AlertSpeech") { [weak self] in
+                rideLog("background time ended by iOS")
+                self?.holdBackgroundTime(false)
+            }
+            rideLog("background time held")
+        } else if isHeld == false, backgroundTask != .invalid {
+            rideLog("background time let go")
+            UIApplication.shared.endBackgroundTask(backgroundTask)
+            backgroundTask = .invalid
+        }
     }
 
     /// Every phrase once, the critical ones first, the whole said twice
@@ -193,14 +308,21 @@ final class AlertSpeaker: ObservableObject {
         return "\(once). \(once)."
     }
 
+    /// Pushes the backup back once said. Not when it couldn't play, during a call for instance: the
+    /// backup then says it when due.
     @MainActor private func say(_ text: String, isCrimson: Bool) async {
         guard let settings else { return }
         if settings.vibrateAlerts { Voice.vibrate(isCrimson: isCrimson) }
-        switch settings.alertSound {
+        let isPlayed = switch settings.alertSound {
         case .speech: await voice.speak(text)
         case .tones: await voice.playTones(isCrimson: isCrimson)
-        case .none: break
+        case .none: true
         }
+        rideLog(isPlayed ? "said: \(text)" : "couldn't say: \(text)")
+        guard isPlayed else { return }
+        lastSaid = Date()
+        said = said.filter { Date().timeIntervalSince($0.value) < Self.saidAgainAfter }.merging([text: Date()]) { $1 }
+        scheduleBackup(Date(), isSaid: true)
     }
 }
 
@@ -215,45 +337,20 @@ private extension AlertClass {
     }
 }
 
-/// The phrases and tone patterns, lowering what's playing meanwhile as navigation prompts do
-private final class Voice: NSObject, AVSpeechSynthesizerDelegate {
-    private let synthesizer = AVSpeechSynthesizer()
-    private var finished: CheckedContinuation<Void, Never>?
-
-    override init() {
-        super.init()
-        synthesizer.delegate = self
-    }
-
-    @MainActor func speak(_ text: String) async {
-        activate()
-        await withCheckedContinuation { continuation in
-            finished = continuation
-            synthesizer.speak(AVSpeechUtterance(string: text))
-        }
-        deactivate()
-    }
-
-    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) { resume() }
-    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) { resume() }
-
-    private func resume() {
-        finished?.resume()
-        finished = nil
-    }
-
-    /// Like the Android app's AlertTones, shaped after the medical alarms': a medium priority's 3
-    /// pulses twice for a red alert, a high priority's fast burst for a critical one
-    @MainActor func playTones(isCrimson: Bool) async {
+/// Like the Android app's AlertTones, shaped after the medical alarms': a medium priority's 3 pulses
+/// twice for a red alert, a high priority's fast burst for a critical one. Played by AlertSpeaker, and
+/// recorded as SpeechBackup's sound.
+enum AlertTones {
+    static func buffer(isCrimson: Bool) -> AVAudioPCMBuffer? {
         let (starts, pulse, frequency): ([Int], Int, Double) = isCrimson
             ? ({ burst in burst + burst.map { $0 + 1600 } }([0, 200, 400, 800, 1000]), 120, 880)
             : ({ burst in burst + burst.map { $0 + 1600 } }([0, 300, 600]), 200, 523)
         let sampleRate = 44_100.0
-        guard let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1) else { return }
+        guard let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1) else { return nil }
         let total = Int(Double((starts.max() ?? 0) + pulse) / 1000 * sampleRate)
         guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(total)),
               let samples = buffer.floatChannelData?[0]
-        else { return }
+        else { return nil }
         buffer.frameLength = AVAudioFrameCount(total)
         // A pulse is a tone with a few harmonics, carrying through road noise and a helmet better
         let harmonics = [1.0, 0.5, 0.33, 0.25]
@@ -268,10 +365,48 @@ private final class Voice: NSObject, AVSpeechSynthesizerDelegate {
                 samples[first + i] = Float(wave * envelope * 0.8)
             }
         }
-        activate()
+        return buffer
+    }
+}
+
+/// The phrases and tone patterns, lowering what's playing meanwhile as navigation prompts do
+private final class Voice: NSObject, AVSpeechSynthesizerDelegate {
+    private let synthesizer = AVSpeechSynthesizer()
+    private var finished: CheckedContinuation<Void, Never>?
+
+    override init() {
+        super.init()
+        synthesizer.delegate = self
+    }
+
+    /// False when the audio couldn't start
+    @MainActor func speak(_ text: String) async -> Bool {
+        guard activate() else { return false }
+        await withCheckedContinuation { continuation in
+            finished = continuation
+            let utterance = AVSpeechUtterance(string: text)
+            utterance.voice = .alerts
+            synthesizer.speak(utterance)
+        }
+        deactivate()
+        return true
+    }
+
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) { resume() }
+    func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) { resume() }
+
+    private func resume() {
+        finished?.resume()
+        finished = nil
+    }
+
+    /// Like the Android app's AlertTones, see [tones]. False when the audio couldn't start.
+    @MainActor func playTones(isCrimson: Bool) async -> Bool {
+        guard let buffer = AlertTones.buffer(isCrimson: isCrimson) else { return true }
+        guard activate() else { return false }
         let engine = AVAudioEngine(), player = AVAudioPlayerNode()
         engine.attach(player)
-        engine.connect(player, to: engine.mainMixerNode, format: format)
+        engine.connect(player, to: engine.mainMixerNode, format: buffer.format)
         do {
             try engine.start()
             await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
@@ -283,6 +418,7 @@ private final class Voice: NSObject, AVSpeechSynthesizerDelegate {
         }
         engine.stop()
         deactivate()
+        return true
     }
 
     /// 3 pulses for a red alert, 5 for a critical one: a phone's vibration only comes one way
@@ -294,12 +430,30 @@ private final class Voice: NSObject, AVSpeechSynthesizerDelegate {
         }
     }
 
-    private func activate() {
-        try? AVAudioSession.sharedInstance().setCategory(.playback, options: [.duckOthers])
-        try? AVAudioSession.sharedInstance().setActive(true)
+    /// False when it can't, during a call for instance
+    private func activate() -> Bool {
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, options: [.duckOthers])
+            try AVAudioSession.sharedInstance().setActive(true)
+            return true
+        } catch {
+            return false
+        }
     }
 
     private func deactivate() {
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    }
+}
+
+extension AVSpeechSynthesisVoice {
+    /// In the language the app's texts are in, a phone in another language reading them with its own
+    /// voice otherwise: iOS's default voice follows the phone. That language's voice for the phone's
+    /// region where there's one, en-GB in the UK, its usual one otherwise. The speech's, and the
+    /// backup's recording of it.
+    static var alerts: AVSpeechSynthesisVoice? {
+        let language = Bundle.main.preferredLocalizations.first { $0 != "Base" } ?? "en"
+        return Locale.current.region.flatMap { AVSpeechSynthesisVoice(language: "\(language)-\($0.identifier)") }
+            ?? AVSpeechSynthesisVoice(language: language)
     }
 }

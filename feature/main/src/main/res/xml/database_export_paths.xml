@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The database copies DebugSettingsViewModel.exportDatabase() writes -->
+<!-- The database copies DebugSettingsViewModel.exportDatabase() writes, and the CSV files of
+     SensorHistoryViewModel.exportCsv() -->
 <paths>
     <cache-path
         name="database_export"
         path="database_export/" />
+    <cache-path
+        name="sensor_history"
+        path="sensor_history/" />
 </paths>

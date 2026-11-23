@@ -501,6 +501,8 @@ public class TyreTaps internal constructor(
     internal val startMove: (Location) -> Unit = {},
     /** Opens the calibration of the sensor with this id */
     internal val calibrate: (Int) -> Unit = {},
+    /** Opens the history of the sensor with this id */
+    internal val history: (Int) -> Unit = {},
     /** A vehicle with a single location has nowhere to move a sensor to */
     internal val canMove: Boolean = true,
     /** Where each location's tyre is in the window, to draw over the vehicle */
@@ -797,6 +799,7 @@ private class VehicleLayout(
             move = taps.move,
             startMove = taps.startMove,
             calibrate = taps.calibrate,
+            history = taps.history,
             canMove = taps.canMove,
             onOutlinePositioned = taps.onOutlinePositioned,
             title = tapAreaTitle,
