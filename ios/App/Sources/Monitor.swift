@@ -99,6 +99,9 @@ final class Monitor: ObservableObject {
         if isRestored == false { isTemporaryMonitoring = false }
         speaker.configure(settings: settings)
         notifier.speaker = speaker
+        Task { @MainActor [notifier, speaker] in
+            if await notifier.isAlertShowing() == false { speaker.dropLeftoverBackup() }
+        }
         if Demo.isOn {
             do {
                 let database = try Database()
@@ -144,6 +147,9 @@ final class Monitor: ObservableObject {
         if isActive { notifier.isAuthorized { [weak self] in self?.isNotificationAuthorized = $0 } }
         if Demo.isOn { return }
         rideLog(isActive ? "app open" : "app left")
+        #if DEBUG
+        logSilentMode(isActive ? "app open" : "app left", throttled: false)
+        #endif
         if isActive { ride.appOpened() }
         let listensToSensors = isActive || ((settings.backgroundMonitoring || isTemporaryMonitoring) && sensors.isEmpty == false)
         // The beacons wake the app whatever Persistent scanning says, its readings then still not
@@ -274,7 +280,24 @@ final class Monitor: ObservableObject {
         sensors.first { $0.id == reading.sensorId }?.calibration.applied != nil
     }
 
+    #if DEBUG
+    private var silentModeLogged = Date.distantPast
+
+    /// Whether SilentMode can tell, in the background too, where a sensor heard wakes the app for a
+    /// few seconds: flip the switch with the phone locked and compare with the log
+    private func logSilentMode(_ event: String, throttled: Bool = true) {
+        guard throttled == false || Date().timeIntervalSince(silentModeLogged) > 20 else { return }
+        silentModeLogged = Date()
+        SilentMode.check { isSilent, elapsed in
+            rideLog("silent mode at \(event): \(isSilent.map { $0 ? "silent" : "ringer on" } ?? "can't tell"), ended after \(elapsed.map { "\(Int($0 * 1000)) ms" } ?? "none"), phone \(UIApplication.shared.isProtectedDataAvailable ? "unlocked" : "locked")")
+        }
+    }
+    #endif
+
     private func record(_ read: SensorReading, vehicle: Vehicle, location: TyreLocation, isStored: Bool = true) {
+        #if DEBUG
+        logSilentMode("reading")
+        #endif
         // As it was read: the calibration applies when it's read back, it can still change
         if isStored { try? database?.insert(read, vehicleId: vehicle.id, location: location) }
         let reading = corrected(read)
@@ -297,14 +320,18 @@ final class Monitor: ObservableObject {
 
     // MARK: Editing
 
-    /// A kind without some of the tyres the vehicle had loses their sensors, their readings stay
+    /// A kind without some of the tyres the vehicle had loses their sensors, their readings stay,
+    /// their alerts go
     func save(_ vehicle: Vehicle) {
+        var unbound = [TyreLocation]()
         perform { database in
             try database.save(vehicle)
             for sensor in try database.sensors() where sensor.vehicleId == vehicle.id && vehicle.kind.locations.contains(sensor.location) == false {
                 try database.unbind(vehicleId: vehicle.id, location: sensor.location)
+                unbound.append(sensor.location)
             }
         }
+        unbound.forEach { clearAlerts(vehicle, $0) }
         reevaluateSoon(vehicle)
     }
 
@@ -343,9 +370,12 @@ final class Monitor: ObservableObject {
     }
 
     /// A notification dismissed for a while stops being said. Tapped, it opens the main screen, on the
-    /// vehicle of its thread when it has one, which a tyre's alert does.
+    /// vehicle of its thread when it has one, which a tyre's alert does. The speech's backup swiped
+    /// away silences the speech, as its button on the main screen does.
     func answered(_ response: UNNotificationResponse) {
-        if let tag = notifier.snooze(response) {
+        if response.notification.request.identifier == SpeechBackup.identifier, response.actionIdentifier == UNNotificationDismissActionIdentifier {
+            speaker.dismissBackup()
+        } else if let tag = notifier.snooze(response) {
             speaker.stop(tag: tag)
         } else if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
             UUID(uuidString: response.notification.request.content.threadIdentifier).map(open) ?? showMainScreen.send()
@@ -473,6 +503,9 @@ final class Monitor: ObservableObject {
         try FileManager.default.moveItem(at: staged, to: target)
         try open()
         nearby = [:]
+        // Of sensors the imported data may not have, the backup's with them
+        speaker.stopAll()
+        notifier.clearAll()
     }
 
     func setAlerts(_ enabled: Bool) {

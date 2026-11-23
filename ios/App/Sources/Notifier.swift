@@ -1,9 +1,14 @@
 import Foundation
 import TPMSCore
+import UIKit
 import UserNotifications
 
 /// One notification per tyre and alert class, and what the speech says about it, like the Android
 /// app's AlertNotifier, see docs/alerts.md and AlertAction.
+///
+/// A red or critical one which sounded while the phone was locked, likely in a pocket or a bag
+/// during a ride, sounds again once it's unlocked, see docs/alerts.md ("Reminding on unlocking").
+/// What the speech says goes on without the app, see SpeechBackup.
 final class Notifier {
     private let center = UNUserNotificationCenter.current()
     private let defaults = UserDefaults.standard
@@ -15,9 +20,87 @@ final class Notifier {
     private static let alertClassKey = "alertClass"
     private static let levelKey = "level"
     private static let speechTagKey = "speechTag"
+    private static let unseenKey = "unseenAlerts"
 
     init() {
         center.setNotificationCategories(Self.categories)
+        // Only sent while the app runs: suspended in the background between two sensors heard, it
+        // reminds at the next reading instead, see update()
+        NotificationCenter.default.addObserver(forName: UIApplication.protectedDataDidBecomeAvailableNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.remindIfUnlocked()
+        }
+        // Opened on the app, whose screen shows them
+        NotificationCenter.default.addObserver(forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main) { [weak self] _ in
+            self?.seen()
+        }
+    }
+
+    /// The red and critical notifications which last sounded while the phone was locked
+    private var unseen: Set<String> {
+        get { Set(defaults.stringArray(forKey: Self.unseenKey) ?? []) }
+        set { defaults.set(Array(newValue), forKey: Self.unseenKey) }
+    }
+
+    /// The latest content posted under each identifier, which may not be delivered yet, to repeat it.
+    /// Kept in memory: after a relaunch, the delivered one is repeated.
+    private var contents = [String: UNNotificationContent]()
+
+    /// Whether the phone was locked when last checked, see [remindIfUnlocked]
+    private var wasLocked = false
+
+    /// Locked with a passcode: the protected data is only available while unlocked, and for a few
+    /// seconds after locking. Without a passcode it's always there, and nothing reminds.
+    private var isLocked: Bool { UIApplication.shared.isProtectedDataAvailable == false }
+
+    /// The unseen ones still red or critical
+    private var due: Set<String> {
+        let notified = notified
+        return unseen.filter { id in notified[id].flatMap(AlertLevel.init(rawValue:)).map { $0 >= .red } == true }
+    }
+
+    /// Unlocked since last checked: sounds the unseen notifications again, still red or critical
+    private func remindIfUnlocked() {
+        let isLocked = isLocked
+        defer { wasLocked = isLocked }
+        guard wasLocked, isLocked == false else { return }
+        let due = due
+        seen()
+        // Opened on the app, whose screen shows them
+        guard due.isEmpty == false, UIApplication.shared.applicationState != .active else { return }
+        reminders(due) { [center] id, content in
+            center.add(UNNotificationRequest(identifier: id, content: content, trigger: nil))
+        }
+    }
+
+    /// The phone was unlocked with them shown, or the app opened on them
+    private func seen() {
+        unseen = []
+    }
+
+    /// The notifications [ids] as they show, sounding
+    private func reminders(_ ids: Set<String>, _ then: @escaping (String, UNNotificationContent) -> Void) {
+        let contents = contents
+        center.getDeliveredNotifications { delivered in
+            delivered
+                .reduce(into: contents) { result, notification in
+                    result[notification.request.identifier] = result[notification.request.identifier] ?? notification.request.content
+                }
+                .filter { ids.contains($0.key) }
+                .forEach { id, content in
+                    guard let content = content.mutableCopy() as? UNMutableNotificationContent else { return }
+                    let level = (content.userInfo[Self.levelKey] as? Int).flatMap(AlertLevel.init(rawValue:))
+                    content.sound = .default
+                    // As it sounded when posted
+                    content.interruptionLevel = level.map(Self.interruptionLevel) ?? .active
+                    then(id, content)
+                }
+        }
+    }
+
+    /// A sounding notification's, a reminder's too. Red and crimson go through a Focus, Driving
+    /// included: that's when they matter
+    private static func interruptionLevel(_ level: AlertLevel) -> UNNotificationInterruptionLevel {
+        level >= .red ? .timeSensitive : .active
     }
 
     private var snoozes: AlertSnoozes {
@@ -81,6 +164,7 @@ final class Notifier {
     weak var speaker: AlertSpeaker?
 
     func update(_ update: Update) {
+        if update.isPosted { remindIfUnlocked() }
         shown(isPosted: update.isPosted) { shown in
             AlertClass.allCases.forEach { self.notify(update, $0, shown: shown) }
         }
@@ -222,9 +306,8 @@ final class Notifier {
         content.subtitle = update.vehicle.name
         content.body = "\(update.location.name): \(details(update, alertClass, reading, now: now))"
         content.sound = sound ? .default : nil
-        // Passive updates what's there without a banner or lighting the screen, as Android's do. Red
-        // and crimson go through a Focus, Driving included: that's when they matter
-        content.interruptionLevel = sound == false ? .passive : level >= .red ? .timeSensitive : .active
+        // Passive updates what's there without a banner or lighting the screen, as Android's do
+        content.interruptionLevel = sound == false ? .passive : Self.interruptionLevel(level)
         content.threadIdentifier = update.vehicle.id.uuidString
         content.categoryIdentifier = Self.category(level)
         content.userInfo = [
@@ -234,6 +317,11 @@ final class Notifier {
             Self.speechTagKey: speechTag(update.vehicle, update.location, alertClass),
         ]
         center.add(UNNotificationRequest(identifier: id, content: content, trigger: nil))
+        contents[id] = content
+        // A sound heard with the phone unlocked, a banner over the screen, was seen
+        if sound {
+            if level >= .red && isLocked { unseen.insert(id) } else { unseen.remove(id) }
+        }
     }
 
     private func remove(_ id: String) {
@@ -241,6 +329,8 @@ final class Notifier {
         notified.removeValue(forKey: id)
         self.notified = notified
         unposted[id] = nil
+        contents[id] = nil
+        unseen.remove(id)
         center.removeDeliveredNotifications(withIdentifiers: [id])
     }
 
@@ -253,6 +343,7 @@ final class Notifier {
     /// the next reading of a level no longer snoozed alerts again, its notification sounding.
     func snooze(_ response: UNNotificationResponse) -> String? {
         let request = response.notification.request
+        let id = request.identifier
         let info = request.content.userInfo
         guard let sensorId = info[Self.sensorIdKey] as? Int,
               let alertClass = (info[Self.alertClassKey] as? String).flatMap(AlertClass.init(rawValue:)),
@@ -264,15 +355,16 @@ final class Notifier {
         var snoozes = snoozes
         snoozes.snooze(sensorId: sensorId, alertClass, level, for: duration, at: Date().timeIntervalSince1970)
         self.snoozes = snoozes
-        remove(request.identifier)
-        holds[request.identifier] = nil
-        raises[request.identifier] = nil
+        remove(id)
+        holds[id] = nil
+        raises[id] = nil
         return info[Self.speechTagKey] as? String
     }
 
     private static func category(_ level: AlertLevel) -> String { "alert\(level.rawValue)" }
 
-    /// Told when one is swiped away, and offering what to dismiss it for, on a long press
+    /// Told when one is swiped away, and offering what to dismiss it for, on a long press. The speech's
+    /// backup is told too: swiped away, it silences the speech, see Monitor.answered.
     private static var categories: Set<UNNotificationCategory> {
         Set(AlertLevel.allCases.map { level in
             UNNotificationCategory(
@@ -281,7 +373,7 @@ final class Notifier {
                 intentIdentifiers: [],
                 options: .customDismissAction
             )
-        })
+        } + [UNNotificationCategory(identifier: SpeechBackup.category, actions: [], intentIdentifiers: [], options: .customDismissAction)])
     }
 
     private static func snoozeDuration(_ action: String) -> Double? {
@@ -307,6 +399,8 @@ final class Notifier {
     func clearAll() {
         center.removeAllDeliveredNotifications()
         notified = [:]
+        unseen = []
+        contents = [:]
         unposted = [:]
         holds = [:]
         raises = [:]
@@ -320,6 +414,13 @@ final class Notifier {
         content.interruptionLevel = .timeSensitive
         center.add(UNNotificationRequest(identifier: Self.ridePromptId, content: content, trigger: nil)) { error in
             rideLog("notification added, error: \(String(describing: error))")
+        }
+    }
+
+    /// A red or critical alert's notification still shows, which the speech backup goes on for
+    func isAlertShowing() async -> Bool {
+        await center.deliveredNotifications().contains { notification in
+            (notification.request.content.userInfo[Self.levelKey] as? Int).flatMap(AlertLevel.init(rawValue:)).map { $0 >= .red } == true
         }
     }
 
