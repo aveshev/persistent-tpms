@@ -320,14 +320,18 @@ final class Monitor: ObservableObject {
 
     // MARK: Editing
 
-    /// A kind without some of the tyres the vehicle had loses their sensors, their readings stay
+    /// A kind without some of the tyres the vehicle had loses their sensors, their readings stay,
+    /// their alerts go
     func save(_ vehicle: Vehicle) {
+        var unbound = [TyreLocation]()
         perform { database in
             try database.save(vehicle)
             for sensor in try database.sensors() where sensor.vehicleId == vehicle.id && vehicle.kind.locations.contains(sensor.location) == false {
                 try database.unbind(vehicleId: vehicle.id, location: sensor.location)
+                unbound.append(sensor.location)
             }
         }
+        unbound.forEach { clearAlerts(vehicle, $0) }
         reevaluateSoon(vehicle)
     }
 
@@ -499,6 +503,9 @@ final class Monitor: ObservableObject {
         try FileManager.default.moveItem(at: staged, to: target)
         try open()
         nearby = [:]
+        // Of sensors the imported data may not have, the backup's with them
+        speaker.stopAll()
+        notifier.clearAll()
     }
 
     func setAlerts(_ enabled: Bool) {
