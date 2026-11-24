@@ -19,7 +19,6 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.masselis.tpmsadvanced.core.ui.SettingsGroup
 import com.masselis.tpmsadvanced.core.ui.SettingsSectionHeader
 import com.masselis.tpmsadvanced.core.ui.SwitchNavigationSettingsItem
-import com.masselis.tpmsadvanced.core.ui.SwitchSettingsItem
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.BellState
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.SettingsOnScreenEffect
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.rememberMonitoringPermissions
@@ -33,7 +32,8 @@ import androidx.compose.foundation.verticalScroll
 /**
  * Lite's background monitoring: its only conditions (Bluetooth devices, beacons, known sensors) come
  * first as the vehicle detection, then the persistent mode switch with its options, rather than on
- * pages of their own like [PersistentScanningSettings]. The ride notification follows, outside. They stay usable while
+ * pages of their own like [PersistentScanningSettings]. The ride notification and
+ * [LiteSuspendSettings] follow, outside. They stay usable while
  * persistent scanning is off, so that a trigger can be set up before turning it on. Without any
  * trigger it scans all the time, which [AlwaysOnWarning] tells when that's about to happen.
  */
@@ -42,12 +42,14 @@ public fun LitePersistentScanningSettings(
     openPersistentScanning: () -> Unit,
     openBluetoothDevices: () -> Unit,
     openBeacons: () -> Unit,
+    openKnownSensors: () -> Unit,
     openStayActiveDuration: () -> Unit,
     modifier: Modifier = Modifier,
 ): Unit = LitePersistentScanningSettings(
     openPersistentScanning,
     openBluetoothDevices,
     openBeacons,
+    openKnownSensors,
     openStayActiveDuration,
     modifier,
     viewModel { PersistentScanningSettingsViewModel() },
@@ -59,6 +61,7 @@ internal fun LitePersistentScanningSettings(
     openPersistentScanning: () -> Unit,
     openBluetoothDevices: () -> Unit,
     openBeacons: () -> Unit,
+    openKnownSensors: () -> Unit,
     openStayActiveDuration: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PersistentScanningSettingsViewModel = viewModel { PersistentScanningSettingsViewModel() },
@@ -78,7 +81,6 @@ internal fun LitePersistentScanningSettings(
     val knownSensor by viewModel.activateOnKnownSensor.collectAsState()
     val stayActive by viewModel.stayActive.collectAsState()
     val stayActiveMinutes by viewModel.stayActiveMinutes.collectAsState()
-    val suspendInDoze by viewModel.suspendScanningInDoze.collectAsState()
     // Like ScanPolicyUseCase: a switch without any device or beacon to look for doesn't count
     val bluetooth = bluetoothEnabled && bluetoothDevices.isNotEmpty()
     val beacon = beaconEnabled && beacons.isNotEmpty()
@@ -123,13 +125,12 @@ internal fun LitePersistentScanningSettings(
         openBeacons = openBeacons,
         knownSensor = knownSensor,
         onKnownSensor = { viewModel.activateOnKnownSensor.value = it },
+        openKnownSensors = openKnownSensors,
         anyTrigger = anyTrigger,
         stayActive = stayActive,
         stayActiveMinutes = stayActiveMinutes,
         onStayActive = { viewModel.stayActive.value = it },
         openStayActiveDuration = openStayActiveDuration,
-        suspendInDoze = suspendInDoze,
-        onSuspendInDoze = { viewModel.suspendScanningInDoze.value = it },
         modifier = modifier,
     )
 
@@ -195,13 +196,12 @@ private fun LitePersistentScanningSettings(
     openBeacons: () -> Unit,
     knownSensor: Boolean,
     onKnownSensor: (Boolean) -> Unit,
+    openKnownSensors: () -> Unit,
     anyTrigger: Boolean,
     stayActive: Boolean,
     stayActiveMinutes: Int,
     onStayActive: (Boolean) -> Unit,
     openStayActiveDuration: () -> Unit,
-    suspendInDoze: Boolean,
-    onSuspendInDoze: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) = Column(modifier) {
     // How the app tells the vehicle is near comes first: persistent mode and the ride notification
@@ -228,10 +228,13 @@ private fun LitePersistentScanningSettings(
             openableWhenOff = true,
             modifier = Modifier.testTag(PersistentScanningSettingsTags.activateOnBeacon),
         )
-        SwitchSettingsItem(
+        SwitchNavigationSettingsItem(
             headline = stringResource(CommonR.string.vehicle_tpms_sensors),
             checked = knownSensor,
             onCheckedChange = onKnownSensor,
+            onClick = openKnownSensors,
+            // Explains how unreliable it is, which matters most before turning it on
+            openableWhenOff = true,
             modifier = Modifier.testTag(PersistentScanningSettingsTags.activateOnKnownSensor),
         )
     }
@@ -244,26 +247,24 @@ private fun LitePersistentScanningSettings(
             openPersistentScanning,
             headline = stringResource(CommonR.string.persistent_mode),
         )
+        // Only keeps persistent scanning going after the vehicle detection ends: meaningless
+        // without either, shown off and telling what's missing
+        val stayActiveUsable = persistentScanning && anyTrigger
         SwitchNavigationSettingsItem(
             headline = stringResource(CommonR.string.stay_active),
-            supporting = listOf(
-                stringResource(CommonR.string.for_min_after_the_last_condition_ends, stayActiveMinutes),
-                stringResource(CommonR.string.for_min, stayActiveMinutes),
-            ).map(::AnnotatedString),
-            checked = stayActive,
-            // Only extends the conditions above, meaningless without any of them
-            enabled = anyTrigger,
+            supporting = when {
+                persistentScanning.not() -> listOf(stringResource(CommonR.string.enable_persistent_mode))
+                anyTrigger.not() -> listOf(stringResource(CommonR.string.enable_vehicle_detection))
+                else -> listOf(
+                    stringResource(CommonR.string.for_min_after_the_last_condition_ends, stayActiveMinutes),
+                    stringResource(CommonR.string.for_min, stayActiveMinutes),
+                )
+            }.map(::AnnotatedString),
+            checked = stayActive && stayActiveUsable,
+            enabled = stayActiveUsable,
             onCheckedChange = onStayActive,
             onClick = openStayActiveDuration,
             modifier = Modifier.testTag(PersistentScanningSettingsTags.stayActive),
-        )
-        // Also holds back the ride notification's detection, which isn't worth a group of its own
-        SwitchSettingsItem(
-            headline = stringResource(CommonR.string.suspend_when_idle),
-            supporting = stringResource(CommonR.string.screen_off_or_locked_not_charging_no),
-            checked = suspendInDoze,
-            onCheckedChange = onSuspendInDoze,
-            modifier = Modifier.testTag(PersistentScanningSettingsTags.suspendInDoze),
         )
     }
 }
@@ -287,13 +288,12 @@ internal fun LitePersistentScanningSettingsPreview() {
         openBeacons = {},
         knownSensor = false,
         onKnownSensor = {},
+        openKnownSensors = {},
         anyTrigger = false,
         stayActive = false,
         stayActiveMinutes = 10,
         onStayActive = {},
         openStayActiveDuration = {},
-        suspendInDoze = true,
-        onSuspendInDoze = {},
     )
 }
 

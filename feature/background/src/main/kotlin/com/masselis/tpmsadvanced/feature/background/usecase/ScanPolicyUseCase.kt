@@ -145,6 +145,14 @@ internal class ScanPolicyUseCase(
         }
         .distinctUntilChanged()
 
+    /**
+     * Whether any condition can tell the vehicle is near: without one, persistent scanning scans all
+     * the time, and the ride notification alone has nothing to watch for
+     */
+    val detectsVehicle: Flow<Boolean> = enabledCauses()
+        .map { ALWAYS !in it }
+        .distinctUntilChanged()
+
     /** The latest [decision] if one is known for the current mode, without waiting for it */
     val currentDecision: ScanDecision?
         get() = decisionByMode

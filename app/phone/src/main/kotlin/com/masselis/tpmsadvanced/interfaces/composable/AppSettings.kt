@@ -39,7 +39,9 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.composable.ScanSt
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.ExceptedWifis
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.PersistentScanningDetails
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.KeepMonitoringRunningSettings
+import com.masselis.tpmsadvanced.feature.background.interfaces.composable.KnownSensors
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.LitePersistentScanningSettings
+import com.masselis.tpmsadvanced.feature.background.interfaces.composable.LiteSuspendSettings
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.PersistentScanningSettings
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.StayActiveDuration
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.SuspendBluetoothDevices
@@ -156,6 +158,7 @@ internal fun PersistentModeSettings(
     openSuspendScanConditions: () -> Unit,
     openBluetoothDevices: () -> Unit,
     openBeacons: () -> Unit,
+    openKnownSensors: () -> Unit,
     openStayActiveDuration: () -> Unit,
     modifier: Modifier = Modifier,
 ) = SettingsPage(modifier) {
@@ -174,6 +177,7 @@ internal fun PersistentModeSettings(
             openPersistentScanning = openPersistentScanning,
             openBluetoothDevices = openBluetoothDevices,
             openBeacons = openBeacons,
+            openKnownSensors = openKnownSensors,
             openStayActiveDuration = openStayActiveDuration,
             modifier = Modifier
                 .padding(top = 16.dp)
@@ -190,8 +194,11 @@ internal fun PersistentModeSettings(
         )
     }
     RideNotificationSettings(Modifier.testTag(rideNotification))
-    // Pro has it on its persistent scanning page
-    if (AppTier.current == LITE) KeepMonitoringRunningSettings()
+    // Pro has them on its suspend conditions and persistent scanning pages
+    if (AppTier.current == LITE) {
+        LiteSuspendSettings()
+        KeepMonitoringRunningSettings()
+    }
 }
 
 @Composable
@@ -281,9 +288,17 @@ internal fun ActivateScanConditionsSettings(
     openStayActiveDuration: () -> Unit,
     openBluetoothDevices: () -> Unit,
     openBeacons: () -> Unit,
+    openKnownSensors: () -> Unit,
     modifier: Modifier = Modifier
 ) = SettingsPage(modifier) {
-    ActivateScanConditions(openStayActiveDuration, openBluetoothDevices, openBeacons)
+    ActivateScanConditions(openStayActiveDuration, openBluetoothDevices, openBeacons, openKnownSensors)
+}
+
+@Composable
+internal fun KnownSensorsSettings(
+    modifier: Modifier = Modifier
+) = SettingsPage(modifier) {
+    KnownSensors()
 }
 
 @Composable

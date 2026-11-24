@@ -176,6 +176,8 @@
     <string name="edit_vehicle_name">Изменить название</string>
     <string name="enable_background_monitoring">Включить фоновый мониторинг</string>
     <string name="enable_bluetooth">Включить Bluetooth</string>
+    <string name="enable_persistent_mode">Включите постоянный режим</string>
+    <string name="enable_vehicle_detection">Включите обнаружение транспорта</string>
     <string name="error_reading_qr_please_assign_via_bluetooth">Ошибка чтения QR, назначьте через Bluetooth</string>
     <string name="error_reading_the_shared_sensors_please_scan">Ошибка чтения переданных датчиков, отсканируйте код ещё раз</string>
     <string name="even_when_not_low">(даже если не разряжена)</string>
@@ -328,6 +330,8 @@
     <string name="names_connected">подключено: %1$s</string>
     <string name="names_nearby">рядом: %1$s</string>
     <string name="nearby_devices">Устройства поблизости</string>
+    <string name="needs_a_vehicle_detection_option">Включите постоянный режим или одну из настроек обнаружения транспорта выше, чтобы пользоваться им</string>
+    <string name="needs_an_activate_condition">Включите постоянное сканирование или одно из его условий запуска, чтобы пользоваться им</string>
     <string name="needs_camera">Чтобы продолжить, на устройстве должна быть камера</string>
     <string name="needs_full_location_permission">Нужен полный доступ к геолокации</string>
     <string name="never_drains_battery">Никогда (расходует батарею)</string>
@@ -509,6 +513,7 @@
     <string name="stop_permission">потому что было отозвано разрешение.</string>
     <string name="stop_unknown">без выключения, скорее всего, системой управления питанием.</string>
     <string name="suspend">Приостановка</string>
+    <string name="suspend_monitoring">Приостановка мониторинга</string>
     <string name="suspend_scan_conditions">Условия приостановки сканирования</string>
     <string name="suspend_scanning_when_connected_to">Приостанавливать сканирование при подключении к</string>
     <string name="suspend_scanning_when_other">Приостанавливать сканирование (другое)</string>
@@ -565,6 +570,8 @@
     <string name="to_keep_monitoring_your_tyres_reliably_in">Для надёжного мониторинга шин в фоне приложение нужно исключить из оптимизации батареи (в настройках иногда называется «без ограничений»). Иначе система, скорее всего, остановит фоновый мониторинг вскоре после запуска.</string>
     <string name="tones">Сигналы</string>
     <string name="too_many_sensors">Слишком много датчиков</string>
+    <string name="tpms_sensors_run_on_small_batteries">Датчики TPMS работают от небольших батареек, поэтому отправляют обновления лишь раз в несколько минут, а некоторые — в основном когда колесо вращается. Для обнаружения транспорта приложение слушает их сканированием с низким энергопотреблением, поэтому может пройти время, прежде чем обновление дойдёт до приложения и оно перейдёт к активному сканированию. Для более надёжного обнаружения используйте BLE-маячки вашего транспорта или подключённое устройство Bluetooth. Если это невозможно, рассмотрите возможность полностью отключить обнаружение транспорта и либо пользоваться приложением в ручном (непостоянном) режиме, запуская его вручную перед каждой поездкой, либо использовать постоянный режим без обнаружения транспорта (фоновое сканирование всё время, что заметно увеличивает расход батареи).</string>
+    <string name="tpms_sensors_run_on_small_batteries_2">Датчики TPMS работают от небольших батареек, поэтому отправляют обновления лишь раз в несколько минут, а некоторые — в основном когда колесо вращается. Для обнаружения транспорта приложение слушает их сканированием с низким энергопотреблением, поэтому может пройти время, прежде чем обновление дойдёт до приложения и оно перейдёт к активному сканированию. Для более надёжного обнаружения используйте BLE-маячки вашего транспорта или подключённое устройство Bluetooth. Если это невозможно, рассмотрите возможность отключить условия запуска и либо пользоваться приложением в ручном (непостоянном) режиме, запуская его вручную перед каждой поездкой, либо использовать постоянное сканирование без условий запуска (фоновое сканирование всё время, что заметно увеличивает расход батареи).</string>
     <string name="try_again">Повторить</string>
     <string name="turn_it_on_to_look_for_beacons">Включите его, чтобы искать маячки</string>
     <string name="turn_it_on_to_see_which_beacon">Включите его, чтобы видеть, какой маячок рядом</string>
@@ -589,6 +596,7 @@
     <string name="vehicle_ble_beacons">Ваши BLE-маячки</string>
     <string name="vehicle_detected_due_to">Ваш транспорт обнаружен, причина: %1$s. Постоянный режим выключен: шины сканируются, только пока приложение открыто</string>
     <string name="vehicle_detection">Обнаружение вашего транспорта</string>
+    <string name="vehicle_detection_only_mode_active">Активен режим только обнаружения транспорта</string>
     <string name="vehicle_detection_persistent_mode_and_ride">Обнаружение вашего транспорта, постоянный режим и уведомление о поездке</string>
     <string name="vehicle_location_already_has_a_sensor">%1$s: %2$s уже с датчиком</string>
     <string name="vehicle_name">Название транспорта</string>

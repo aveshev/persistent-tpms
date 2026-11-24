@@ -334,6 +334,7 @@ internal fun VehicleHome(
                             openSuspendScanConditions = { navController.navigateTo(Path.SuspendScanConditions) },
                             openBluetoothDevices = { navController.navigateTo(Path.ActivateBluetoothDevices) },
                             openBeacons = { navController.navigateTo(Path.Beacons) },
+                            openKnownSensors = { navController.navigateTo(Path.KnownSensors) },
                             openStayActiveDuration = { navController.navigateTo(Path.StayActiveDuration) },
                             modifier = modifier,
                         )
@@ -358,9 +359,11 @@ internal fun VehicleHome(
                             openStayActiveDuration = { navController.navigateTo(Path.StayActiveDuration) },
                             openBluetoothDevices = { navController.navigateTo(Path.ActivateBluetoothDevices) },
                             openBeacons = { navController.navigateTo(Path.Beacons) },
+                            openKnownSensors = { navController.navigateTo(Path.KnownSensors) },
                             modifier = modifier
                         )
                     }
+                    composable(Path.KnownSensors) { KnownSensorsSettings(modifier = modifier) }
                     composable(Path.StayActiveDuration) { StayActiveDurationSettings(modifier = modifier) }
                     composable(Path.SuspendScanConditions) {
                         SuspendScanConditionsSettings(

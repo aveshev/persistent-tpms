@@ -737,6 +737,23 @@ internal class ScanPolicyUseCaseTest {
     }
 
     @Test
+    fun `the vehicle is detectable only while a condition is selected`() = runTest {
+        tier = AppTier.LITE
+        activateOnKnownSensor.value = false
+        test().detectsVehicle.test {
+            assertEquals(false, awaitItem())
+            activateOnKnownSensor.value = true
+            assertEquals(true, awaitItem())
+        }
+    }
+
+    @Test
+    fun `turning the activate conditions off leaves nothing to detect the vehicle with`() = runTest {
+        activateConditions.value = false
+        test().detectsVehicle.test { assertEquals(false, awaitItem()) }
+    }
+
+    @Test
     fun `the ride notification alone watches for a known sensor, even when it would always scan`() = runTest {
         activateOnKnownSensor.value = true
         activateConditions.value = false
