@@ -12,6 +12,7 @@ import androidx.core.app.NotificationManagerCompat.IMPORTANCE_HIGH
 import androidx.core.content.edit
 import co.touchlab.kermit.Logger
 import com.masselis.tpmsadvanced.core.common.appContext
+import com.masselis.tpmsadvanced.core.common.localized
 import com.masselis.tpmsadvanced.core.common.now
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
 import com.masselis.tpmsadvanced.data.vehicle.model.TyreAtmosphere
@@ -46,6 +47,7 @@ import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
+import com.masselis.tpmsadvanced.core.common.R as CommonR
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
@@ -58,9 +60,9 @@ import kotlin.time.Duration.Companion.seconds
  * A trigger fires when heard after [AppPreferences.rideAbsentMinutesInUse] away: one of the persistent
  * scan's activate conditions starting the scan (each condition on its own), or a bound sensor of a
  * vehicle heard by the service's scan (each vehicle on its own, which also covers scanning without
- * any condition). Only watched while the service monitors: the notification needs persistent
- * scanning. Nothing while the app is open, which also removes it, nor in demo mode. Everything runs
- * on [scope], which must run one thing at a time.
+ * any condition). Only watched while the service monitors, which it does for the ride notification
+ * alone too, see `BackgroundMode`. Nothing while the app is open, which also removes it, nor in
+ * demo mode. Everything runs on [scope], which must run one thing at a time.
  */
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -90,8 +92,8 @@ internal class RideNotifier(
             NotificationChannelCompat
                 // High for a banner, but silent: only an invitation, not an alert
                 .Builder(CHANNEL, IMPORTANCE_HIGH)
-                .setName("Ride notification")
-                .setDescription("\"Going for a ride?\", when back near a vehicle")
+                .setName(localized(CommonR.string.ride_notification))
+                .setDescription(localized(CommonR.string.going_for_a_ride_when_back_near_a_vehicle))
                 .setSound(null, null)
                 .setVibrationEnabled(false)
                 .build()
@@ -111,7 +113,14 @@ internal class RideNotifier(
                 else decision
                     // Suspended, the conditions fulfilled meanwhile aren't known: they count once
                     // the suspension ends, scanning then
-                    .map { (it as? ScanDecision.Active)?.causes.orEmpty() }
+                    .map {
+                        when (it) {
+                            is ScanDecision.Active -> it.causes
+                            // The ride notification alone: the same conditions, without the scan
+                            is ScanDecision.Detected -> it.causes
+                            else -> emptySet()
+                        }
+                    }
                     .let { causes ->
                         CONDITIONS
                             .map { condition ->
@@ -190,7 +199,12 @@ internal class RideNotifier(
         NotificationCompat
             .Builder(appContext, CHANNEL)
             .setSmallIcon(R.drawable.car_tire)
-            .setContentText("Going for a ride? Open Persistent TPMS to monitor tyre pressure")
+            .setContentText(
+                localized(
+                    CommonR.string.going_for_a_ride_open,
+                    appContext.applicationInfo.loadLabel(appContext.packageManager),
+                )
+            )
             .setStyle(NotificationCompat.BigTextStyle())
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setSilent(true)

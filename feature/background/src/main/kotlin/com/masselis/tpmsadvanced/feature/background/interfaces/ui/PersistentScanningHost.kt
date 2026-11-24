@@ -49,11 +49,11 @@ internal val LocalWifiExceptionJourney = compositionLocalOf<PermissionJourney> {
  * bell and the app-open check share: two independent journeys would both react when the user comes
  * back from Settings and show their dialogs twice.
  *
- * Every time the app is opened while persistent scanning is on, it also checks that the service
- * still has what it needs (walking the user through what is missing, once) and that it is running.
- * When the service died behind the user's back since the last opening, the user is told first.
- * Before any of that, the other version of the app (Lite or Pro) must not scan persistently too:
- * the user chooses which one does.
+ * Every time the app is opened while persistent scanning or the ride notification is on, it also
+ * checks that the service still has what it needs (walking the user through what is missing, once)
+ * and that it is running. When the service died behind the user's back since the last opening, the
+ * user is told first. Before any of that, the other version of the app (Lite or Pro) must not scan
+ * persistently too: the user chooses which one does.
  */
 @Composable
 public fun PersistentScanningHost(content: @Composable () -> Unit): Unit =
@@ -91,14 +91,18 @@ internal fun PersistentScanningHost(
     val currentPermissions by rememberUpdatedState(permissions)
     // Read here to key the effect: the service is restarted once the user read why it stopped
     val unexpectedStopShown = unexpectedStop != null
-    LifecycleStartEffect(persistentScanning, unexpectedStopShown, otherAppCheck) {
+    // The ride notification alone runs the service too
+    val inBackground by viewModel.inBackground.collectAsState()
+    LifecycleStartEffect(inBackground, unexpectedStopShown, otherAppCheck) {
         // When everything is granted this only makes sure the service runs, without any popup.
         // Coming back from Settings also starts the lifecycle again: the journey started before
         // leaving is resumed by the permissions themselves, it must not be started a second time.
         // The check is read live: the composition's value can still be the last opening's.
         if (
-            persistentScanning &&
-            viewModel.otherAppCheck.value == Clear &&
+            inBackground &&
+            // Only checked for persistent scanning: two apps each watching for the ride
+            // notification don't scan twice
+            (persistentScanning.not() || viewModel.otherAppCheck.value == Clear) &&
             unexpectedStopShown.not() &&
             currentPermissions.isInProgress().not()
         ) {

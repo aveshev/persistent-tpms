@@ -30,6 +30,7 @@ import com.masselis.tpmsadvanced.feature.background.usecase.AlertSilenceUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.AlertSnoozeUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.AlertSpeaker
 import com.masselis.tpmsadvanced.feature.background.usecase.AlertingVehiclesUseCase
+import com.masselis.tpmsadvanced.feature.background.usecase.BackgroundMode
 import com.masselis.tpmsadvanced.feature.background.usecase.AndroidAutoUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.BeaconDiscoveryUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.BeaconPresenceUseCase
@@ -264,11 +265,12 @@ public interface Bindings {
         appPreferences,
         scanner.isScanningTyres,
         // The speech loops go on while the app is open, whose screen scans, and in the background
-        // while persistent scanning is active or, without it, monitoring from its button
-        appPreferences
-            .persistentScanning
-            .flatMapLatest { persistent ->
-                if (persistent) controller.isRunning.flatMapLatest { isRunning ->
+        // while persistent scanning is active or, without it, monitoring from its button. The ride
+        // notification alone never scans.
+        BackgroundMode
+            .flow(appPreferences)
+            .flatMapLatest { mode ->
+                if (mode.isInBackground) controller.isRunning.flatMapLatest { isRunning ->
                     if (isRunning) scanPolicyUseCase.decision.map { it is ScanDecision.Active }
                     else flowOf(false)
                 }
@@ -320,7 +322,8 @@ public interface Bindings {
     @Provides
     private fun rideNotificationSettingsViewModel(
         appPreferences: AppPreferences,
-    ): RideNotificationSettingsViewModel = RideNotificationSettingsViewModel(appPreferences)
+        controller: MonitoringController,
+    ): RideNotificationSettingsViewModel = RideNotificationSettingsViewModel(appPreferences, controller)
 
     @Provides
     private fun persistentScanningViewModel(

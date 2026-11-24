@@ -16,6 +16,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.masselis.tpmsadvanced.core.ui.SettingsGroup
+import com.masselis.tpmsadvanced.core.ui.SettingsIntro
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.LITE
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.PRO
 import com.masselis.tpmsadvanced.core.ui.SwitchSettingsItem
 import com.masselis.tpmsadvanced.core.ui.TextSettingsItem
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.BellState
@@ -70,10 +74,19 @@ private fun PersistentScanningDetails(
     onPersistentScanning: (Boolean) -> Unit,
     onKeepAliveInstructions: () -> Unit,
     modifier: Modifier = Modifier,
+    tier: AppTier = AppTier.current,
 ) = Column(modifier) {
+    // Lite's background monitoring page starts with the vehicle detection instead, which this
+    // explains how persistent mode acts on
+    if (tier == LITE) SettingsIntro(stringResource(CommonR.string.when_on_keeps_monitoring_your_tyres_lite))
     SettingsGroup(Modifier.padding(top = 16.dp)) {
         SwitchSettingsItem(
-            headline = stringResource(CommonR.string.persistent_scanning),
+            headline = stringResource(
+                when (tier) {
+                    LITE -> CommonR.string.persistent_mode
+                    PRO -> CommonR.string.persistent_scanning
+                }
+            ),
             checked = persistentScanning,
             onCheckedChange = onPersistentScanning,
             modifier = Modifier.testTag(PersistentScanningSettingsTags.persistentScanningDetails),
@@ -103,7 +116,8 @@ private fun PersistentScanningDetails(
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp),
         )
     }
-    SettingsGroup(Modifier.padding(top = 24.dp)) {
+    // Lite has it at the bottom of its background monitoring page, for the ride notification too
+    if (tier == PRO) SettingsGroup(Modifier.padding(top = 24.dp)) {
         TextSettingsItem(
             headline = stringResource(CommonR.string.keep_monitoring_running_on_this_phone),
             supporting = stringResource(CommonR.string.some_phones_stop_background_apps_on_their),

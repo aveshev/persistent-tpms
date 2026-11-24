@@ -1,17 +1,27 @@
 package com.masselis.tpmsadvanced.feature.main.interfaces.composable
 
 import android.content.Intent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
@@ -22,12 +32,12 @@ import com.masselis.tpmsadvanced.core.common.AppLanguage.RUSSIAN
 import com.masselis.tpmsadvanced.core.common.AppLanguage.SYSTEM
 import com.masselis.tpmsadvanced.core.common.R as CommonR
 import com.masselis.tpmsadvanced.core.common.localized
-import com.masselis.tpmsadvanced.core.ui.SegmentedSettingsItem
 import com.masselis.tpmsadvanced.core.ui.SettingsGroup
 import com.masselis.tpmsadvanced.core.ui.SettingsIntro
 import com.masselis.tpmsadvanced.core.ui.SettingsSectionHeader
 import com.masselis.tpmsadvanced.core.ui.SwitchSettingsItem
 import com.masselis.tpmsadvanced.core.ui.TextSettingsItem
+import com.masselis.tpmsadvanced.feature.main.R
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.DebugSettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.DebugSettingsViewModel
 import kotlinx.coroutines.launch
@@ -120,21 +130,7 @@ private fun DebugSettings(
     }
     SettingsSectionHeader("Display")
     SettingsGroup {
-        SegmentedSettingsItem(
-            headline = stringResource(CommonR.string.language),
-            options = AppLanguage.entries,
-            selected = language,
-            onSelect = onLanguage,
-            label = {
-                // Each language in its own, so that it can be found from any of them
-                when (it) {
-                    SYSTEM -> localized(CommonR.string.language_system)
-                    ENGLISH -> "English"
-                    RUSSIAN -> "Русский"
-                }
-            },
-            modifier = Modifier.testTag(DebugSettingsTags.language),
-        )
+        LanguageSettingsItem(language, onLanguage)
     }
     SettingsSectionHeader("Scanning")
     SettingsGroup {
@@ -179,5 +175,46 @@ internal object DebugSettingsTags {
     const val showSensorFlags = "DebugSettingsTags_showSensorFlags"
     const val balancedAfterFirstReading = "DebugSettingsTags_balancedAfterFirstReading"
     const val language = "DebugSettingsTags_language"
+    const val languageOption = "DebugSettingsTags_languageOption"
     const val exportDatabase = "DebugSettingsTags_exportDatabase"
 }
+
+/** The app's language, from a dropdown */
+@Composable
+private fun LanguageSettingsItem(language: AppLanguage, onLanguage: (AppLanguage) -> Unit) {
+    var languageExpanded by rememberSaveable { mutableStateOf(false) }
+    Box {
+        TextSettingsItem(
+            headline = stringResource(CommonR.string.language),
+            supporting = language.label,
+            onClick = { languageExpanded = true },
+            modifier = Modifier.testTag(DebugSettingsTags.language),
+        )
+        DropdownMenu(expanded = languageExpanded, onDismissRequest = { languageExpanded = false }) {
+            AppLanguage.entries.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.label) },
+                    onClick = {
+                        onLanguage(option)
+                        languageExpanded = false
+                    },
+                    trailingIcon = {
+                        if (option == language) Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.check_24px),
+                            contentDescription = "Selected",
+                        )
+                    },
+                    modifier = Modifier.testTag("${DebugSettingsTags.languageOption}_${option.name}"),
+                )
+            }
+        }
+    }
+}
+
+/** Each language in its own, so that it can be found from any of them */
+private val AppLanguage.label: String
+    get() = when (this) {
+        SYSTEM -> localized(CommonR.string.language_system)
+        ENGLISH -> "English"
+        RUSSIAN -> "Русский"
+    }

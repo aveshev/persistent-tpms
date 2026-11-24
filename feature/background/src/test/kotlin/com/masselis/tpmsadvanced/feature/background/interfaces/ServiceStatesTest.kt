@@ -20,6 +20,7 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.S
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.ScanRetrying
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.Starting
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.Suspended
+import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.Watching
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.CABLE
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanSuspensionUseCase.Reason.WIFI
@@ -100,6 +101,20 @@ internal class ServiceStatesTest {
             decision.value = ScanDecision.Suspended(setOf(WIFI))
             assertEquals(Suspended(ScanDecision.Suspended(setOf(WIFI))), awaitItem())
             assertEquals(0, watching)
+        }
+    }
+
+    @Test
+    fun `the ride notification alone watches without scanning, the vehicle detected or not`() = runTest {
+        decision.value = ScanDecision.Watching
+        test().test {
+            assertEquals(Starting, awaitItem())
+            assertEquals(Watching(ScanDecision.Watching), awaitItem())
+            assertEquals(1, watching)
+            decision.value = ScanDecision.Detected(setOf(CABLE))
+            assertEquals(Watching(ScanDecision.Detected(setOf(CABLE))), awaitItem())
+            assertEquals(1, watching)
+            assertEquals(0, scans)
         }
     }
 

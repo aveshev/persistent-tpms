@@ -34,7 +34,7 @@ public fun SensorReadingsUpdateDetails(modifier: Modifier = Modifier): Unit = Co
         )
         TextSettingsItem(
             headline = "TC.TPMS",
-            supporting = "Every 5 minutes, whether the vehicle moves or not, and at once when the pressure changes by about 1.5 psi. Reads the pressure in steps of 0.1 psi",
+            supporting = stringResource(CommonR.string.every_5_minutes_whether_the_vehicle),
         )
     }
     SettingsSectionHeader(stringResource(CommonR.string.when_updates_seem_to_be_missing))

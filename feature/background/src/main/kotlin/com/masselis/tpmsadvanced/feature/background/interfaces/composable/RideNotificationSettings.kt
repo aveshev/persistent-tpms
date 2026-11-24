@@ -1,11 +1,5 @@
 package com.masselis.tpmsadvanced.feature.background.interfaces.composable
 
-import android.Manifest.permission.POST_NOTIFICATIONS
-import android.content.pm.PackageManager.PERMISSION_GRANTED
-import android.os.Build.VERSION.SDK_INT
-import android.os.Build.VERSION_CODES.TIRAMISU
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts.RequestPermission
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.DropdownMenu
@@ -20,11 +14,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.core.content.ContextCompat.checkSelfPermission
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.masselis.tpmsadvanced.core.ui.SettingsGroup
 import com.masselis.tpmsadvanced.core.ui.SettingsSectionHeader
@@ -32,13 +25,20 @@ import com.masselis.tpmsadvanced.core.ui.SwitchSettingsItem
 import com.masselis.tpmsadvanced.core.ui.TextSettingsItem
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.Companion.DEFAULT_RIDE_ABSENT_MINUTES
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.Companion.DEFAULT_RIDE_STALE_MINUTES
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.LITE
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.PRO
 import com.masselis.tpmsadvanced.feature.background.R
+import com.masselis.tpmsadvanced.feature.background.interfaces.ui.rememberMonitoringPermissions
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.RideNotificationSettingsViewModel
 import com.masselis.tpmsadvanced.feature.background.ioc.Bindings.Companion.RideNotificationSettingsViewModel
+import com.masselis.tpmsadvanced.core.common.R as CommonR
 
 /**
- * The "Going for a ride?" notification's switch, on the persistent mode page of both tiers. It fires
- * on the persistent scan's own activate conditions, and on a known sensor heard: nothing to set up.
+ * The "Going for a ride?" notification's switch, on the background monitoring page of both tiers. It
+ * fires on the persistent scan's own activate conditions, and on a known sensor heard: nothing to set
+ * up. Without persistent scanning it runs the service by itself, which then only watches for the
+ * vehicle, so it needs the same permissions.
  */
 @Composable
 public fun RideNotificationSettings(modifier: Modifier = Modifier): Unit =
@@ -50,23 +50,14 @@ internal fun RideNotificationSettings(
     viewModel: RideNotificationSettingsViewModel = viewModel { RideNotificationSettingsViewModel() },
 ) {
     val rideNotification by viewModel.rideNotification.collectAsState()
-    val persistentScanning by viewModel.persistentScanning.collectAsState()
-    val context = LocalContext.current
-    // Persistent scanning already asked for it, for its own notification: only refused since then
-    val notificationPermission = rememberLauncherForActivityResult(RequestPermission()) { granted ->
-        if (granted) viewModel.rideNotification.value = true
-    }
+    // The switch only turns on once everything the service needs was granted; refusing leaves it off
+    val permissions = rememberMonitoringPermissions(
+        confirmBeforeStart = false,
+        onGranted = viewModel::enable,
+    )
     RideNotificationSettings(
         rideNotification = rideNotification,
-        onRideNotification = { enabled ->
-            if (
-                enabled &&
-                SDK_INT >= TIRAMISU &&
-                checkSelfPermission(context, POST_NOTIFICATIONS) != PERMISSION_GRANTED
-            ) notificationPermission.launch(POST_NOTIFICATIONS)
-            else viewModel.rideNotification.value = enabled
-        },
-        persistentScanning = persistentScanning,
+        onRideNotification = { enabled -> if (enabled) permissions.request() else viewModel.disable() },
         modifier = modifier,
     )
 }
@@ -75,17 +66,20 @@ internal fun RideNotificationSettings(
 private fun RideNotificationSettings(
     rideNotification: Boolean,
     onRideNotification: (Boolean) -> Unit,
-    persistentScanning: Boolean,
     modifier: Modifier = Modifier,
+    tier: AppTier = AppTier.current,
 ) = Column(modifier) {
-    SettingsSectionHeader("Ride notification")
+    SettingsSectionHeader(stringResource(CommonR.string.ride_notification))
     SettingsGroup {
-        @Suppress("MaxLineLength")
         SwitchSettingsItem(
-            headline = "Ride notification",
-            supporting = "Prompts \"Going for a ride?\" when a scan condition is met or a known TPMS sensor is detected, after 30 min away. Opening the app allows more sensor updates to reach it." +
-                // The triggers are only watched while the service runs
-                if (persistentScanning) "" else "\nWorks while persistent scanning is on.",
+            headline = stringResource(CommonR.string.ride_notification),
+            supporting = stringResource(
+                // Lite's page lists the vehicle detection options above it
+                when (tier) {
+                    LITE -> CommonR.string.prompts_going_for_a_ride_lite
+                    PRO -> CommonR.string.prompts_going_for_a_ride_when_a_scan
+                }
+            ),
             checked = rideNotification,
             onCheckedChange = onRideNotification,
             modifier = Modifier.testTag(RideNotificationSettingsTags.rideNotification),
@@ -184,6 +178,5 @@ internal fun RideNotificationSettingsPreview() {
     RideNotificationSettings(
         rideNotification = true,
         onRideNotification = {},
-        persistentScanning = true,
     )
 }

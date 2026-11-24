@@ -124,6 +124,7 @@ internal class PersistentScanningSettingsViewModel(
 
     fun disablePersistentScanning() {
         appPreferences.persistentScanning.value = false
-        controller.stop()
+        // The ride notification alone keeps it running, without scanning
+        if (appPreferences.rideNotification.value.not()) controller.stop()
     }
 }

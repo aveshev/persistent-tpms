@@ -6,6 +6,7 @@ import androidx.lifecycle.lifecycleScope
 import com.masselis.tpmsadvanced.core.common.appContext
 import com.masselis.tpmsadvanced.feature.background.ioc.Bindings
 import com.masselis.tpmsadvanced.feature.background.ioc.vehicle.ServiceComponent
+import com.masselis.tpmsadvanced.feature.background.usecase.BackgroundMode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
@@ -42,13 +43,12 @@ internal class MonitorService : LifecycleService() {
         // The service is started again while it runs (the app being opened...), a second
         // component would monitor everything twice. The intent is null after a sticky restart.
         if (::component.isInitialized.not()) component = ServiceComponent(this, lifecycleScope)
-        return Bindings.featureBackgroundInternal
-            .appPreferences
-            .persistentScanning
-            .value
-            // Persistent scanning can be turned on while the service already runs
+        return BackgroundMode
+            .current(Bindings.featureBackgroundInternal.appPreferences)
+            .isInBackground
+            // Persistent mode or the ride notification can be turned on while the service already runs
             .also { Bindings.featureBackgroundInternal.unexpectedStopUseCase.started(it, createdAt) }
-            .let { persistent -> if (persistent) START_STICKY else START_NOT_STICKY }
+            .let { inBackground -> if (inBackground) START_STICKY else START_NOT_STICKY }
     }
 
     override fun onDestroy() {

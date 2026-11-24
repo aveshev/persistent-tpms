@@ -40,6 +40,7 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.S
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.ScanRetrying
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.Starting
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.Suspended
+import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.Watching
 import com.masselis.tpmsadvanced.feature.background.usecase.KnownSensorPresenceUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.MANUAL
@@ -166,20 +167,20 @@ internal class ServiceNotifier(
                     .Builder(
                         appContext,
                         when (state) {
-                            Starting, is Active, is Suspended, Idle, BluetoothOff, LocationOff, is ScanRetrying -> channelNameWhenOk
+                            Starting, is Active, is Suspended, Idle, is Watching, BluetoothOff, LocationOff, is ScanRetrying -> channelNameWhenOk
                             is ScanKeepsFailing, is ScanFailure, MonitoringFailure -> channelNameForFailure
                         }
                     )
                     .setSmallIcon(
                         when (state) {
-                            Starting, is Active, is Suspended, Idle -> R.drawable.car_tire
+                            Starting, is Active, is Suspended, Idle, is Watching -> R.drawable.car_tire
                             BluetoothOff, LocationOff, is ScanRetrying, is ScanKeepsFailing, is ScanFailure, MonitoringFailure ->
                                 R.drawable.car_tire_alert
                         }
                     )
                     .setPriority(
                         when (state) {
-                            Starting, is Active, is Suspended, Idle, BluetoothOff, LocationOff, is ScanRetrying -> PRIORITY_LOW
+                            Starting, is Active, is Suspended, Idle, is Watching, BluetoothOff, LocationOff, is ScanRetrying -> PRIORITY_LOW
                             is ScanKeepsFailing, is ScanFailure, MonitoringFailure -> PRIORITY_MAX
                         }
                     )
@@ -204,13 +205,14 @@ internal class ServiceNotifier(
 
                             is Suspended -> state.decision.explanation()
                             Idle -> ScanDecision.Idle.explanation()
+                            is Watching -> state.decision.explanation()
                         }
                     )
                     .apply {
                         when (state) {
                             // Opens the app on its current vehicle. Bluetooth or Location off: the
                             // app tells it and has the button to turn it on
-                            Starting, is Active, is Suspended, Idle, BluetoothOff, LocationOff, is ScanRetrying,
+                            Starting, is Active, is Suspended, Idle, is Watching, BluetoothOff, LocationOff, is ScanRetrying,
                             is ScanKeepsFailing -> appContext
                                 .packageManager
                                 .getLaunchIntentForPackage(appContext.packageName)
@@ -244,7 +246,7 @@ internal class ServiceNotifier(
                             )
 
                             // Restarting doesn't give the phone the feature
-                            Starting, is Suspended, Idle, is ScanFailure -> Unit
+                            Starting, is Suspended, Idle, is Watching, is ScanFailure -> Unit
 
                             MonitoringFailure -> addAction(
                                 NotificationCompat.Action.Builder(
@@ -323,6 +325,9 @@ internal class ServiceNotifier(
         data class Suspended(val decision: ScanDecision.Suspended) : State
 
         data object Idle : State
+
+        /** The ride notification alone runs the service: [ScanDecision.Watching] or [ScanDecision.Detected] */
+        data class Watching(val decision: ScanDecision) : State
     }
 
     @Suppress("ConstPropertyName")
@@ -341,7 +346,7 @@ internal class ServiceNotifier(
  * [tyreScanStatus] tells the scan waits for Bluetooth or Location or retries a refused start. The scanner
  * starts the scan over by itself then. Retrying for [SCAN_KEEPS_FAILING_AFTER] is told as a
  * failure. Only the failures nothing can recover from end the flow, with the state telling which.
- * [watch] runs while idle. Each state differs from the previous one.
+ * [watch] runs while idle or watching. Each state differs from the previous one.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 internal fun Flow<ScanDecision>.serviceStates(
@@ -355,6 +360,9 @@ internal fun Flow<ScanDecision>.serviceStates(
         // that call if the app launches already suspended (e.g. opened while already in Doze).
         is ScanDecision.Suspended -> flowOf(Suspended(decision))
         ScanDecision.Idle -> merge(flowOf(Idle), watch)
+        // Never scans at full rate, the vehicle detected or not: the ride notification only invites
+        // to open the app
+        ScanDecision.Watching, is ScanDecision.Detected -> merge(flowOf(Watching(decision)), watch)
         is ScanDecision.Active -> combine(
             active(decision),
             tyreScanStatus.transformLatest<ScanStatus?, ServiceNotifier.State?> { status ->

@@ -125,6 +125,20 @@ internal class ScanDecisionTest {
     }
 
     @Test
+    fun `the ride notification alone tells that only the open app scans`() {
+        assertEquals(
+            "Watching for your vehicle, for the ride notification. Persistent mode is off: the tyres are only " +
+                "scanned while the app is open",
+            ScanDecision.Watching.rationale()
+        )
+        assertEquals(
+            "Your vehicle is detected due to charging with a cable. Persistent mode is off: the tyres are only " +
+                "scanned while the app is open",
+            ScanDecision.Detected(setOf(CABLE)).rationale()
+        )
+    }
+
+    @Test
     fun `always scanning is explained as the user's choice`() {
         assertEquals(
             "Background scanning is active because you chose it to be always active",
