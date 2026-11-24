@@ -323,7 +323,9 @@ public interface Bindings {
     private fun rideNotificationSettingsViewModel(
         appPreferences: AppPreferences,
         controller: MonitoringController,
-    ): RideNotificationSettingsViewModel = RideNotificationSettingsViewModel(appPreferences, controller)
+        scanPolicyUseCase: ScanPolicyUseCase,
+    ): RideNotificationSettingsViewModel =
+        RideNotificationSettingsViewModel(appPreferences, controller, scanPolicyUseCase)
 
     @Provides
     private fun persistentScanningViewModel(

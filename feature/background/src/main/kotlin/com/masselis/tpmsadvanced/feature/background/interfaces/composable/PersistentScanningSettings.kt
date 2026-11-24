@@ -247,6 +247,7 @@ internal fun PersistentScanningSettingsPreview() {
 internal object PersistentScanningSettingsTags {
     const val persistentScanning = "PersistentScanningSettingsTags_persistentScanning"
     const val persistentScanningDetails = "PersistentScanningSettingsTags_persistentScanningDetails"
+    const val knownSensorsDetails = "PersistentScanningSettingsTags_knownSensorsDetails"
     const val status = "PersistentScanningSettingsTags_status"
     const val activateConditions = "PersistentScanningSettingsTags_activateConditions"
     const val suspendConditions = "PersistentScanningSettingsTags_suspendConditions"

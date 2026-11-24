@@ -37,6 +37,8 @@ internal sealed interface Path {
             else CommonR.string.persistent_scanning
             is ActivateScanConditions -> CommonR.string.activate_scan_conditions
             is StayActiveDuration -> CommonR.string.stay_active
+            is KnownSensors -> if (AppTier.current == LITE) CommonR.string.vehicle_tpms_sensors
+            else CommonR.string.known_tpms_sensors
             is SuspendScanConditions -> CommonR.string.suspend_scan_conditions
             is ExceptedWifis -> CommonR.string.excepted_wifis
             is ActivateBluetoothDevices, is SuspendBluetoothDevices -> CommonR.string.bluetooth_devices
@@ -134,6 +136,10 @@ internal sealed interface Path {
         override fun toString(): String = "app_settings/activate_scan_conditions/stay_active"
     }
 
+    data object KnownSensors : Path {
+        override fun toString(): String = "app_settings/activate_scan_conditions/known_sensors"
+    }
+
     data object ExceptedWifis : Path {
         override fun toString(): String = "app_settings/suspend_scan_conditions/excepted_wifis"
     }
@@ -227,6 +233,7 @@ internal sealed interface Path {
                 PersistentScanning,
                 ActivateScanConditions,
                 StayActiveDuration,
+                KnownSensors,
                 SuspendScanConditions,
                 ExceptedWifis,
                 ActivateBluetoothDevices,

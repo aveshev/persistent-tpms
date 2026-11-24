@@ -50,6 +50,7 @@ internal fun RideNotificationSettings(
     viewModel: RideNotificationSettingsViewModel = viewModel { RideNotificationSettingsViewModel() },
 ) {
     val rideNotification by viewModel.rideNotification.collectAsState()
+    val canFire by viewModel.canFire.collectAsState(initial = true)
     // The switch only turns on once everything the service needs was granted; refusing leaves it off
     val permissions = rememberMonitoringPermissions(
         confirmBeforeStart = false,
@@ -58,6 +59,7 @@ internal fun RideNotificationSettings(
     RideNotificationSettings(
         rideNotification = rideNotification,
         onRideNotification = { enabled -> if (enabled) permissions.request() else viewModel.disable() },
+        canFire = canFire,
         modifier = modifier,
     )
 }
@@ -66,6 +68,7 @@ internal fun RideNotificationSettings(
 private fun RideNotificationSettings(
     rideNotification: Boolean,
     onRideNotification: (Boolean) -> Unit,
+    canFire: Boolean,
     modifier: Modifier = Modifier,
     tier: AppTier = AppTier.current,
 ) = Column(modifier) {
@@ -74,13 +77,20 @@ private fun RideNotificationSettings(
         SwitchSettingsItem(
             headline = stringResource(CommonR.string.ride_notification),
             supporting = stringResource(
-                // Lite's page lists the vehicle detection options above it
+                // Greyed out, it only tells what's missing. Lite's page lists the vehicle detection
+                // options above it.
                 when (tier) {
-                    LITE -> CommonR.string.prompts_going_for_a_ride_lite
-                    PRO -> CommonR.string.prompts_going_for_a_ride_when_a_scan
+                    LITE -> if (canFire) CommonR.string.prompts_going_for_a_ride_lite
+                    else CommonR.string.needs_a_vehicle_detection_option
+
+                    PRO -> if (canFire) CommonR.string.prompts_going_for_a_ride_when_a_scan
+                    else CommonR.string.needs_an_activate_condition
                 }
             ),
-            checked = rideNotification,
+            // Nothing could ever fire it, unlike persistent scanning which then scans all the time:
+            // shown off, it keeps its setting for when a condition is back
+            checked = rideNotification && canFire,
+            enabled = canFire,
             onCheckedChange = onRideNotification,
             modifier = Modifier.testTag(RideNotificationSettingsTags.rideNotification),
         )
@@ -178,5 +188,6 @@ internal fun RideNotificationSettingsPreview() {
     RideNotificationSettings(
         rideNotification = true,
         onRideNotification = {},
+        canFire = true,
     )
 }

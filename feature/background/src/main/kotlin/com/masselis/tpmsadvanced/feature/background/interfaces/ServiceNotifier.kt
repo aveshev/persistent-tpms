@@ -205,7 +205,8 @@ internal class ServiceNotifier(
 
                             is Suspended -> state.decision.explanation()
                             Idle -> ScanDecision.Idle.explanation()
-                            is Watching -> state.decision.explanation()
+                            // The bell tells what was detected, the notification only stays there
+                            is Watching -> localized(CommonR.string.vehicle_detection_only_mode_active)
                         }
                     )
                     .apply {

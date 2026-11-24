@@ -25,18 +25,21 @@ import androidx.compose.ui.res.stringResource
  * The page opened from the "Activate scan conditions" item of [PersistentScanningSettings], the
  * duration of "Stay active" being picked on its own page, opened through [openStayActiveDuration],
  * the Bluetooth devices on another one, opened through [openBluetoothDevices], and the beacons on a
- * third one, opened through [openBeacons].
+ * third one, opened through [openBeacons]. The known sensors' explanation is opened through
+ * [openKnownSensors].
  */
 @Composable
 public fun ActivateScanConditions(
     openStayActiveDuration: () -> Unit,
     openBluetoothDevices: () -> Unit,
     openBeacons: () -> Unit,
+    openKnownSensors: () -> Unit,
     modifier: Modifier = Modifier,
 ): Unit = ActivateScanConditions(
     openStayActiveDuration,
     openBluetoothDevices,
     openBeacons,
+    openKnownSensors,
     modifier,
     viewModel { PersistentScanningSettingsViewModel() },
 )
@@ -46,6 +49,7 @@ internal fun ActivateScanConditions(
     openStayActiveDuration: () -> Unit,
     openBluetoothDevices: () -> Unit,
     openBeacons: () -> Unit,
+    openKnownSensors: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: PersistentScanningSettingsViewModel = viewModel { PersistentScanningSettingsViewModel() },
 ) {
@@ -91,6 +95,7 @@ internal fun ActivateScanConditions(
         beaconSelected = beacon && beacons.isNotEmpty(),
         knownSensor = knownSensor,
         onKnownSensor = { viewModel.activateOnKnownSensor.value = it },
+        openKnownSensors = openKnownSensors,
         stayActive = stayActive,
         stayActiveMinutes = stayActiveMinutes,
         onStayActive = { viewModel.stayActive.value = it },
@@ -120,6 +125,7 @@ private fun ActivateScanConditions(
     beaconSelected: Boolean,
     knownSensor: Boolean,
     onKnownSensor: (Boolean) -> Unit,
+    openKnownSensors: () -> Unit,
     stayActive: Boolean,
     stayActiveMinutes: Int,
     onStayActive: (Boolean) -> Unit,
@@ -152,10 +158,13 @@ private fun ActivateScanConditions(
             openableWhenOff = true,
             modifier = Modifier.testTag(PersistentScanningSettingsTags.activateOnBeacon),
         )
-        SwitchSettingsItem(
+        SwitchNavigationSettingsItem(
             headline = stringResource(CommonR.string.known_tpms_sensors),
             checked = knownSensor,
             onCheckedChange = onKnownSensor,
+            onClick = openKnownSensors,
+            // Explains how unreliable it is, which matters most before turning it on
+            openableWhenOff = true,
             modifier = Modifier.testTag(PersistentScanningSettingsTags.activateOnKnownSensor),
         )
         SwitchSettingsItem(
@@ -218,6 +227,7 @@ internal fun ActivateScanConditionsPreview() {
         beaconSelected = true,
         knownSensor = true,
         onKnownSensor = {},
+        openKnownSensors = {},
         stayActive = true,
         stayActiveMinutes = 10,
         onStayActive = {},

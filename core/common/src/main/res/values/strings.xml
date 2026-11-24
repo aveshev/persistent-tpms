@@ -177,6 +177,8 @@
     <string name="edit_vehicle_name">Edit vehicle name</string>
     <string name="enable_background_monitoring">Enable background monitoring</string>
     <string name="enable_bluetooth">Enable bluetooth</string>
+    <string name="enable_persistent_mode">Enable persistent mode</string>
+    <string name="enable_vehicle_detection">Enable vehicle detection</string>
     <string name="error_reading_qr_please_assign_via_bluetooth">Error reading QR, please assign via Bluetooth instead</string>
     <string name="error_reading_the_shared_sensors_please_scan">Error reading the shared sensors, please scan the code again</string>
     <string name="even_when_not_low">(even when not low)</string>
@@ -329,6 +331,8 @@
     <string name="names_connected">%1$s being connected</string>
     <string name="names_nearby">%1$s being nearby</string>
     <string name="nearby_devices">Nearby devices</string>
+    <string name="needs_a_vehicle_detection_option">Turn on persistent mode or one of the vehicle detection options above to use it</string>
+    <string name="needs_an_activate_condition">Turn on persistent scanning or one of its activate conditions to use it</string>
     <string name="needs_camera">Your device should to have a camera to continue</string>
     <string name="needs_full_location_permission">Needs full location permission</string>
     <string name="never_drains_battery">Never (drains battery)</string>
@@ -510,6 +514,7 @@
     <string name="stop_permission">because a permission was revoked.</string>
     <string name="stop_unknown">without being turned off, most likely by your phone\'s power management.</string>
     <string name="suspend">Suspend</string>
+    <string name="suspend_monitoring">Suspend monitoring</string>
     <string name="suspend_scan_conditions">Suspend scan conditions</string>
     <string name="suspend_scanning_when_connected_to">Suspend scanning when connected to</string>
     <string name="suspend_scanning_when_other">Suspend scanning when (other)</string>
@@ -566,6 +571,8 @@
     <string name="to_keep_monitoring_your_tyres_reliably_in">To keep monitoring your tyres reliably in the background, this app needs to be exempted from battery optimization (sometimes labelled \"unrestricted\" battery usage in your device\'s settings). Without it, the system is likely to stop background monitoring shortly after it starts.</string>
     <string name="tones">Tones</string>
     <string name="too_many_sensors">Too many sensors</string>
+    <string name="tpms_sensors_run_on_small_batteries">TPMS sensors run on small batteries, so they send updates only every few minutes, and some mostly while the wheel turns. For vehicle detection, the app listens for them with a low power scan, so it can take a while before an update gets through and the app switches to active scanning. For more reliable detection, use your vehicle\'s BLE beacons or a connected Bluetooth device. If neither is an option, consider disabling vehicle detection completely and either using the app in manual (non-persistent) mode, launching it by hand before each ride, or using Persistent mode without vehicle detection (always-on background scanning, which uses significantly more battery).</string>
+    <string name="tpms_sensors_run_on_small_batteries_2">TPMS sensors run on small batteries, so they send updates only every few minutes, and some mostly while the wheel turns. For vehicle detection, the app listens for them with a low power scan, so it can take a while before an update gets through and the app switches to active scanning. For more reliable detection, use your vehicle\'s BLE beacons or a connected Bluetooth device. If neither is an option, consider turning the activate conditions off and either using the app in manual (non-persistent) mode, launching it by hand before each ride, or using persistent scanning without activate conditions (always-on background scanning, which uses significantly more battery).</string>
     <string name="try_again">Try again</string>
     <string name="turn_it_on_to_look_for_beacons">Turn it on to look for beacons</string>
     <string name="turn_it_on_to_see_which_beacon">Turn it on to see which beacon is nearby</string>
@@ -590,6 +597,7 @@
     <string name="vehicle_ble_beacons">Vehicle BLE beacons</string>
     <string name="vehicle_detected_due_to">Your vehicle is detected due to %1$s. Persistent mode is off: the tyres are only scanned while the app is open</string>
     <string name="vehicle_detection">Vehicle detection</string>
+    <string name="vehicle_detection_only_mode_active">Vehicle detection-only mode active</string>
     <string name="vehicle_detection_persistent_mode_and_ride">Vehicle detection, persistent mode and ride notification</string>
     <string name="vehicle_location_already_has_a_sensor">%1$s\'s %2$s already has a sensor</string>
     <string name="vehicle_name">Vehicle name</string>
