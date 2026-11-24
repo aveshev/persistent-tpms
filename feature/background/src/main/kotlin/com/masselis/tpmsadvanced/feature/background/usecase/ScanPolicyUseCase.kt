@@ -4,6 +4,9 @@ import co.touchlab.kermit.Logger
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
 import com.masselis.tpmsadvanced.data.app.interfaces.AppTier
 import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.LITE
+import com.masselis.tpmsadvanced.feature.background.usecase.BackgroundMode.MANUAL
+import com.masselis.tpmsadvanced.feature.background.usecase.BackgroundMode.PERSISTENT
+import com.masselis.tpmsadvanced.feature.background.usecase.BackgroundMode.RIDE_NOTIFICATION
 import com.masselis.tpmsadvanced.feature.background.usecase.BeaconPresenceUseCase.Companion.asBeaconScanMode
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.ALWAYS
@@ -11,7 +14,6 @@ import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.Activat
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.BEACON
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.BLUETOOTH
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.CABLE
-import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.MANUAL
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.SENSOR
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.STAY_ACTIVE
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.WIRELESS
@@ -65,18 +67,34 @@ internal class ScanPolicyUseCase(
         .suspensionReasons
         .shareIn(scope, WhileSubscribed(replayExpirationMillis = 0), replay = 1)
 
+    /** Which of persistent mode, the ride notification only, or the manual button runs the service */
+    private val mode: Flow<BackgroundMode> = BackgroundMode.flow(appPreferences)
+
     /**
-     * Each decision along with the mode (persistent scanning or not) it was made for. Shared, so
-     * the service and the UI observe the same decision and a single set of system listeners is
-     * registered.
+     * Each decision along with the mode it was made for. Shared, so the service and the UI observe
+     * the same decision and a single set of system listeners is registered.
      */
-    private val decisionByMode: SharedFlow<Pair<Boolean, ScanDecision>> = appPreferences
-        .persistentScanning
-        .flatMapLatest { persistent ->
-            if (persistent) automatic().map { persistent to it }
-            // Without persistent scanning, monitoring is the manual start/stop button: scanning
-            // for as long as the service runs
-            else flowOf(persistent to ScanDecision.Active(setOf(MANUAL)))
+    private val decisionByMode: SharedFlow<Pair<BackgroundMode, ScanDecision>> = mode
+        .flatMapLatest { mode ->
+            when (mode) {
+                PERSISTENT -> automatic()
+                // The same conditions detect the vehicle, but only for the ride notification: the
+                // tyres aren't scanned for them
+                RIDE_NOTIFICATION -> automatic().map { decision ->
+                    when (decision) {
+                        // "Always" detects nothing, it only scans
+                        is ScanDecision.Active -> if (ALWAYS in decision.causes) ScanDecision.Watching
+                        else ScanDecision.Detected(decision.causes, decision.bluetoothDevices, decision.beacons)
+
+                        ScanDecision.Idle -> ScanDecision.Watching
+                        else -> decision
+                    }
+                }
+
+                // Without either, monitoring is the manual start/stop button: scanning for as long
+                // as the service runs
+                MANUAL -> flowOf(ScanDecision.Active(setOf(ActivateCause.MANUAL)))
+            }.map { mode to it }
         }
         // Several inputs can change without changing the outcome: nobody needs to hear it again
         .distinctUntilChanged()
@@ -87,10 +105,9 @@ internal class ScanPolicyUseCase(
      * replay still holds the previous mode's decision until the new mode's inputs are read: it is
      * never handed out, so that nobody scans (nor shows "Active") for a stale reason.
      */
-    val decision: Flow<ScanDecision> = combine(
-        appPreferences.persistentScanning,
-        decisionByMode,
-    ) { persistent, (mode, decision) -> decision.takeIf { mode == persistent } }
+    val decision: Flow<ScanDecision> = combine(mode, decisionByMode) { current, (mode, decision) ->
+        decision.takeIf { mode == current }
+    }
         .filterNotNull()
         .distinctUntilChanged()
 
@@ -114,14 +131,17 @@ internal class ScanPolicyUseCase(
         .shareIn(scope, WhileSubscribed(replayExpirationMillis = 0), replay = 1)
 
     /**
-     * Whether persistent scanning has [SENSOR] to wait for: while nothing else scans, the service
-     * listens to the tyres with the low power scan, which is how a known sensor gets heard
+     * Whether there's [SENSOR] to wait for: while nothing else scans, the service listens to the
+     * tyres with the low power scan, which is how a known sensor gets heard. Persistent mode has
+     * nothing to wait for while it always scans, the ride notification alone never scans otherwise.
      */
-    val watchesSensors: Flow<Boolean> = appPreferences
-        .persistentScanning
-        .flatMapLatest { persistent ->
-            if (persistent) enabledCauses().map { SENSOR in it && ALWAYS !in it }
-            else flowOf(false)
+    val watchesSensors: Flow<Boolean> = mode
+        .flatMapLatest { mode ->
+            when (mode) {
+                PERSISTENT -> enabledCauses().map { SENSOR in it && ALWAYS !in it }
+                RIDE_NOTIFICATION -> enabledCauses().map { SENSOR in it }
+                MANUAL -> flowOf(false)
+            }
         }
         .distinctUntilChanged()
 
@@ -130,7 +150,7 @@ internal class ScanPolicyUseCase(
         get() = decisionByMode
             .replayCache
             .lastOrNull()
-            ?.takeIf { (mode) -> mode == appPreferences.persistentScanning.value }
+            ?.takeIf { (mode) -> mode == BackgroundMode.current(appPreferences) }
             ?.second
 
     private fun automatic(): Flow<ScanDecision> = combine(

@@ -50,8 +50,8 @@ private fun StayActiveDuration(
     @Suppress("MaxLineLength")
     SettingsIntro(
         when (AppTier.current) {
-            // Lite has no suspend scan conditions to tell about, nor charging
-            LITE -> stringResource(CommonR.string.once_every_activate_condition_has_ended_for)
+            // Told in terms of Lite's vehicle detection, which has no suspend scan conditions nor charging
+            LITE -> stringResource(CommonR.string.keep_actively_scanning_in_the_background)
             PRO -> stringResource(CommonR.string.once_every_activate_condition_has_ended_for_2)
         }
     )

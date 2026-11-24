@@ -45,7 +45,8 @@ public class AppLinkProvider : ContentProvider() {
 
                 TURN_OFF_PERSISTENT_SCANNING -> {
                     appPreferences.persistentScanning.value = false
-                    controller.stop()
+                    // The ride notification alone keeps it running, without scanning
+                    if (appPreferences.rideNotification.value.not()) controller.stop()
                     Bundle()
                 }
 

@@ -37,6 +37,7 @@ import kotlin.test.assertEquals
 internal class ScanPolicyUseCaseTest {
 
     private lateinit var persistentScanning: MutableStateFlow<Boolean>
+    private lateinit var rideNotification: MutableStateFlow<Boolean>
     private lateinit var activateConditions: MutableStateFlow<Boolean>
     private lateinit var activateOnCableCharging: MutableStateFlow<Boolean>
     private lateinit var activateOnWirelessCharging: MutableStateFlow<Boolean>
@@ -62,6 +63,7 @@ internal class ScanPolicyUseCaseTest {
     private fun test() = ScanPolicyUseCase(
         mockk<AppPreferences> {
             every { persistentScanning } returns this@ScanPolicyUseCaseTest.persistentScanning
+            every { rideNotification } returns this@ScanPolicyUseCaseTest.rideNotification
             every { activateConditions } returns this@ScanPolicyUseCaseTest.activateConditions
             every { activateOnCableCharging } returns this@ScanPolicyUseCaseTest.activateOnCableCharging
             every { activateOnWirelessCharging } returns this@ScanPolicyUseCaseTest.activateOnWirelessCharging
@@ -98,6 +100,7 @@ internal class ScanPolicyUseCaseTest {
     @Before
     fun setup() {
         persistentScanning = MutableStateFlow(true)
+        rideNotification = MutableStateFlow(false)
         activateConditions = MutableStateFlow(true)
         activateOnCableCharging = MutableStateFlow(true)
         activateOnWirelessCharging = MutableStateFlow(true)
@@ -125,6 +128,56 @@ internal class ScanPolicyUseCaseTest {
         persistentScanning.value = false
         test().decision.test {
             assertEquals(ScanDecision.Active(setOf(MANUAL)), awaitItem())
+        }
+    }
+
+    @Test
+    fun `the ride notification alone detects the vehicle without scanning`() = runTest {
+        persistentScanning.value = false
+        rideNotification.value = true
+        test().decision.test {
+            assertEquals(ScanDecision.Watching, awaitItem())
+            charging.value = State(cable = true, wireless = false)
+            assertEquals(ScanDecision.Detected(setOf(CABLE)), awaitItem())
+            charging.value = State(cable = false, wireless = false)
+            assertEquals(ScanDecision.Watching, awaitItem())
+        }
+    }
+
+    @Test
+    fun `the ride notification alone is suspended like persistent scanning`() = runTest {
+        persistentScanning.value = false
+        rideNotification.value = true
+        charging.value = State(cable = true, wireless = false)
+        suspensionReasons.value = setOf(Reason.IDLE)
+        test().decision.test {
+            assertEquals(ScanDecision.Suspended(setOf(Reason.IDLE)), awaitItem())
+        }
+    }
+
+    @Test
+    fun `scanning always detects nothing for the ride notification alone`() = runTest {
+        persistentScanning.value = false
+        rideNotification.value = true
+        activateConditions.value = false
+        test().decision.test { assertEquals(ScanDecision.Watching, awaitItem()) }
+    }
+
+    @Test
+    fun `persistent scanning scans whether the ride notification is on or not`() = runTest {
+        rideNotification.value = true
+        charging.value = State(cable = true, wireless = false)
+        test().decision.test { assertEquals(ScanDecision.Active(setOf(CABLE)), awaitItem()) }
+    }
+
+    @Test
+    fun `turning persistent scanning off with the ride notification on goes from scanning to watching`() = runTest {
+        rideNotification.value = true
+        charging.value = State(cable = true, wireless = false)
+        test().decision.test {
+            assertEquals(ScanDecision.Active(setOf(CABLE)), awaitItem())
+            persistentScanning.value = false
+            assertEquals(ScanDecision.Detected(setOf(CABLE)), awaitItem())
         }
     }
 
@@ -681,6 +734,15 @@ internal class ScanPolicyUseCaseTest {
         activateOnKnownSensor.value = true
         persistentScanning.value = false
         test().watchesSensors.test { assertEquals(false, awaitItem()) }
+    }
+
+    @Test
+    fun `the ride notification alone watches for a known sensor, even when it would always scan`() = runTest {
+        activateOnKnownSensor.value = true
+        activateConditions.value = false
+        persistentScanning.value = false
+        rideNotification.value = true
+        test().watchesSensors.test { assertEquals(true, awaitItem()) }
     }
 
     @Test

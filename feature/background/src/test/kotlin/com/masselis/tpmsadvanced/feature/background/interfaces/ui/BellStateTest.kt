@@ -43,6 +43,12 @@ internal class BellStateTest {
     }
 
     @Test
+    fun `the ride notification alone is neutral while watching and blue once the vehicle is detected`() {
+        assertEquals(BellState.Idle, BellState.of(true, ScanDecision.Watching))
+        assertEquals(BellState.Bluetooth, BellState.of(true, ScanDecision.Detected(setOf(CABLE))))
+    }
+
+    @Test
     fun `Lite scanning without a trigger is green`() {
         assertEquals(BellState.Always, BellState.of(true, ScanDecision.Active(setOf(ALWAYS)), LITE))
     }

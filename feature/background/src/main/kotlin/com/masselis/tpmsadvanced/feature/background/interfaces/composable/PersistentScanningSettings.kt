@@ -160,8 +160,9 @@ internal fun PersistentScanningItem(
     onPersistentScanning: (Boolean) -> Unit,
     status: BellState?,
     openPersistentScanning: () -> Unit,
+    headline: String = stringResource(CommonR.string.persistent_scanning),
 ) = SwitchNavigationSettingsItem(
-    headline = stringResource(CommonR.string.persistent_scanning),
+    headline = headline,
     supporting = listOf(status.statusText(stringResource(CommonR.string.status))),
     checked = persistentScanning,
     onCheckedChange = onPersistentScanning,

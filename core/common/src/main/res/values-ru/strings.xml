@@ -127,12 +127,13 @@
     <string name="close">Закрыть</string>
     <string name="cold">Холодно\n%1$s</string>
     <string name="cold_2">Холодно</string>
-    <string name="cold_hot">Холодно %1$s · Жарко %2$s %3$s</string>
+    <string name="cold_hot">Холодно %1$s · Горячо %2$s %3$s</string>
     <string name="cold_temperature">Холодная температура</string>
     <string name="come_close_to_your_vehicle_the_beacons">Подойдите к транспорту: маячки с самым сильным сигналом показаны вверху списка.</string>
     <string name="connected">%1$s (подключено)</string>
     <string name="connected_2">Подключено</string>
     <string name="connected_3">%1$s (подключено)</string>
+    <string name="connected_bluetooth_devices">Подключённые устройства Bluetooth</string>
     <string name="connected_to_any_wifi">Подключение к любой сети WiFi</string>
     <string name="correct_this_sensor_s_pressure_readings">Поправить показания давления этого датчика</string>
     <string name="correction">Поправка</string>
@@ -180,6 +181,7 @@
     <string name="even_when_not_low">(даже если не разряжена)</string>
     <string name="every">каждые %1$s</string>
     <string name="every_5_5_minutes_whether_the_vehicle">Каждые 5,5 минуты, независимо от движения, и при значительном изменении давления. Измеряет давление с шагом 0,1 бар (около 1,5 psi): шина между двумя шагами может показывать на шаг меньше на холодную и на шаг больше после прогрева</string>
+    <string name="every_5_minutes_whether_the_vehicle">Каждые 5 минут, независимо от движения, и сразу при изменении давления примерно на 1,5 psi. Измеряет давление с шагом 0,1 psi</string>
     <string name="every_minute_while_the_wheel_rotates_while">Каждую минуту, пока колесо вращается. На стоянке только при давлении ниже ~22 psi, и в обоих случаях при значительном изменении давления. Измеряет давление с шагом около 0,45 psi (3,1 кПа), с округлением до 0,1 psi: давление стабильной шины может колебаться на один шаг</string>
     <string name="every_reading_stored_for_this_sensor">Все сохранённые показания этого датчика</string>
     <string name="except_phone_idle">(кроме бездействия телефона)</string>
@@ -201,6 +203,8 @@
     <string name="front_right">переднее правое</string>
     <string name="getting_low">Снижается</string>
     <string name="go_back">Назад</string>
+    <string name="going_for_a_ride_open">Собираетесь в поездку? Откройте %1$s, чтобы следить за давлением в шинах</string>
+    <string name="going_for_a_ride_when_back_near_a_vehicle">«Собираетесь в поездку?», когда вы снова рядом с транспортом</string>
     <string name="grant_permission">Предоставить разрешение</string>
     <string name="great_news">Отличные новости!</string>
     <string name="has_no_sensor_assigned_yet_there_s">У транспорта %1$s пока нет датчиков, делиться нечем</string>
@@ -208,9 +212,9 @@
     <string name="hide">Скрыть: %1$s</string>
     <string name="high">ВЫСОКО!</string>
     <string name="history">История</string>
-    <string name="hot">Жарко\n%1$s</string>
-    <string name="hot_2">Жарко</string>
-    <string name="hot_from">%1$s, жарко от %2$s</string>
+    <string name="hot">Горячо\n%1$s</string>
+    <string name="hot_2">Горячо</string>
+    <string name="hot_from">%1$s, горячо от %2$s</string>
     <string name="hot_temperature">Горячая температура</string>
     <string name="hours">%1$s ч</string>
     <string name="how_often_each_sensor_updates_and_how">Как часто обновляется каждый датчик и как проверить молчащий</string>
@@ -241,6 +245,7 @@
     <string name="its_sensor_comes_to_the_other_vehicle">Его датчик перейдёт на другой транспорт: %1$s</string>
     <string name="its_sensor_is_removed_from">Его датчик будет удалён с %1$s</string>
     <string name="just_swap_them">Просто поменять местами</string>
+    <string name="keep_actively_scanning_in_the_background">Продолжать активно сканировать в фоне ещё какое-то время, даже когда транспорт больше не обнаруживается.</string>
     <string name="keep_always_on">Оставить всегда включённым</string>
     <string name="keep_monitoring_running">Как сохранить мониторинг</string>
     <string name="keep_monitoring_running_on">Как сохранить мониторинг на %1$s</string>
@@ -255,7 +260,7 @@
     <string name="leak">Утечка?</string>
     <string name="learn_more">Подробнее</string>
     <string name="legend_cold">Холодно\n20 °C</string>
-    <string name="legend_hot">Жарко\n90 °C</string>
+    <string name="legend_hot">Горячо\n90 °C</string>
     <string name="legend_normal">Норма\n45 °C</string>
     <string name="let_s_figure_out_which_one_to">Определим, какой из них назначить</string>
     <string name="light">Светлая</string>
@@ -301,6 +306,7 @@
     <string name="missing_a_device">Нет нужного устройства?</string>
     <string name="monitor_service">Служба мониторинга</string>
     <string name="monitor_service_failure">Сбой службы мониторинга</string>
+    <string name="monitoring">Мониторинг</string>
     <string name="monitoring_in_the_background">Мониторинг в фоне</string>
     <string name="monowheel">Моноколесо</string>
     <string name="most_tpms_sensors_send_updates_at_regular">Большинство датчиков TPMS отправляют обновления через равные промежутки времени во время движения. Но иногда обновления теряются из-за препятствий для сигнала, разряженной батареи датчика и других проблем. Зная, когда от каждого датчика пришло последнее обновление, проще найти причину.</string>
@@ -353,7 +359,6 @@
     <string name="ok">Норма\n%1$s – %2$s</string>
     <string name="on_the_other_phone_tap_a_wheel">На другом телефоне нажмите на колесо без датчика, выберите «Сканировать QR-код» и наведите камеру на этот код: все датчики будут назначены сразу</string>
     <string name="on_wheel_sensors_found">Найдено датчиков на колёсах: %1$s</string>
-    <string name="once_every_activate_condition_has_ended_for">Когда все условия запуска закончатся, например устройство Bluetooth отключится, сканирование ещё какое-то время продолжится.</string>
     <string name="once_every_activate_condition_has_ended_for_2">Когда все условия запуска закончатся, например телефон отключат от зарядки, сканирование ещё какое-то время продолжится. Действует, только если в этот момент не было активных условий приостановки.</string>
     <string name="one_day">1 день</string>
     <string name="one_sensor_found">Найден один датчик</string>
@@ -374,7 +379,7 @@
     <string name="persistent_mode_is_on_in_turn_it">Постоянный режим включён в %1$s. Выключить его там и включить здесь?</string>
     <string name="persistent_monitoring_stopped">Постоянный мониторинг остановлен</string>
     <string name="persistent_scanning">Постоянное сканирование</string>
-    <string name="persistent_scanning_and_its_scan_conditions">Постоянное сканирование и его условия</string>
+    <string name="persistent_scanning_its_conditions_and_ride">Постоянное сканирование, его условия и уведомление о поездке</string>
     <string name="persistent_scanning_needs_permissions_tap_to_grant">Постоянному сканированию нужны разрешения, нажмите, чтобы их предоставить</string>
     <string name="persistent_tpms_is_unable_to_find_your">Persistent TPMS не может найти датчик. Попробуйте выключить Bluetooth или перезапустить приложение</string>
     <string name="persistent_tpms_need_you_to_approve_a">Persistent TPMS нужно ваше разрешение, чтобы сканировать QR-код</string>
@@ -398,6 +403,8 @@
     <string name="pressures_corrected_by_this_sensor_s_current">Давление поправлено текущей калибровкой этого датчика</string>
     <string name="printed_on_the_sensors_box_card_or">Напечатан на коробке, карточке или колпачке датчиков либо показан на другом телефоне</string>
     <string name="privacy_policy">Политика конфиденциальности</string>
+    <string name="prompts_going_for_a_ride_lite">Спрашивает «Собираетесь в поездку?», когда ваш транспорт обнаружен после 30 мин отсутствия</string>
+    <string name="prompts_going_for_a_ride_when_a_scan">Спрашивает «Собираетесь в поездку?», когда выполняется условие сканирования или обнаружен известный датчик TPMS, после 30 мин отсутствия. Открытое приложение получает больше обновлений от датчиков.</string>
     <string name="proximity_sensor_active_touches_are_blocked">Датчик приближения активен\nКасания заблокированы</string>
     <string name="put_the_sensor_back_on_the_wheel">Установите датчик обратно на колесо</string>
     <string name="put_the_sensor_on_the_wheel">Установите датчик на колесо</string>
@@ -450,6 +457,7 @@
     <string name="replaces_this_app_s_vehicles_sensors_readings">Заменяет транспорт, датчики, показания и настройки этого приложения</string>
     <string name="restart_app">Перезапустить</string>
     <string name="restart_the_app">Перезапустить приложение</string>
+    <string name="ride_notification">Уведомление о поездке</string>
     <string name="save">Сохранить</string>
     <string name="says_tyre_pressure_tyre_hot_or_sensor">Произносит вслух «Давление в шине», «Перегрев шины» или «Батарея в сенсоре»</string>
     <string name="scan_qr_code">Сканировать QR-код</string>
@@ -530,6 +538,7 @@
     <string name="text_yes">Да</string>
     <string name="the_android_system_keeps_refusing_the_bluetooth">Android продолжает отказывать в сканировании Bluetooth (ошибка %1$s), шины не отслеживаются. Фоновое сканирование продолжает попытки</string>
     <string name="the_android_system_refused_the_bluetooth_scan">Android отказал в сканировании Bluetooth (ошибка %1$s), скоро будет новая попытка</string>
+    <string name="the_app_can_tell_when_you_re_near">Приложение может понять, что вы рядом с транспортом, обнаружив его BLE-маячки или датчики TPMS (с помощью сканирования Bluetooth с низким энергопотреблением) или подключение устройства Bluetooth. Тогда оно может активнее сканировать шины в фоне и/или прислать уведомление о поездке, которое открывает приложение для постоянного сканирования.</string>
     <string name="the_data_of_couldn_t_be_read">Не удалось прочитать данные %1$s. Данные этого приложения не изменились.</string>
     <string name="the_devices_below_have_already_been_selected">Эти устройства уже выбраны на другой странице настроек для приостановки сканирования.</string>
     <string name="the_devices_below_have_already_been_selected_2">Эти устройства уже выбраны на другой странице настроек для запуска сканирования.</string>
@@ -577,21 +586,28 @@
     <string name="update_this_app_first">Сначала обновите это приложение</string>
     <string name="use_pressure_changes_to_detect_the_correct">Определить нужный датчик по изменению давления</string>
     <string name="vehicle">Транспорт</string>
+    <string name="vehicle_ble_beacons">Ваши BLE-маячки</string>
+    <string name="vehicle_detected_due_to">Ваш транспорт обнаружен, причина: %1$s. Постоянный режим выключен: шины сканируются, только пока приложение открыто</string>
+    <string name="vehicle_detection">Обнаружение вашего транспорта</string>
+    <string name="vehicle_detection_persistent_mode_and_ride">Обнаружение вашего транспорта, постоянный режим и уведомление о поездке</string>
     <string name="vehicle_location_already_has_a_sensor">%1$s: %2$s уже с датчиком</string>
     <string name="vehicle_name">Название транспорта</string>
     <string name="vehicle_settings">Настройки транспорта</string>
+    <string name="vehicle_tpms_sensors">Ваши датчики TPMS</string>
     <string name="vehicles">Транспорт</string>
     <string name="version">Версия</string>
     <string name="vibrate">Вибрация</string>
     <string name="voltage_alarm">Порог напряжения</string>
     <string name="was_nearby">Был рядом</string>
+    <string name="watching_for_your_vehicle">Ожидание вашего транспорта для уведомления о поездке. Постоянный режим выключен: шины сканируются, только пока приложение открыто</string>
     <string name="weak_signal">Слабый сигнал</string>
     <string name="website">Сайт</string>
     <string name="wheel_on">", транспорт: "</string>
     <string name="wheel_on_the">\</string>
     <string name="when_a_sensor_reports_pressure_outside_of" formatted="false">Если датчик сообщает давление вне заданного здесь диапазона, появится тревожное оповещение, а индикатор шины замигает красным. Если давление более чем на 20% выше максимума или более чем на 25% ниже минимума, оповещение будет критическим. При приближении к минимуму или максимуму в пределах 3% появится предупреждение.</string>
     <string name="when_no_bluetooth_connections_or_beacons_are">Если для запуска постоянного сканирования не настроены подключения Bluetooth, маячки или известные датчики TPMS, фоновое сканирование будет работать всё или почти всё время, и батарея будет садиться быстрее.\n\nПодумайте, какое устройство Bluetooth или маячок в вашем транспорте подойдёт для этого, включите известные датчики TPMS либо используйте ручной (непостоянный) режим, чтобы этого избежать.</string>
-    <string name="when_on_keeps_monitoring_your_tyres_in">Когда включено, шины отслеживаются в фоне, даже после перезагрузки телефона, а сканирование запускается и приостанавливается по условиям ниже. Так не нужно открывать приложение вручную перед каждой поездкой.</string>
+    <string name="when_on_keeps_monitoring_your_tyres_in">Когда включено, шины отслеживаются в фоне, даже после перезагрузки телефона, а сканирование запускается и приостанавливается по условиям ниже. Это позволит не открывать приложение вручную перед каждой поездкой.</string>
+    <string name="when_on_keeps_monitoring_your_tyres_lite">Когда включено, шины отслеживаются в фоне, даже после перезагрузки телефона, а сканирование запускается и приостанавливается по настройкам обнаружения транспорта с предыдущей страницы. Это позволит не открывать приложение вручную перед каждой поездкой. Также можно заставить приложение всегда активно сканировать в фоне, отключив все настройки обнаружения транспорта, но оставив постоянный режим включённым.</string>
     <string name="when_updates_seem_to_be_missing">Если обновлений как будто не хватает</string>
     <string name="wifi_disabled_end">" не предоставлено. Его можно снова включить в настройках приложения, в разделе фонового сканирования."</string>
     <string name="wifi_disabled_q">" («Разрешить в любом режиме»)"</string>

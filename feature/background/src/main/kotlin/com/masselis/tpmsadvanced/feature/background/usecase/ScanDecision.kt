@@ -37,6 +37,22 @@ internal sealed interface ScanDecision {
 
     /** No enabled activate condition is fulfilled, there is nothing to scan for. */
     data object Idle : ScanDecision
+
+    /**
+     * Only the ride notification runs the service ([BackgroundMode.RIDE_NOTIFICATION]): it watches
+     * for the vehicle and never scans the tyres at full rate. No condition is fulfilled.
+     */
+    data object Watching : ScanDecision
+
+    /**
+     * [Watching], and the vehicle is detected for [causes], which the ride notification counts.
+     * Named like [Active]'s.
+     */
+    data class Detected(
+        val causes: Set<ActivateCause>,
+        val bluetoothDevices: List<String> = emptyList(),
+        val beacons: List<String> = emptyList(),
+    ) : ScanDecision
 }
 
 /**
@@ -71,15 +87,7 @@ internal fun ScanDecision.explanation(tier: AppTier = AppTier.current): String =
 
         ALWAYS in causes -> localized(CommonR.string.always_active)
         causes == setOf(ScanDecision.ActivateCause.SENSOR) -> localized(CommonR.string.active_due_to_sensor)
-        else -> causes
-            .joinToString(", ") {
-                when (it) {
-                    BLUETOOTH -> bluetoothDevices.connectedLabel()
-                    BEACON -> beacons.nearbyLabel()
-                    else -> it.label
-                }
-            }
-            .let { localized(CommonR.string.active_due_to, it) }
+        else -> localized(CommonR.string.active_due_to, causesLabel())
     }
 
     is ScanDecision.Suspended ->
@@ -93,6 +101,12 @@ internal fun ScanDecision.explanation(tier: AppTier = AppTier.current): String =
             }
             .let { localized(CommonR.string.suspended_due_to, it) }
 
+    ScanDecision.Watching -> localized(CommonR.string.watching_for_your_vehicle)
+
+    is ScanDecision.Detected -> ScanDecision.Active(causes, bluetoothDevices, beacons)
+        .causesLabel()
+        .let { localized(CommonR.string.vehicle_detected_due_to, it) }
+
     // Lite's only conditions, told as such
     ScanDecision.Idle -> if (tier == LITE) {
         localized(CommonR.string.idle_lite)
@@ -101,9 +115,19 @@ internal fun ScanDecision.explanation(tier: AppTier = AppTier.current): String =
     }
 }
 
+/** "A being connected, B being nearby" */
+private fun ScanDecision.Active.causesLabel(): String = causes.joinToString(", ") {
+    when (it) {
+        BLUETOOTH -> bluetoothDevices.connectedLabel()
+        BEACON -> beacons.nearbyLabel()
+        else -> it.label
+    }
+}
+
 /** What the user reads when tapping the bell. */
 internal fun ScanDecision.rationale(tier: AppTier = AppTier.current): String = when (this) {
-    is ScanDecision.Active -> explanation(tier)
+    // Watching and detected tell by themselves that only the open app scans
+    is ScanDecision.Active, ScanDecision.Watching, is ScanDecision.Detected -> explanation(tier)
     // The foreground UI scans by itself, whatever the decision is
     is ScanDecision.Suspended, ScanDecision.Idle ->
         localized(CommonR.string.scanning_while_open, explanation(tier))

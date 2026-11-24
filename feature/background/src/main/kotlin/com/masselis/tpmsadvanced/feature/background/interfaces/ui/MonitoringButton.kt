@@ -10,7 +10,7 @@ import com.masselis.tpmsadvanced.feature.background.ioc.Bindings
 
 /**
  * The top bar button for background monitoring: the manual Start/Stop button, or the bell that
- * reports what persistent scanning is doing once that setting is on.
+ * reports what persistent scanning or the ride notification is doing once either setting is on.
  */
 @Composable
 public fun MonitoringButton(modifier: Modifier = Modifier): Unit =
@@ -26,7 +26,8 @@ internal fun MonitoringButton(
         Bindings.featureBackgroundInternal.persistentScanningViewModel()
     },
 ) {
-    val persistentScanning by viewModel.persistentScanning.collectAsState()
-    if (persistentScanning) PersistentScanningBell(viewModel, modifier)
+    // The ride notification alone runs the service too, the bell tells what it's watching
+    val inBackground by viewModel.inBackground.collectAsState()
+    if (inBackground) PersistentScanningBell(viewModel, modifier)
     else BackgroundIconButton(modifier)
 }

@@ -134,6 +134,7 @@
     <string name="connected">%1$s (connected)</string>
     <string name="connected_2">Connected</string>
     <string name="connected_3">%1$s (connected)</string>
+    <string name="connected_bluetooth_devices">Connected Bluetooth devices</string>
     <string name="connected_to_any_wifi">Connected to any WiFi</string>
     <string name="correct_this_sensor_s_pressure_readings">Correct this sensor\'s pressure readings</string>
     <string name="correction">Correction</string>
@@ -181,6 +182,7 @@
     <string name="even_when_not_low">(even when not low)</string>
     <string name="every">every %1$s</string>
     <string name="every_5_5_minutes_whether_the_vehicle">Every 5.5 minutes, whether the vehicle moves or not, and whenever pressure changes significantly. Reads the pressure in steps of 0.1 bar (about 1.5 psi): a tyre between two steps can read one step lower when cold, and the next one up once warm</string>
+    <string name="every_5_minutes_whether_the_vehicle">Every 5 minutes, whether the vehicle moves or not, and at once when the pressure changes by about 1.5 psi. Reads the pressure in steps of 0.1 psi</string>
     <string name="every_minute_while_the_wheel_rotates_while">Every minute while the wheel rotates. While stationary, only when the pressure is below ~22 psi, and in either case, whenever pressure changes significantly. Reads the pressure in steps of about 0.45 psi (3.1 kPa), shown rounded to 0.1 psi: a steady tyre can go back and forth by one step</string>
     <string name="every_reading_stored_for_this_sensor">Every reading stored for this sensor</string>
     <string name="except_phone_idle">(except phone idle)</string>
@@ -202,6 +204,8 @@
     <string name="front_right">front right</string>
     <string name="getting_low">Getting low</string>
     <string name="go_back">Go back</string>
+    <string name="going_for_a_ride_open">Going for a ride? Open %1$s to monitor tyre pressure</string>
+    <string name="going_for_a_ride_when_back_near_a_vehicle">\"Going for a ride?\", when back near a vehicle</string>
     <string name="grant_permission">Grant permission</string>
     <string name="great_news">Great news !</string>
     <string name="has_no_sensor_assigned_yet_there_s">%1$s has no sensor assigned yet, there\'s nothing to share</string>
@@ -242,6 +246,7 @@
     <string name="its_sensor_comes_to_the_other_vehicle">Its sensor comes to the other vehicle\'s %1$s</string>
     <string name="its_sensor_is_removed_from">Its sensor is removed from %1$s</string>
     <string name="just_swap_them">Just swap them</string>
+    <string name="keep_actively_scanning_in_the_background">Keep actively scanning in the background for a while longer even when a vehicle is no longer detected.</string>
     <string name="keep_always_on">Keep always on</string>
     <string name="keep_monitoring_running">Keep monitoring running</string>
     <string name="keep_monitoring_running_on">Keep monitoring running on %1$s</string>
@@ -302,6 +307,7 @@
     <string name="missing_a_device">Missing a device?</string>
     <string name="monitor_service">Monitor service</string>
     <string name="monitor_service_failure">Monitor service failure</string>
+    <string name="monitoring">Monitoring</string>
     <string name="monitoring_in_the_background">Monitoring in the background</string>
     <string name="monowheel">Monowheel</string>
     <string name="most_tpms_sensors_send_updates_at_regular">Most TPMS sensors send updates at regular time intervals while riding. However, in some cases the updates can get lost, because of signal obstruction, low sensor battery or other issues. Knowing when exactly the last update arrived from each sensor can help you diagnose these issues.</string>
@@ -354,7 +360,6 @@
     <string name="ok">OK\n%1$s – %2$s</string>
     <string name="on_the_other_phone_tap_a_wheel">On the other phone, tap a wheel without a sensor, choose “Scan QR code” and point the camera at this code: every sensor is assigned at once</string>
     <string name="on_wheel_sensors_found">%1$s on-wheel sensors found</string>
-    <string name="once_every_activate_condition_has_ended_for">Once every activate condition has ended, for example when the Bluetooth device disconnects, keep scanning for a while longer.</string>
     <string name="once_every_activate_condition_has_ended_for_2">Once every activate condition has ended, for example when the phone is unplugged, keep scanning for a while longer. Only applies if no suspend scan conditions were active at that moment.</string>
     <string name="one_day">1 day</string>
     <string name="one_sensor_found">One sensor found</string>
@@ -375,7 +380,7 @@
     <string name="persistent_mode_is_on_in_turn_it">Persistent mode is on in %1$s. Turn it off there and on here?</string>
     <string name="persistent_monitoring_stopped">Persistent monitoring stopped</string>
     <string name="persistent_scanning">Persistent scanning</string>
-    <string name="persistent_scanning_and_its_scan_conditions">Persistent scanning and its scan conditions</string>
+    <string name="persistent_scanning_its_conditions_and_ride">Persistent scanning, its conditions and ride notification</string>
     <string name="persistent_scanning_needs_permissions_tap_to_grant">Persistent scanning needs permissions, tap to grant them</string>
     <string name="persistent_tpms_is_unable_to_find_your">Persistent TPMS is unable to find your sensor, try to disable bluetooth or restart the app</string>
     <string name="persistent_tpms_need_you_to_approve_a">Persistent TPMS need you to approve a permission to scan the QR Code</string>
@@ -399,6 +404,8 @@
     <string name="pressures_corrected_by_this_sensor_s_current">Pressures corrected by this sensor\'s current calibration</string>
     <string name="printed_on_the_sensors_box_card_or">Printed on the sensors\' box, card or cap, or shared by another phone</string>
     <string name="privacy_policy">Privacy policy</string>
+    <string name="prompts_going_for_a_ride_lite">Prompts \"Going for a ride?\" when your vehicle is detected after 30 min away</string>
+    <string name="prompts_going_for_a_ride_when_a_scan">Prompts \"Going for a ride?\" when a scan condition is met or a known TPMS sensor is detected, after 30 min away. Opening the app allows more sensor updates to reach it.</string>
     <string name="proximity_sensor_active_touches_are_blocked">Proximity sensor active\nTouches are blocked</string>
     <string name="put_the_sensor_back_on_the_wheel">Put the sensor back on the wheel</string>
     <string name="put_the_sensor_on_the_wheel">Put the sensor on the wheel</string>
@@ -451,6 +458,7 @@
     <string name="replaces_this_app_s_vehicles_sensors_readings">Replaces this app\'s vehicles, sensors, readings and settings</string>
     <string name="restart_app">Restart app</string>
     <string name="restart_the_app">Restart the app</string>
+    <string name="ride_notification">Ride notification</string>
     <string name="save">Save</string>
     <string name="says_tyre_pressure_tyre_hot_or_sensor">Says \"Tyre pressure\", \"Tyre hot\" or \"Sensor battery\" out loud</string>
     <string name="scan_qr_code">Scan QR code</string>
@@ -531,6 +539,7 @@
     <string name="text_yes">Yes</string>
     <string name="the_android_system_keeps_refusing_the_bluetooth">The Android system keeps refusing the Bluetooth scan (error %1$s), the tyres aren\'t monitored. Background scanning keeps trying</string>
     <string name="the_android_system_refused_the_bluetooth_scan">The Android system refused the Bluetooth scan (error %1$s), background scanning tries again shortly</string>
+    <string name="the_app_can_tell_when_you_re_near">The app can tell when you\'re near your vehicle by detecting its BLE beacons or TPMS sensors (using low power Bluetooth scanning), or a Bluetooth device connecting. Then it can scan the tyres more actively in the background, and/or send a ride notification that opens the app for full-time scanning.</string>
     <string name="the_data_of_couldn_t_be_read">The data of %1$s couldn\'t be read. This app\'s data is unchanged.</string>
     <string name="the_devices_below_have_already_been_selected">The devices below have already been selected in the other settings page to suspend scanning.</string>
     <string name="the_devices_below_have_already_been_selected_2">The devices below have already been selected in the other settings page to activate scanning.</string>
@@ -578,14 +587,20 @@
     <string name="update_this_app_first">Update this app first</string>
     <string name="use_pressure_changes_to_detect_the_correct">Use pressure changes to detect the correct sensor</string>
     <string name="vehicle">Vehicle</string>
+    <string name="vehicle_ble_beacons">Vehicle BLE beacons</string>
+    <string name="vehicle_detected_due_to">Your vehicle is detected due to %1$s. Persistent mode is off: the tyres are only scanned while the app is open</string>
+    <string name="vehicle_detection">Vehicle detection</string>
+    <string name="vehicle_detection_persistent_mode_and_ride">Vehicle detection, persistent mode and ride notification</string>
     <string name="vehicle_location_already_has_a_sensor">%1$s\'s %2$s already has a sensor</string>
     <string name="vehicle_name">Vehicle name</string>
     <string name="vehicle_settings">Vehicle settings</string>
+    <string name="vehicle_tpms_sensors">Vehicle TPMS sensors</string>
     <string name="vehicles">Vehicles</string>
     <string name="version">Version</string>
     <string name="vibrate">Vibrate</string>
     <string name="voltage_alarm">Voltage alarm</string>
     <string name="was_nearby">Was nearby</string>
+    <string name="watching_for_your_vehicle">Watching for your vehicle, for the ride notification. Persistent mode is off: the tyres are only scanned while the app is open</string>
     <string name="weak_signal">Weak signal</string>
     <string name="website">Website</string>
     <string name="wheel_on">" on "</string>
@@ -593,6 +608,7 @@
     <string name="when_a_sensor_reports_pressure_outside_of" formatted="false">When a sensor reports pressure outside of the range set here, it will raise a warning alert and blink the affected tyre indicator in red. If it\'s more than 20% above the maximum, or more than 25% below the minimum, it will be a critical alert. Getting within 3% of the minimum or maximum will raise a caution alert.</string>
     <string name="when_no_bluetooth_connections_or_beacons_are">When no Bluetooth connections, beacons or known TPMS sensors are configured to activate persistent scanning, it will run background scanning all or nearly all the time, which increases battery drain.\n\nConsider figuring out which Bluetooth device or beacon can be used for that purpose in your vehicle, turning on known TPMS sensors, or use manual (non-persistent) mode if you want to avoid that.</string>
     <string name="when_on_keeps_monitoring_your_tyres_in">When on, keeps monitoring your tyres in the background, even after the phone restarts, starting and suspending scanning based on the options below. That way you don\'t have to open the app manually each ride.</string>
+    <string name="when_on_keeps_monitoring_your_tyres_lite">When on, keeps monitoring your tyres in the background, even after the phone restarts, starting and suspending scanning based on vehicle detection options from the previous page. That way you don\'t have to open the app manually each ride. You can also force the app to always actively scan in the background by disabling all Vehicle detection options while keeping Persistent mode on.</string>
     <string name="when_updates_seem_to_be_missing">When updates seem to be missing</string>
     <string name="wifi_disabled_end">" was not granted. You can turn it on again in App settings, under Background scanning."</string>
     <string name="wifi_disabled_q">" (\"Allow all the time\")"</string>

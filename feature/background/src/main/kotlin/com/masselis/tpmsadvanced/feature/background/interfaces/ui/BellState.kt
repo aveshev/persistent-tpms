@@ -27,14 +27,15 @@ internal enum class BellState {
      * Blue, like Bluetooth: scanning because a Bluetooth device is connected, a beacon is near or a
      * known TPMS sensor was heard, or on Lite also during "Stay active" after one, as its only
      * conditions are those. Pro's "always"
-     * overrides it, as it doesn't depend on them. The manual monitoring button stays [Active].
+     * overrides it, as it doesn't depend on them. The manual monitoring button stays [Active]. The
+     * ride notification alone detecting the vehicle is told the same way, without scanning.
      */
     Bluetooth,
 
     /** Orange: an activate condition holds but a suspend condition overrides it */
     Suspended,
 
-    /** Neutral: nothing to activate */
+    /** Neutral: nothing to activate, or the ride notification alone watching for the vehicle */
     Idle;
 
     companion object {
@@ -45,6 +46,8 @@ internal enum class BellState {
                 it in setOf(BLUETOOTH, BEACON, SENSOR) || (tier == LITE && it == STAY_ACTIVE)
             } -> Bluetooth
             decision is ScanDecision.Active -> Active
+            // The ride notification alone: detected the way a condition activates the scan
+            decision is ScanDecision.Detected -> Bluetooth
             decision is ScanDecision.Suspended -> Suspended
             else -> Idle
         }
