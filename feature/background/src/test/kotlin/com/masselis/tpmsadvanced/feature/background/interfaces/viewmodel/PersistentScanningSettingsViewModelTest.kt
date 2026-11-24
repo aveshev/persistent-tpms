@@ -24,6 +24,7 @@ internal class PersistentScanningSettingsViewModelTest {
     private lateinit var activateBluetoothDevices: MutableStateFlow<Set<String>>
     private lateinit var activateOnBeacon: MutableStateFlow<Boolean>
     private lateinit var beacons: MutableStateFlow<List<Beacon>>
+    private lateinit var activateOnKnownSensor: MutableStateFlow<Boolean>
 
     private fun test() = PersistentScanningSettingsViewModel(
         mockk<AppPreferences>(relaxed = true) {
@@ -35,6 +36,7 @@ internal class PersistentScanningSettingsViewModelTest {
             every { activateBluetoothDevices } returns this@PersistentScanningSettingsViewModelTest.activateBluetoothDevices
             every { activateOnBeacon } returns this@PersistentScanningSettingsViewModelTest.activateOnBeacon
             every { beacons } returns this@PersistentScanningSettingsViewModelTest.beacons
+            every { activateOnKnownSensor } returns this@PersistentScanningSettingsViewModelTest.activateOnKnownSensor
         },
         mockk(relaxed = true),
         mockk(relaxed = true),
@@ -52,6 +54,7 @@ internal class PersistentScanningSettingsViewModelTest {
         activateBluetoothDevices = MutableStateFlow(setOf("CAR"))
         activateOnBeacon = MutableStateFlow(false)
         beacons = MutableStateFlow(emptyList())
+        activateOnKnownSensor = MutableStateFlow(false)
     }
 
     @Test
@@ -114,6 +117,14 @@ internal class PersistentScanningSettingsViewModelTest {
         activateOnBeacon.value = true
         test().disableActivateConditionsIfNoneSelected()
         assertFalse(activateConditions.value)
+    }
+
+    @Test
+    fun `the known sensor condition alone keeps the activate conditions on`() {
+        activateOnBluetooth.value = false
+        activateOnKnownSensor.value = true
+        test().disableActivateConditionsIfNoneSelected()
+        assertTrue(activateConditions.value)
     }
 
     private fun device(address: String) = PairedDevice(address, address, isAudio = true)

@@ -44,6 +44,8 @@ public class DemoLeScanner : BluetoothLeScanner {
 
     override fun normalScan(): Flow<Tyre.SensorInput> = source
 
+    override fun lowPowerScan(): Flow<Tyre.SensorInput> = source
+
     // The demo's readings aren't stored, nothing alerts about them
     override val tyreScanStatus: Flow<BluetoothLeScanner.ScanStatus?> = flowOf(null)
 

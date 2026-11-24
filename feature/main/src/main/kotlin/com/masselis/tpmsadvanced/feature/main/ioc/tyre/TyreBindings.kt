@@ -21,6 +21,7 @@ import com.masselis.tpmsadvanced.feature.main.usecase.ListenTyreSmartDutyUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.ListenTyreUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.ListenTyreWithDatabaseUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.LocatedTyreScannerUseCase
+import com.masselis.tpmsadvanced.feature.main.usecase.LowPowerWatchUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.SensorBindingUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.TyreAlertsUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.TyreAtmosphereUseCase
@@ -107,12 +108,14 @@ public interface TyreBindings {
     private fun listenTyreSmartDutyUseCase(
         scanner: LocatedTyreScannerUseCase,
         appPreferences: AppPreferences,
+        lowPowerWatchUseCase: LowPowerWatchUseCase,
     ): ListenTyreSmartDutyUseCase = ListenTyreSmartDutyUseCase(
         scanner,
         // A debug option: turning Debug off turns it off too
         combine(appPreferences.debugOptionsInUse, appPreferences.balancedAfterFirstReading, Boolean::and),
         isAppVisibleFlow,
         ListenTyreSmartDutyUseCase.KEEPS_LOW_LATENCY_IN_BACKGROUND,
+        lowPowerWatchUseCase.isWatching,
     )
 
     // Single, it keeps the sensor it detects for TyreActionsViewModel

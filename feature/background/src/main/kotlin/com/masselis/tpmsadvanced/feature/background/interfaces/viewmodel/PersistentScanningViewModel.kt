@@ -14,6 +14,7 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.MonitoringControl
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningViewModel.OtherAppCheck.Clear
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningViewModel.OtherAppCheck.Conflict
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningViewModel.OtherAppCheck.Unchecked
+import com.masselis.tpmsadvanced.feature.background.usecase.BackgroundMode
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanPolicyUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.UnexpectedStopUseCase
@@ -21,9 +22,12 @@ import com.masselis.tpmsadvanced.feature.background.usecase.UnexpectedStopUseCas
 import com.masselis.tpmsadvanced.feature.background.usecase.WifiConnectionUseCase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted.Companion.Eagerly
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import com.masselis.tpmsadvanced.core.common.R as CommonR
 import com.masselis.tpmsadvanced.core.common.localized
@@ -43,6 +47,15 @@ internal class PersistentScanningViewModel(
 
     val persistentScanning = appPreferences.persistentScanning
 
+    /**
+     * Whether the service is expected to run in the background, for persistent mode or the ride
+     * notification alone, see [BackgroundMode]
+     */
+    val inBackground: StateFlow<Boolean> = BackgroundMode
+        .flow(appPreferences)
+        .map { it.isInBackground }
+        .stateIn(viewModelScope, Eagerly, BackgroundMode.current(appPreferences).isInBackground)
+
     /** The main screen's menu only offers its switch once the settings page turned it on */
     val persistentScanningSetUp: StateFlow<Boolean> = appPreferences.persistentScanningSetUp
 
@@ -52,7 +65,8 @@ internal class PersistentScanningViewModel(
      */
     fun setPersistentScanning(enabled: Boolean) {
         appPreferences.persistentScanning.value = enabled
-        if (enabled.not()) controller.stop()
+        // The ride notification alone keeps it running, without scanning
+        if (enabled.not() && appPreferences.rideNotification.value.not()) controller.stop()
     }
 
     /**
@@ -70,8 +84,8 @@ internal class PersistentScanningViewModel(
     private val mutableUnexpectedStop = MutableStateFlow(
         unexpectedStopUseCase
             .consume()
-            ?.takeIf { persistentScanning.value }
-            ?.also { logger.w { "The persistent scanning service was stopped unexpectedly: $it" } }
+            ?.takeIf { inBackground.value }
+            ?.also { logger.w { "The background monitoring service was stopped unexpectedly: $it" } }
     )
 
     /** Set when the service died behind the user's back since the app was last opened */
@@ -149,7 +163,7 @@ internal class PersistentScanningViewModel(
     }
 
     /**
-     * Persistent scanning is on, so the service is expected to run whenever the app is opened. On
+     * Persistent mode or the ride notification is on, so the service is expected to run whenever the app is opened. On
      * Android 11 it's started again even when it runs: one started while the app wasn't visible,
      * after a reboot for instance, has no location access in the background until then, see
      * [MonitorService].

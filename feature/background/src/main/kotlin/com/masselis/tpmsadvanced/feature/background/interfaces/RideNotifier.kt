@@ -1,7 +1,5 @@
 package com.masselis.tpmsadvanced.feature.background.interfaces
 
-import com.masselis.tpmsadvanced.core.common.localized
-import com.masselis.tpmsadvanced.core.common.R as CommonR
 import android.annotation.SuppressLint
 import android.app.PendingIntent.FLAG_IMMUTABLE
 import android.app.PendingIntent.getActivity
@@ -14,6 +12,7 @@ import androidx.core.app.NotificationManagerCompat.IMPORTANCE_HIGH
 import androidx.core.content.edit
 import co.touchlab.kermit.Logger
 import com.masselis.tpmsadvanced.core.common.appContext
+import com.masselis.tpmsadvanced.core.common.localized
 import com.masselis.tpmsadvanced.core.common.now
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
 import com.masselis.tpmsadvanced.data.vehicle.model.TyreAtmosphere
@@ -24,6 +23,7 @@ import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.Activat
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.BEACON
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.BLUETOOTH
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.CABLE
+import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.SENSOR
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.WIRELESS
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -47,6 +47,7 @@ import kotlinx.coroutines.flow.runningFold
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
+import com.masselis.tpmsadvanced.core.common.R as CommonR
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
@@ -59,9 +60,9 @@ import kotlin.time.Duration.Companion.seconds
  * A trigger fires when heard after [AppPreferences.rideAbsentMinutesInUse] away: one of the persistent
  * scan's activate conditions starting the scan (each condition on its own), or a bound sensor of a
  * vehicle heard by the service's scan (each vehicle on its own, which also covers scanning without
- * any condition). Only watched while the service monitors: the notification needs persistent
- * scanning. Nothing while the app is open, which also removes it, nor in demo mode. Everything runs
- * on [scope], which must run one thing at a time.
+ * any condition). Only watched while the service monitors, which it does for the ride notification
+ * alone too, see `BackgroundMode`. Nothing while the app is open, which also removes it, nor in
+ * demo mode. Everything runs on [scope], which must run one thing at a time.
  */
 @SuppressLint("MissingPermission")
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -112,7 +113,14 @@ internal class RideNotifier(
                 else decision
                     // Suspended, the conditions fulfilled meanwhile aren't known: they count once
                     // the suspension ends, scanning then
-                    .map { (it as? ScanDecision.Active)?.causes.orEmpty() }
+                    .map {
+                        when (it) {
+                            is ScanDecision.Active -> it.causes
+                            // The ride notification alone: the same conditions, without the scan
+                            is ScanDecision.Detected -> it.causes
+                            else -> emptySet()
+                        }
+                    }
                     .let { causes ->
                         CONDITIONS
                             .map { condition ->
@@ -191,7 +199,12 @@ internal class RideNotifier(
         NotificationCompat
             .Builder(appContext, CHANNEL)
             .setSmallIcon(R.drawable.car_tire)
-            .setContentText(localized(CommonR.string.going_for_a_ride_open_persistent_tpms))
+            .setContentText(
+                localized(
+                    CommonR.string.going_for_a_ride_open,
+                    appContext.applicationInfo.loadLabel(appContext.packageManager),
+                )
+            )
             .setStyle(NotificationCompat.BigTextStyle())
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setSilent(true)
@@ -232,8 +245,11 @@ internal class RideNotifier(
         const val NOTIFICATION_ID = 0x52494445 // "RIDE"
         const val LAST_HEARD = "LAST_HEARD"
         const val LAST_FIRED = "LAST_FIRED"
-        /** What starts the scan because the vehicle is near, unlike "always", "stay active" or the button */
-        val CONDITIONS = listOf(CABLE, WIRELESS, ANDROID_AUTO, BLUETOOTH, BEACON)
+        /**
+         * What starts the scan because the vehicle is near, unlike "always", "stay active" or the
+         * button. A known sensor is heard once the ride started: a late notification still beats none.
+         */
+        val CONDITIONS = listOf(CABLE, WIRELESS, ANDROID_AUTO, BLUETOOTH, BEACON, SENSOR)
         val RECENT = 1.minutes
         val STILL_THERE = 1.minutes
     }

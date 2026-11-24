@@ -1,6 +1,8 @@
 package com.masselis.tpmsadvanced.interfaces.composable
 
 import androidx.annotation.StringRes
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier
+import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.LITE
 import java.util.UUID
 import com.masselis.tpmsadvanced.core.common.R as CommonR
 
@@ -28,15 +30,18 @@ internal sealed interface Path {
             is DimDisplayDelay -> CommonR.string.dim_when_idle
             is TextSize -> CommonR.string.sensor_readings_text_size
             is AlertSound -> CommonR.string.alert_sound
-            is PersistentMode -> CommonR.string.persistent_mode
+            // Persistent mode and the ride notification, with Lite's vehicle detection
+            is PersistentMode -> CommonR.string.background_monitoring
             is Debug -> CommonR.string.debug
-            is PersistentScanning -> CommonR.string.persistent_scanning
+            is PersistentScanning -> if (AppTier.current == LITE) CommonR.string.persistent_mode
+            else CommonR.string.persistent_scanning
             is ActivateScanConditions -> CommonR.string.activate_scan_conditions
             is StayActiveDuration -> CommonR.string.stay_active
             is SuspendScanConditions -> CommonR.string.suspend_scan_conditions
             is ExceptedWifis -> CommonR.string.excepted_wifis
             is ActivateBluetoothDevices, is SuspendBluetoothDevices -> CommonR.string.bluetooth_devices
-            is Beacons -> CommonR.string.bluetooth_beacons
+            is Beacons -> if (AppTier.current == LITE) CommonR.string.vehicle_ble_beacons
+            else CommonR.string.bluetooth_beacons
             is BeaconScan -> CommonR.string.add_a_beacon
             is Licenses -> CommonR.string.open_source_licenses
             is BluetoothAssign -> CommonR.string.assign_via_bluetooth

@@ -8,6 +8,7 @@ import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.Activat
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.BLUETOOTH
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.CABLE
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.MANUAL
+import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.SENSOR
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.STAY_ACTIVE
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanSuspensionUseCase.Reason.WIFI
 import org.junit.Test
@@ -42,6 +43,12 @@ internal class BellStateTest {
     }
 
     @Test
+    fun `the ride notification alone is neutral while watching and blue once the vehicle is detected`() {
+        assertEquals(BellState.Idle, BellState.of(true, ScanDecision.Watching))
+        assertEquals(BellState.Bluetooth, BellState.of(true, ScanDecision.Detected(setOf(CABLE))))
+    }
+
+    @Test
     fun `Lite scanning without a trigger is green`() {
         assertEquals(BellState.Always, BellState.of(true, ScanDecision.Active(setOf(ALWAYS)), LITE))
     }
@@ -52,9 +59,9 @@ internal class BellStateTest {
     }
 
     @Test
-    fun `a Bluetooth device or a beacon is blue on both tiers`() {
+    fun `a Bluetooth device, a beacon or a known sensor is blue on both tiers`() {
         listOf(LITE, PRO).forEach { tier ->
-            listOf(setOf(BLUETOOTH), setOf(BEACON), setOf(BLUETOOTH, STAY_ACTIVE)).forEach {
+            listOf(setOf(BLUETOOTH), setOf(BEACON), setOf(SENSOR), setOf(BLUETOOTH, STAY_ACTIVE)).forEach {
                 assertEquals(BellState.Bluetooth, BellState.of(true, ScanDecision.Active(it), tier))
             }
         }

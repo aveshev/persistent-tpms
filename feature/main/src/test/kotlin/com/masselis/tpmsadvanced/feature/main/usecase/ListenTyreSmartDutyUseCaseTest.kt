@@ -20,23 +20,68 @@ internal class ListenTyreSmartDutyUseCaseTest {
     private lateinit var balanced: MutableStateFlow<Boolean>
     private lateinit var isAppVisible: MutableStateFlow<Boolean>
     private var keepsLowLatencyInBackground = false
+    private lateinit var lowPowerWatch: MutableStateFlow<Boolean>
 
     private val first = mockk<Tyre.Located>()
     private val second = mockk<Tyre.Located>()
     private val normal = mockk<Tyre.Located>()
+    private val lowPower = mockk<Tyre.Located>()
 
     @Before
     fun setup() {
         scanner = mockk {
             every { highDutyScan() } returns flowOf(first, second)
             every { normalScan() } returns flowOf(normal)
+            every { lowPowerScan() } returns flowOf(lowPower)
         }
         balanced = MutableStateFlow(false)
         isAppVisible = MutableStateFlow(true)
         keepsLowLatencyInBackground = false
+        lowPowerWatch = MutableStateFlow(false)
     }
 
-    private fun test() = ListenTyreSmartDutyUseCase(scanner, balanced, isAppVisible, keepsLowLatencyInBackground)
+    private fun test() =
+        ListenTyreSmartDutyUseCase(scanner, balanced, isAppVisible, keepsLowLatencyInBackground, lowPowerWatch)
+
+    @Test
+    fun `uses the low power scan while watching in the background`() = runTest {
+        isAppVisible.value = false
+        keepsLowLatencyInBackground = true
+        balanced.value = true
+        lowPowerWatch.value = true
+        test().listen().test {
+            assertEquals(lowPower, awaitItem())
+            expectNoEvents()
+        }
+        verify(exactly = 0) { scanner.highDutyScan() }
+        verify(exactly = 0) { scanner.normalScan() }
+    }
+
+    @Test
+    fun `ignores the watch while the app is visible`() = runTest {
+        lowPowerWatch.value = true
+        test().listen().test {
+            assertEquals(first, awaitItem())
+            assertEquals(second, awaitItem())
+            expectNoEvents()
+        }
+        verify(exactly = 0) { scanner.lowPowerScan() }
+    }
+
+    @Test
+    fun `the watch ending switches to the normal scan`() = runTest {
+        isAppVisible.value = false
+        lowPowerWatch.value = true
+        every { scanner.lowPowerScan() } returns flow {
+            emit(lowPower)
+            awaitCancellation()
+        }
+        test().listen().test {
+            assertEquals(lowPower, awaitItem())
+            lowPowerWatch.value = false
+            assertEquals(normal, awaitItem())
+        }
+    }
 
     @Test
     fun `switches to the normal scan after the first reading while balanced`() = runTest {

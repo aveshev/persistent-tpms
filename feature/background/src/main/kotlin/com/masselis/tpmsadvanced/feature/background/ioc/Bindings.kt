@@ -30,6 +30,7 @@ import com.masselis.tpmsadvanced.feature.background.usecase.AlertSilenceUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.AlertSnoozeUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.AlertSpeaker
 import com.masselis.tpmsadvanced.feature.background.usecase.AlertingVehiclesUseCase
+import com.masselis.tpmsadvanced.feature.background.usecase.BackgroundMode
 import com.masselis.tpmsadvanced.feature.background.usecase.AndroidAutoUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.BeaconDiscoveryUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.BeaconPresenceUseCase
@@ -37,6 +38,7 @@ import com.masselis.tpmsadvanced.feature.background.usecase.BluetoothDevicesUseC
 import com.masselis.tpmsadvanced.feature.background.usecase.ChargingStateUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.DeviceIdleModeUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.KeepAliveInstructionsUseCase
+import com.masselis.tpmsadvanced.feature.background.usecase.KnownSensorPresenceUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.PhoneIdleUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanPolicyUseCase
@@ -204,6 +206,7 @@ public interface Bindings {
         androidAutoUseCase: AndroidAutoUseCase,
         bluetoothDevicesUseCase: BluetoothDevicesUseCase,
         beaconPresenceUseCase: BeaconPresenceUseCase,
+        knownSensorPresenceUseCase: KnownSensorPresenceUseCase,
     ): ScanPolicyUseCase = ScanPolicyUseCase(
         appPreferences,
         scanSuspensionUseCase,
@@ -211,8 +214,14 @@ public interface Bindings {
         androidAutoUseCase,
         bluetoothDevicesUseCase,
         beaconPresenceUseCase,
+        knownSensorPresenceUseCase,
         GlobalScope + Dispatchers.Default,
     )
+
+    @Provides
+    @SingleIn(AppScope::class)
+    private fun knownSensorPresenceUseCase(appPreferences: AppPreferences): KnownSensorPresenceUseCase =
+        KnownSensorPresenceUseCase(appPreferences)
 
     @OptIn(DelicateCoroutinesApi::class)
     @Provides
@@ -256,11 +265,12 @@ public interface Bindings {
         appPreferences,
         scanner.isScanningTyres,
         // The speech loops go on while the app is open, whose screen scans, and in the background
-        // while persistent scanning is active or, without it, monitoring from its button
-        appPreferences
-            .persistentScanning
-            .flatMapLatest { persistent ->
-                if (persistent) controller.isRunning.flatMapLatest { isRunning ->
+        // while persistent scanning is active or, without it, monitoring from its button. The ride
+        // notification alone never scans.
+        BackgroundMode
+            .flow(appPreferences)
+            .flatMapLatest { mode ->
+                if (mode.isInBackground) controller.isRunning.flatMapLatest { isRunning ->
                     if (isRunning) scanPolicyUseCase.decision.map { it is ScanDecision.Active }
                     else flowOf(false)
                 }
@@ -312,7 +322,8 @@ public interface Bindings {
     @Provides
     private fun rideNotificationSettingsViewModel(
         appPreferences: AppPreferences,
-    ): RideNotificationSettingsViewModel = RideNotificationSettingsViewModel(appPreferences)
+        controller: MonitoringController,
+    ): RideNotificationSettingsViewModel = RideNotificationSettingsViewModel(appPreferences, controller)
 
     @Provides
     private fun persistentScanningViewModel(

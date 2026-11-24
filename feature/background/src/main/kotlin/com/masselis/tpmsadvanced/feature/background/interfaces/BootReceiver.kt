@@ -7,11 +7,12 @@ import android.content.Intent.ACTION_BOOT_COMPLETED
 import android.content.Intent.ACTION_MY_PACKAGE_REPLACED
 import co.touchlab.kermit.Logger
 import com.masselis.tpmsadvanced.feature.background.ioc.Bindings.Companion.featureBackgroundInternal
+import com.masselis.tpmsadvanced.feature.background.usecase.BackgroundMode
 
 /**
- * Brings the persistent scanning service back after a reboot or an app update, both of which kill
- * it. `LOCKED_BOOT_COMPLETED` is deliberately not used: the preferences are not readable before
- * the first unlock.
+ * Brings the background monitoring service (persistent mode, the ride notification) back after a
+ * reboot or an app update, both of which kill it. `LOCKED_BOOT_COMPLETED` is deliberately not
+ * used: the preferences are not readable before the first unlock.
  */
 internal class BootReceiver : BroadcastReceiver() {
 
@@ -22,12 +23,12 @@ internal class BootReceiver : BroadcastReceiver() {
         featureBackgroundInternal
             // The reboot or the update killed the service, it was not stopped behind the user's back
             .also { it.unexpectedStopUseCase.stopped() }
-            .takeIf { it.appPreferences.persistentScanning.value }
+            .takeIf { BackgroundMode.current(it.appPreferences).isInBackground }
             // A boot start must never crash the app: a permission may have been revoked meanwhile,
             // which makes the system refuse the foreground start
             ?.also { internal ->
                 runCatching { internal.controller.start() }
-                    .onFailure { logger.e(it) { "Cannot restart the persistent scanning service" } }
+                    .onFailure { logger.e(it) { "Cannot restart the background monitoring service" } }
             }
     }
 }

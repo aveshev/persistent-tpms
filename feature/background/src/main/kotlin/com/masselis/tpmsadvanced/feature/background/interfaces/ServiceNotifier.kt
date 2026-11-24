@@ -40,12 +40,15 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.S
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.ScanRetrying
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.Starting
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.Suspended
+import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.Watching
+import com.masselis.tpmsadvanced.feature.background.usecase.KnownSensorPresenceUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.MANUAL
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanPolicyUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.explanation
 import com.masselis.tpmsadvanced.feature.main.ioc.tyre.TyreComponent.Companion.TyreComponent
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
+import com.masselis.tpmsadvanced.feature.main.usecase.LowPowerWatchUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.VehicleListUseCase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -54,9 +57,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
@@ -74,7 +80,7 @@ import com.masselis.tpmsadvanced.core.common.localized
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @SuppressLint("MissingPermission")
-@Suppress("MaxLineLength")
+@Suppress("MaxLineLength", "LongParameterList")
 internal class ServiceNotifier(
     scope: CoroutineScope,
     service: Service,
@@ -82,6 +88,8 @@ internal class ServiceNotifier(
     scanPolicyUseCase: ScanPolicyUseCase,
     tyreScanStatus: Flow<ScanStatus?>,
     rideNotifier: RideNotifier,
+    knownSensorPresenceUseCase: KnownSensorPresenceUseCase,
+    lowPowerWatchUseCase: LowPowerWatchUseCase,
 ) {
     private val logger = Logger.withTag("ServiceNotifier")
     private val notificationManager = NotificationManagerCompat.from(appContext)
@@ -104,54 +112,75 @@ internal class ServiceNotifier(
         notificationManager.deleteNotificationChannel(OLD_CHANNEL_FOR_LOW_BATTERY)
         notificationManager.deleteNotificationChannel(OLD_CHANNEL_FOR_PRESSURE_LOSS)
 
+        // Listening to the tyres is what scans them, and stores their readings for the alerts
+        val tyres = vehicleListUseCase
+            .vehicleListFlow
+            // Editing a vehicle (ranges, name...) re-emits the list; only a change in the
+            // set of vehicles may rebuild the collectors, otherwise the BLE scan restarts.
+            .distinctUntilChanged { old, new ->
+                old.map(Vehicle::uuid) == new.map(Vehicle::uuid)
+            }
+            .flatMapLatest { vehicles ->
+                vehicles
+                    .flatMap { vehicle ->
+                        VehicleComponent(vehicle).let { component ->
+                            vehicle.kind.locations.map {
+                                component
+                                    .TyreComponent(it)
+                                    .tyreAtmosphereUseCase
+                                    .listen()
+                                    .onEach { atmosphere ->
+                                        rideNotifier.sensorHeard(vehicle.uuid, atmosphere)
+                                        knownSensorPresenceUseCase.heard(atmosphere)
+                                    }
+                            }
+                        }
+                    }
+                    .merge()
+            }
+
         scanPolicyUseCase
             .decision
-            // Listening to the tyres is what scans them, and stores their readings for the alerts
-            .serviceStates(tyreScanStatus) { decision ->
-                vehicleListUseCase
-                    .vehicleListFlow
-                    // Editing a vehicle (ranges, name...) re-emits the list; only a change in the
-                    // set of vehicles may rebuild the collectors, otherwise the BLE scan restarts.
-                    .distinctUntilChanged { old, new ->
-                        old.map(Vehicle::uuid) == new.map(Vehicle::uuid)
-                    }
-                    .flatMapLatest { vehicles ->
-                        vehicles
-                            .flatMap { vehicle ->
-                                VehicleComponent(vehicle).let { component ->
-                                    vehicle.kind.locations.map {
-                                        component
-                                            .TyreComponent(it)
-                                            .tyreAtmosphereUseCase
-                                            .listen()
-                                            .onEach { atmosphere -> rideNotifier.sensorHeard(vehicle.uuid, atmosphere) }
-                                    }
-                                }
+            .serviceStates(
+                tyreScanStatus,
+                // Idle, waiting for a known sensor: the low power scan is what hears it
+                watch = scanPolicyUseCase
+                    .watchesSensors
+                    .flatMapLatest { watches ->
+                        if (watches.not()) emptyFlow()
+                        else flow {
+                            lowPowerWatchUseCase.isWatching.value = true
+                            try {
+                                tyres.collect()
+                            } finally {
+                                lowPowerWatchUseCase.isWatching.value = false
                             }
-                            .merge()
-                            .map<Any, State> { Active(decision) }
-                            .onStart { emit(Active(decision)) }
-                    }
+                        }
+                    },
+            ) { decision ->
+                tyres
+                    .map<Any, State> { Active(decision) }
+                    .onStart { emit(Active(decision)) }
             }
             .map { state ->
                 NotificationCompat
                     .Builder(
                         appContext,
                         when (state) {
-                            Starting, is Active, is Suspended, Idle, BluetoothOff, LocationOff, is ScanRetrying -> channelNameWhenOk
+                            Starting, is Active, is Suspended, Idle, is Watching, BluetoothOff, LocationOff, is ScanRetrying -> channelNameWhenOk
                             is ScanKeepsFailing, is ScanFailure, MonitoringFailure -> channelNameForFailure
                         }
                     )
                     .setSmallIcon(
                         when (state) {
-                            Starting, is Active, is Suspended, Idle -> R.drawable.car_tire
+                            Starting, is Active, is Suspended, Idle, is Watching -> R.drawable.car_tire
                             BluetoothOff, LocationOff, is ScanRetrying, is ScanKeepsFailing, is ScanFailure, MonitoringFailure ->
                                 R.drawable.car_tire_alert
                         }
                     )
                     .setPriority(
                         when (state) {
-                            Starting, is Active, is Suspended, Idle, BluetoothOff, LocationOff, is ScanRetrying -> PRIORITY_LOW
+                            Starting, is Active, is Suspended, Idle, is Watching, BluetoothOff, LocationOff, is ScanRetrying -> PRIORITY_LOW
                             is ScanKeepsFailing, is ScanFailure, MonitoringFailure -> PRIORITY_MAX
                         }
                     )
@@ -176,13 +205,14 @@ internal class ServiceNotifier(
 
                             is Suspended -> state.decision.explanation()
                             Idle -> ScanDecision.Idle.explanation()
+                            is Watching -> state.decision.explanation()
                         }
                     )
                     .apply {
                         when (state) {
                             // Opens the app on its current vehicle. Bluetooth or Location off: the
                             // app tells it and has the button to turn it on
-                            Starting, is Active, is Suspended, Idle, BluetoothOff, LocationOff, is ScanRetrying,
+                            Starting, is Active, is Suspended, Idle, is Watching, BluetoothOff, LocationOff, is ScanRetrying,
                             is ScanKeepsFailing -> appContext
                                 .packageManager
                                 .getLaunchIntentForPackage(appContext.packageName)
@@ -216,7 +246,7 @@ internal class ServiceNotifier(
                             )
 
                             // Restarting doesn't give the phone the feature
-                            Starting, is Suspended, Idle, is ScanFailure -> Unit
+                            Starting, is Suspended, Idle, is Watching, is ScanFailure -> Unit
 
                             MonitoringFailure -> addAction(
                                 NotificationCompat.Action.Builder(
@@ -295,6 +325,9 @@ internal class ServiceNotifier(
         data class Suspended(val decision: ScanDecision.Suspended) : State
 
         data object Idle : State
+
+        /** The ride notification alone runs the service: [ScanDecision.Watching] or [ScanDecision.Detected] */
+        data class Watching(val decision: ScanDecision) : State
     }
 
     @Suppress("ConstPropertyName")
@@ -313,11 +346,12 @@ internal class ServiceNotifier(
  * [tyreScanStatus] tells the scan waits for Bluetooth or Location or retries a refused start. The scanner
  * starts the scan over by itself then. Retrying for [SCAN_KEEPS_FAILING_AFTER] is told as a
  * failure. Only the failures nothing can recover from end the flow, with the state telling which.
- * Each state differs from the previous one.
+ * [watch] runs while idle or watching. Each state differs from the previous one.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 internal fun Flow<ScanDecision>.serviceStates(
     tyreScanStatus: Flow<ScanStatus?>,
+    watch: Flow<Nothing> = emptyFlow(),
     active: (ScanDecision.Active) -> Flow<ServiceNotifier.State>,
 ): Flow<ServiceNotifier.State> = flatMapLatest { decision ->
     when (decision) {
@@ -325,7 +359,10 @@ internal fun Flow<ScanDecision>.serviceStates(
         // call startForeground() shortly after being started — a silent flow here would starve
         // that call if the app launches already suspended (e.g. opened while already in Doze).
         is ScanDecision.Suspended -> flowOf(Suspended(decision))
-        ScanDecision.Idle -> flowOf(Idle)
+        ScanDecision.Idle -> merge(flowOf(Idle), watch)
+        // Never scans at full rate, the vehicle detected or not: the ride notification only invites
+        // to open the app
+        ScanDecision.Watching, is ScanDecision.Detected -> merge(flowOf(Watching(decision)), watch)
         is ScanDecision.Active -> combine(
             active(decision),
             tyreScanStatus.transformLatest<ScanStatus?, ServiceNotifier.State?> { status ->

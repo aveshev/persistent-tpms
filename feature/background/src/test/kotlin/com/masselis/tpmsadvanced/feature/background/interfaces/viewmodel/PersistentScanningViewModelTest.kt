@@ -38,6 +38,7 @@ internal class PersistentScanningViewModelTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     private lateinit var persistentScanning: MutableStateFlow<Boolean>
+    private lateinit var rideNotification: MutableStateFlow<Boolean>
     private lateinit var persistentScanningSetUp: MutableStateFlow<Boolean>
     private lateinit var suspendConditions: MutableStateFlow<Boolean>
     private lateinit var suspendScanningOnWifi: MutableStateFlow<Boolean>
@@ -50,6 +51,7 @@ internal class PersistentScanningViewModelTest {
     private fun test(tier: AppTier = AppTier.PRO) = PersistentScanningViewModel(
         mockk<AppPreferences> {
             every { persistentScanning } returns this@PersistentScanningViewModelTest.persistentScanning
+            every { rideNotification } returns this@PersistentScanningViewModelTest.rideNotification
             every { persistentScanningSetUp } returns this@PersistentScanningViewModelTest.persistentScanningSetUp
             every { suspendConditions } returns this@PersistentScanningViewModelTest.suspendConditions
             every { suspendScanningOnWifi } returns this@PersistentScanningViewModelTest.suspendScanningOnWifi
@@ -66,6 +68,7 @@ internal class PersistentScanningViewModelTest {
     @Before
     fun setup() {
         persistentScanning = MutableStateFlow(true)
+        rideNotification = MutableStateFlow(false)
         persistentScanningSetUp = MutableStateFlow(true)
         suspendConditions = MutableStateFlow(true)
         suspendScanningOnWifi = MutableStateFlow(true)
@@ -207,6 +210,24 @@ internal class PersistentScanningViewModelTest {
         test().setPersistentScanning(false)
         assertFalse(persistentScanning.value)
         verify { controller.stop() }
+    }
+
+    @Test
+    fun `the menu's switch turning persistent scanning off keeps the service for the ride notification`() {
+        rideNotification.value = true
+        val viewModel = test()
+        viewModel.setPersistentScanning(false)
+        assertFalse(persistentScanning.value)
+        assertTrue(viewModel.inBackground.value)
+        verify(exactly = 0) { controller.stop() }
+    }
+
+    @Test
+    fun `an unexpected stop is reported for the ride notification alone`() {
+        persistentScanning.value = false
+        rideNotification.value = true
+        unexpectedStop = UnexpectedStop(42L, LowMemory)
+        assertEquals(unexpectedStop, test().unexpectedStop.value)
     }
 
     @Test

@@ -38,6 +38,7 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.composable.RideNo
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.ScanStatusAnnouncementsSettingsItem
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.ExceptedWifis
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.PersistentScanningDetails
+import com.masselis.tpmsadvanced.feature.background.interfaces.composable.KeepMonitoringRunningSettings
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.LitePersistentScanningSettings
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.PersistentScanningSettings
 import com.masselis.tpmsadvanced.feature.background.interfaces.composable.StayActiveDuration
@@ -67,6 +68,7 @@ import com.mikepenz.aboutlibraries.ui.compose.android.produceLibraries
 import com.masselis.tpmsadvanced.core.common.R as CommonR
 import androidx.compose.ui.res.stringResource
 
+@Suppress("LongMethod")
 @Composable
 internal fun AppSettings(
     openTimeSinceUpdate: () -> Unit,
@@ -95,12 +97,18 @@ internal fun AppSettings(
     )
     SettingsSectionHeader(stringResource(CommonR.string.alerts))
     AlertsSettings(openAlertSound, Modifier.testTag(alerts))
-    SettingsSectionHeader(stringResource(CommonR.string.background_monitoring))
+    // Broader than the single item under it, which is named like the page it opens
+    SettingsSectionHeader(stringResource(CommonR.string.monitoring))
     // A page of its own, also opened from the main screen's menu
     SettingsGroup {
         TextSettingsItem(
-            headline = stringResource(CommonR.string.persistent_mode),
-            supporting = stringResource(CommonR.string.persistent_scanning_and_its_scan_conditions),
+            headline = stringResource(CommonR.string.background_monitoring),
+            supporting = stringResource(
+                when (AppTier.current) {
+                    LITE -> CommonR.string.vehicle_detection_persistent_mode_and_ride
+                    PRO -> CommonR.string.persistent_scanning_its_conditions_and_ride
+                }
+            ),
             onClick = openPersistentMode,
             modifier = Modifier.testTag(persistentMode),
         )
@@ -151,9 +159,14 @@ internal fun PersistentModeSettings(
     openStayActiveDuration: () -> Unit,
     modifier: Modifier = Modifier,
 ) = SettingsPage(modifier) {
-    @Suppress("MaxLineLength")
     SettingsIntro(
-        stringResource(CommonR.string.when_on_keeps_monitoring_your_tyres_in)
+        stringResource(
+            when (AppTier.current) {
+                // Its persistent scanning page explains persistent mode instead
+                LITE -> CommonR.string.the_app_can_tell_when_you_re_near
+                PRO -> CommonR.string.when_on_keeps_monitoring_your_tyres_in
+            }
+        )
     )
     when (AppTier.current) {
         // Its few conditions are right on this page, the condition pages aren't reachable
@@ -177,6 +190,8 @@ internal fun PersistentModeSettings(
         )
     }
     RideNotificationSettings(Modifier.testTag(rideNotification))
+    // Pro has it on its persistent scanning page
+    if (AppTier.current == LITE) KeepMonitoringRunningSettings()
 }
 
 @Composable

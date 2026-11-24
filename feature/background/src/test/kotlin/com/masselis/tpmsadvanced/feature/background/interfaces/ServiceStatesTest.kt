@@ -20,9 +20,11 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.S
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.ScanRetrying
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.Starting
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.Suspended
+import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier.State.Watching
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.CABLE
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanSuspensionUseCase.Reason.WIFI
+import kotlinx.coroutines.awaitCancellation
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,7 +53,20 @@ internal class ServiceStatesTest {
     /** How many times the scan was started */
     private var scans = 0
 
-    private fun test() = decision.serviceStates(tyreScanStatus) {
+    /** How many low power watches are running, while idle */
+    private var watching = 0
+
+    private fun test() = decision.serviceStates(
+        tyreScanStatus,
+        watch = flow {
+            watching++
+            try {
+                awaitCancellation()
+            } finally {
+                watching--
+            }
+        },
+    ) {
         flow {
             scans++
             emitAll(merge(active, scanFailures.map { throw it }))
@@ -70,6 +85,37 @@ internal class ServiceStatesTest {
         active = MutableStateFlow(ACTIVE)
         scanFailures = MutableSharedFlow()
         scans = 0
+        watching = 0
+    }
+
+    @Test
+    fun `the watch only runs while idle`() = runTest {
+        decision.value = ScanDecision.Idle
+        test().test {
+            assertEquals(Starting, awaitItem())
+            assertEquals(Idle, awaitItem())
+            assertEquals(1, watching)
+            decision.value = ScanDecision.Active(setOf(CABLE))
+            assertEquals(ACTIVE, awaitItem())
+            assertEquals(0, watching)
+            decision.value = ScanDecision.Suspended(setOf(WIFI))
+            assertEquals(Suspended(ScanDecision.Suspended(setOf(WIFI))), awaitItem())
+            assertEquals(0, watching)
+        }
+    }
+
+    @Test
+    fun `the ride notification alone watches without scanning, the vehicle detected or not`() = runTest {
+        decision.value = ScanDecision.Watching
+        test().test {
+            assertEquals(Starting, awaitItem())
+            assertEquals(Watching(ScanDecision.Watching), awaitItem())
+            assertEquals(1, watching)
+            decision.value = ScanDecision.Detected(setOf(CABLE))
+            assertEquals(Watching(ScanDecision.Detected(setOf(CABLE))), awaitItem())
+            assertEquals(1, watching)
+            assertEquals(0, scans)
+        }
     }
 
     @Test

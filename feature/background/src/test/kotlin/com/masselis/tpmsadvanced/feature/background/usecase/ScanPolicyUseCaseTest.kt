@@ -13,6 +13,7 @@ import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.Activat
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.CABLE
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.ALWAYS
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.MANUAL
+import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.SENSOR
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.STAY_ACTIVE
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.WIRELESS
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanSuspensionUseCase.Reason
@@ -32,9 +33,11 @@ import org.junit.Test
 import kotlin.test.assertEquals
 
 @OptIn(ExperimentalCoroutinesApi::class)
+@Suppress("LargeClass")
 internal class ScanPolicyUseCaseTest {
 
     private lateinit var persistentScanning: MutableStateFlow<Boolean>
+    private lateinit var rideNotification: MutableStateFlow<Boolean>
     private lateinit var activateConditions: MutableStateFlow<Boolean>
     private lateinit var activateOnCableCharging: MutableStateFlow<Boolean>
     private lateinit var activateOnWirelessCharging: MutableStateFlow<Boolean>
@@ -52,12 +55,15 @@ internal class ScanPolicyUseCaseTest {
     private lateinit var beacons: MutableStateFlow<List<Beacon>>
     private lateinit var beaconOverridesSuspend: MutableStateFlow<Boolean>
     private lateinit var nearbyBeacons: MutableStateFlow<Map<String, Int>>
+    private lateinit var activateOnKnownSensor: MutableStateFlow<Boolean>
+    private lateinit var sensorPresent: MutableStateFlow<Boolean>
     private lateinit var tier: AppTier
 
     context(scope: TestScope)
     private fun test() = ScanPolicyUseCase(
         mockk<AppPreferences> {
             every { persistentScanning } returns this@ScanPolicyUseCaseTest.persistentScanning
+            every { rideNotification } returns this@ScanPolicyUseCaseTest.rideNotification
             every { activateConditions } returns this@ScanPolicyUseCaseTest.activateConditions
             every { activateOnCableCharging } returns this@ScanPolicyUseCaseTest.activateOnCableCharging
             every { activateOnWirelessCharging } returns this@ScanPolicyUseCaseTest.activateOnWirelessCharging
@@ -71,6 +77,7 @@ internal class ScanPolicyUseCaseTest {
             every { beacons } returns this@ScanPolicyUseCaseTest.beacons
             every { beaconOverridesSuspend } returns this@ScanPolicyUseCaseTest.beaconOverridesSuspend
             every { beaconScanModeInUse } returns MutableStateFlow(null)
+            every { activateOnKnownSensor } returns this@ScanPolicyUseCaseTest.activateOnKnownSensor
         },
         mockk<ScanSuspensionUseCase> {
             every { this@mockk.suspensionReasons } returns this@ScanPolicyUseCaseTest.suspensionReasons
@@ -84,6 +91,7 @@ internal class ScanPolicyUseCaseTest {
             }
         },
         mockk<BeaconPresenceUseCase> { every { nearby(any(), any()) } returns nearbyBeacons },
+        mockk<KnownSensorPresenceUseCase> { every { isPresent } returns sensorPresent },
         scope.backgroundScope,
         scope.testScheduler.timeSource,
         tier,
@@ -92,6 +100,7 @@ internal class ScanPolicyUseCaseTest {
     @Before
     fun setup() {
         persistentScanning = MutableStateFlow(true)
+        rideNotification = MutableStateFlow(false)
         activateConditions = MutableStateFlow(true)
         activateOnCableCharging = MutableStateFlow(true)
         activateOnWirelessCharging = MutableStateFlow(true)
@@ -109,6 +118,8 @@ internal class ScanPolicyUseCaseTest {
         beacons = MutableStateFlow(emptyList())
         beaconOverridesSuspend = MutableStateFlow(false)
         nearbyBeacons = MutableStateFlow(emptyMap())
+        activateOnKnownSensor = MutableStateFlow(false)
+        sensorPresent = MutableStateFlow(false)
         tier = PRO
     }
 
@@ -117,6 +128,56 @@ internal class ScanPolicyUseCaseTest {
         persistentScanning.value = false
         test().decision.test {
             assertEquals(ScanDecision.Active(setOf(MANUAL)), awaitItem())
+        }
+    }
+
+    @Test
+    fun `the ride notification alone detects the vehicle without scanning`() = runTest {
+        persistentScanning.value = false
+        rideNotification.value = true
+        test().decision.test {
+            assertEquals(ScanDecision.Watching, awaitItem())
+            charging.value = State(cable = true, wireless = false)
+            assertEquals(ScanDecision.Detected(setOf(CABLE)), awaitItem())
+            charging.value = State(cable = false, wireless = false)
+            assertEquals(ScanDecision.Watching, awaitItem())
+        }
+    }
+
+    @Test
+    fun `the ride notification alone is suspended like persistent scanning`() = runTest {
+        persistentScanning.value = false
+        rideNotification.value = true
+        charging.value = State(cable = true, wireless = false)
+        suspensionReasons.value = setOf(Reason.IDLE)
+        test().decision.test {
+            assertEquals(ScanDecision.Suspended(setOf(Reason.IDLE)), awaitItem())
+        }
+    }
+
+    @Test
+    fun `scanning always detects nothing for the ride notification alone`() = runTest {
+        persistentScanning.value = false
+        rideNotification.value = true
+        activateConditions.value = false
+        test().decision.test { assertEquals(ScanDecision.Watching, awaitItem()) }
+    }
+
+    @Test
+    fun `persistent scanning scans whether the ride notification is on or not`() = runTest {
+        rideNotification.value = true
+        charging.value = State(cable = true, wireless = false)
+        test().decision.test { assertEquals(ScanDecision.Active(setOf(CABLE)), awaitItem()) }
+    }
+
+    @Test
+    fun `turning persistent scanning off with the ride notification on goes from scanning to watching`() = runTest {
+        rideNotification.value = true
+        charging.value = State(cable = true, wireless = false)
+        test().decision.test {
+            assertEquals(ScanDecision.Active(setOf(CABLE)), awaitItem())
+            persistentScanning.value = false
+            assertEquals(ScanDecision.Detected(setOf(CABLE)), awaitItem())
         }
     }
 
@@ -634,6 +695,95 @@ internal class ScanPolicyUseCaseTest {
         beacons.value = listOf(BIKE)
         test().decision.test {
             assertEquals(ScanDecision.Idle, awaitItem())
+        }
+    }
+
+    @Test
+    fun `a known sensor heard activates scanning and its going quiet goes back to idle`() = runTest {
+        activateOnKnownSensor.value = true
+        test().decision.test {
+            assertEquals(ScanDecision.Idle, awaitItem())
+            sensorPresent.value = true
+            assertEquals(ScanDecision.Active(setOf(SENSOR)), awaitItem())
+            sensorPresent.value = false
+            assertEquals(ScanDecision.Idle, awaitItem())
+        }
+    }
+
+    @Test
+    fun `the known sensor condition alone is enough to not always scan, and is watched for`() = runTest {
+        activateOnCableCharging.value = false
+        activateOnWirelessCharging.value = false
+        activateOnAndroidAuto.value = false
+        activateOnKnownSensor.value = true
+        val policy = test()
+        policy.decision.test { assertEquals(ScanDecision.Idle, awaitItem()) }
+        policy.watchesSensors.test { assertEquals(true, awaitItem()) }
+    }
+
+    @Test
+    fun `nothing is watched for without the known sensor condition, nor while always scanning`() = runTest {
+        test().watchesSensors.test { assertEquals(false, awaitItem()) }
+        activateOnKnownSensor.value = true
+        activateConditions.value = false
+        test().watchesSensors.test { assertEquals(false, awaitItem()) }
+    }
+
+    @Test
+    fun `nothing is watched for without persistent scanning`() = runTest {
+        activateOnKnownSensor.value = true
+        persistentScanning.value = false
+        test().watchesSensors.test { assertEquals(false, awaitItem()) }
+    }
+
+    @Test
+    fun `the ride notification alone watches for a known sensor, even when it would always scan`() = runTest {
+        activateOnKnownSensor.value = true
+        activateConditions.value = false
+        persistentScanning.value = false
+        rideNotification.value = true
+        test().watchesSensors.test { assertEquals(true, awaitItem()) }
+    }
+
+    @Test
+    fun `the known sensor's hold is its stay, nothing is added after it`() = runTest {
+        stayActive.value = true
+        activateOnKnownSensor.value = true
+        sensorPresent.value = true
+        test().decision.test {
+            assertEquals(ScanDecision.Active(setOf(SENSOR)), awaitItem())
+            sensorPresent.value = false
+            assertEquals(ScanDecision.Idle, awaitItem())
+        }
+    }
+
+    @Test
+    fun `another condition ending after the known sensor still stays active`() = runTest {
+        stayActive.value = true
+        activateOnKnownSensor.value = true
+        sensorPresent.value = true
+        charging.value = State(cable = true, wireless = false)
+        test().decision.test {
+            assertEquals(ScanDecision.Active(setOf(CABLE, SENSOR)), awaitItem())
+            sensorPresent.value = false
+            assertEquals(ScanDecision.Active(setOf(CABLE)), awaitItem())
+            charging.value = State(cable = false, wireless = false)
+            assertEquals(ScanDecision.Active(setOf(STAY_ACTIVE)), awaitItem())
+            delay(10.minutes + 1.seconds)
+            assertEquals(ScanDecision.Idle, awaitItem())
+        }
+    }
+
+    @Test
+    fun `Lite activates on a known sensor, which is enough to not always scan`() = runTest {
+        tier = LITE
+        activateOnKnownSensor.value = true
+        val policy = test()
+        policy.watchesSensors.test { assertEquals(true, awaitItem()) }
+        policy.decision.test {
+            assertEquals(ScanDecision.Idle, awaitItem())
+            sensorPresent.value = true
+            assertEquals(ScanDecision.Active(setOf(SENSOR)), awaitItem())
         }
     }
 

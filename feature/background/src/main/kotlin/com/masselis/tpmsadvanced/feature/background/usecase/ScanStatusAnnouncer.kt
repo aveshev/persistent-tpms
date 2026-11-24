@@ -78,6 +78,12 @@ internal class ScanStatusAnnouncer(
                     .joinToString(" and ", prefix = "TPMS suspended, ") { it.spoken }
 
                 ScanDecision.Idle -> "TPMS idle"
+                // The ride notification alone, which never scans the tyres
+                ScanDecision.Watching -> "TPMS watching"
+                is ScanDecision.Detected -> decision
+                    .causes
+                    .sorted()
+                    .joinToString(" and ", prefix = "Vehicle detected, ") { it.spoken }
             }
         }
         // A change of reasons is told too, but not a change of the devices' names behind them
@@ -142,6 +148,7 @@ internal class ScanStatusAnnouncer(
                 ANDROID_AUTO -> "Auto"
                 ActivateCause.BLUETOOTH -> "Bluetooth"
                 BEACON -> "beacon"
+                ActivateCause.SENSOR -> "sensor"
                 STAY_ACTIVE -> "stay"
                 ALWAYS -> "always"
             }
