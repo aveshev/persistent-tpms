@@ -31,6 +31,8 @@ internal class LocatedTyreScannerUseCase(
 
     fun normalScan(): Flow<Tyre.Located> = source.normalScan().mapWithLocation()
 
+    fun lowPowerScan(): Flow<Tyre.Located> = source.lowPowerScan().mapWithLocation()
+
     /**
      * An unbound sensor advertising this location (Sysgration) while none is bound here, heard
      * by the scans above in the last [DETECTION_TIMEOUT], ready to be bound here. It's no longer

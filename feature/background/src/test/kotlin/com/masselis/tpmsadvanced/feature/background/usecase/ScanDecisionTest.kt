@@ -7,6 +7,7 @@ import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.Activat
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.CABLE
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.ALWAYS
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.MANUAL
+import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.SENSOR
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.WIRELESS
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanSuspensionUseCase.Reason
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanSuspensionUseCase.Reason.IDLE
@@ -135,8 +136,21 @@ internal class ScanDecisionTest {
     @Test
     fun `idle is explained by Lite's own conditions in Lite`() {
         assertEquals(
-            "Background scanning is idle: none of the selected Bluetooth devices is connected and none of the added beacons is nearby",
+            "Background scanning is idle: none of the selected Bluetooth devices is connected, none of the added beacons is nearby and none of the known TPMS sensors was heard recently",
             ScanDecision.Idle.explanation(AppTier.LITE)
+        )
+    }
+
+    @Suppress("MaxLineLength")
+    @Test
+    fun `a known sensor alone has a sentence of its own, and is named among other causes`() {
+        assertEquals(
+            "Background scanning is active because one of the known TPMS sensors was heard recently",
+            ScanDecision.Active(setOf(SENSOR)).explanation()
+        )
+        assertEquals(
+            "Background scanning is active due to charging with a cable, one of the known TPMS sensors being heard recently",
+            ScanDecision.Active(setOf(CABLE, SENSOR)).explanation()
         )
     }
 

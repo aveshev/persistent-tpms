@@ -199,10 +199,10 @@ internal class BluetoothLeScannerImpl(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @RequiresPermission("android.permission.BLUETOOTH_SCAN")
-    private fun scan(mode: Int) = flow {
+    private fun scan(mode: Int, restarts: Boolean = true) = flow {
         emit(Unit)
         // Below Android 12, a scan started while the app isn't visible may get no results
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) while (true) {
+        if (restarts && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) while (true) {
             delay(SCAN_RESTART)
             emit(Unit)
         }
@@ -245,6 +245,11 @@ internal class BluetoothLeScannerImpl(
     @SuppressLint("MissingPermission")
     override fun normalScan(): Flow<Tyre.SensorInput> =
         shared(TyreScan(ScanSettings.SCAN_MODE_BALANCED)) { scan(ScanSettings.SCAN_MODE_BALANCED) }
+
+    // Not restarted: the restart is against Android's timeout, which moves a long scan to low power
+    @SuppressLint("MissingPermission")
+    override fun lowPowerScan(): Flow<Tyre.SensorInput> =
+        shared(TyreScan(ScanSettings.SCAN_MODE_LOW_POWER)) { scan(ScanSettings.SCAN_MODE_LOW_POWER, restarts = false) }
 
     @SuppressLint("MissingPermission")
     override fun advertisements(mode: ScanMode, devices: List<DeviceMatch>?): Flow<Advertisement> =

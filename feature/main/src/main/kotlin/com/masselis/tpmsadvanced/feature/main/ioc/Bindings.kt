@@ -17,6 +17,7 @@ import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.TyreDisplaySe
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.impl.CurrentVehicleDropdownViewModelImpl
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
 import com.masselis.tpmsadvanced.feature.main.usecase.CurrentVehicleUseCase
+import com.masselis.tpmsadvanced.feature.main.usecase.LowPowerWatchUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.NoveltyUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.VehicleComponentCacheUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.VehicleCountStateFlowUseCase
@@ -40,6 +41,10 @@ public interface Bindings {
     @Provides
     private fun noveltyUseCase(appPreferences: AppPreferences): NoveltyUseCase =
         NoveltyUseCase(appPreferences)
+
+    @SingleIn(AppScope::class)
+    @Provides
+    private fun lowPowerWatchUseCase(): LowPowerWatchUseCase = LowPowerWatchUseCase()
 
     @Provides
     private fun vehicleListUseCase(vehicleDatabase: VehicleDatabase): VehicleListUseCase =

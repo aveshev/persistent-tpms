@@ -61,6 +61,7 @@ internal fun ActivateScanConditions(
     val paired by viewModel.pairedDevices.collectAsState(initial = emptyList())
     val beacon by viewModel.activateOnBeacon.collectAsState()
     val beacons by viewModel.beacons.collectAsState()
+    val knownSensor by viewModel.activateOnKnownSensor.collectAsState()
     val stayActive by viewModel.stayActive.collectAsState()
     val stayActiveMinutes by viewModel.stayActiveMinutes.collectAsState()
     ActivateScanConditions(
@@ -88,6 +89,8 @@ internal fun ActivateScanConditions(
         },
         openBeacons = openBeacons,
         beaconSelected = beacon && beacons.isNotEmpty(),
+        knownSensor = knownSensor,
+        onKnownSensor = { viewModel.activateOnKnownSensor.value = it },
         stayActive = stayActive,
         stayActiveMinutes = stayActiveMinutes,
         onStayActive = { viewModel.stayActive.value = it },
@@ -115,6 +118,8 @@ private fun ActivateScanConditions(
     onBeacon: (Boolean) -> Unit,
     openBeacons: () -> Unit,
     beaconSelected: Boolean,
+    knownSensor: Boolean,
+    onKnownSensor: (Boolean) -> Unit,
     stayActive: Boolean,
     stayActiveMinutes: Int,
     onStayActive: (Boolean) -> Unit,
@@ -148,6 +153,12 @@ private fun ActivateScanConditions(
             modifier = Modifier.testTag(PersistentScanningSettingsTags.activateOnBeacon),
         )
         SwitchSettingsItem(
+            headline = stringResource(CommonR.string.known_tpms_sensors),
+            checked = knownSensor,
+            onCheckedChange = onKnownSensor,
+            modifier = Modifier.testTag(PersistentScanningSettingsTags.activateOnKnownSensor),
+        )
+        SwitchSettingsItem(
             headline = stringResource(CommonR.string.charging_with_a_cable),
             checked = cable,
             onCheckedChange = onCable,
@@ -176,7 +187,7 @@ private fun ActivateScanConditions(
             ).map(::AnnotatedString),
             checked = stayActive,
             // Only extends the conditions above, meaningless without any of them
-            enabled = cable || wireless || androidAuto || bluetoothSelected || beaconSelected,
+            enabled = cable || wireless || androidAuto || bluetoothSelected || beaconSelected || knownSensor,
             onCheckedChange = onStayActive,
             onClick = openStayActiveDuration,
             modifier = Modifier.testTag(PersistentScanningSettingsTags.stayActive),
@@ -205,6 +216,8 @@ internal fun ActivateScanConditionsPreview() {
         onBeacon = {},
         openBeacons = {},
         beaconSelected = true,
+        knownSensor = true,
+        onKnownSensor = {},
         stayActive = true,
         stayActiveMinutes = 10,
         onStayActive = {},

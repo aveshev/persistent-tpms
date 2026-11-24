@@ -5,7 +5,9 @@ import com.masselis.tpmsadvanced.core.common.appGraph
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner
 import com.masselis.tpmsadvanced.feature.background.interfaces.RideNotifier
 import com.masselis.tpmsadvanced.feature.background.interfaces.ServiceNotifier
+import com.masselis.tpmsadvanced.feature.background.usecase.KnownSensorPresenceUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanPolicyUseCase
+import com.masselis.tpmsadvanced.feature.main.usecase.LowPowerWatchUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.VehicleListUseCase
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesTo
@@ -41,6 +43,8 @@ public interface ServiceComponent {
         scanPolicyUseCase: ScanPolicyUseCase,
         scanner: BluetoothLeScanner,
         rideNotifier: RideNotifier,
+        knownSensorPresenceUseCase: KnownSensorPresenceUseCase,
+        lowPowerWatchUseCase: LowPowerWatchUseCase,
     ): ServiceNotifier = ServiceNotifier(
         scope,
         foregroundService,
@@ -48,6 +52,8 @@ public interface ServiceComponent {
         scanPolicyUseCase,
         scanner.tyreScanStatus,
         rideNotifier,
+        knownSensorPresenceUseCase,
+        lowPowerWatchUseCase,
     )
 
     public val internal: Internal

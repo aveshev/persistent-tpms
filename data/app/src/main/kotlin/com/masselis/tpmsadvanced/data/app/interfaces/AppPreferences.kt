@@ -223,6 +223,13 @@ public class AppPreferences internal constructor(
     }
 
     /**
+     * Scans while a sensor bound to a vehicle is heard. Meanwhile, while no other condition scans,
+     * the tyres are listened to with a low power scan.
+     */
+    public val activateOnKnownSensor: MutableStateFlow<Boolean> =
+        sharedPreferences.booleanFlow("ACTIVATE_ON_KNOWN_SENSOR", true)
+
+    /**
      * A nearby beacon overrides every suspend condition but the phone being idle: it tells
      * the vehicle is around, while a phone left still for a long time was likely forgotten in it
      */

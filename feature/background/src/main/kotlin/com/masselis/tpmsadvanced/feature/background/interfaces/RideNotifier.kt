@@ -22,6 +22,7 @@ import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.Activat
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.BEACON
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.BLUETOOTH
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.CABLE
+import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.SENSOR
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.WIRELESS
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -230,8 +231,11 @@ internal class RideNotifier(
         const val NOTIFICATION_ID = 0x52494445 // "RIDE"
         const val LAST_HEARD = "LAST_HEARD"
         const val LAST_FIRED = "LAST_FIRED"
-        /** What starts the scan because the vehicle is near, unlike "always", "stay active" or the button */
-        val CONDITIONS = listOf(CABLE, WIRELESS, ANDROID_AUTO, BLUETOOTH, BEACON)
+        /**
+         * What starts the scan because the vehicle is near, unlike "always", "stay active" or the
+         * button. A known sensor is heard once the ride started: a late notification still beats none.
+         */
+        val CONDITIONS = listOf(CABLE, WIRELESS, ANDROID_AUTO, BLUETOOTH, BEACON, SENSOR)
         val RECENT = 1.minutes
         val STILL_THERE = 1.minutes
     }

@@ -12,7 +12,8 @@ import com.masselis.tpmsadvanced.core.common.localized
 
 internal sealed interface ScanDecision {
 
-    enum class ActivateCause { MANUAL, CABLE, WIRELESS, ANDROID_AUTO, BLUETOOTH, BEACON, STAY_ACTIVE, ALWAYS }
+    /** [SENSOR]: a sensor bound to a vehicle is heard, see [KnownSensorPresenceUseCase] */
+    enum class ActivateCause { MANUAL, CABLE, WIRELESS, ANDROID_AUTO, BLUETOOTH, BEACON, SENSOR, STAY_ACTIVE, ALWAYS }
 
     /**
      * Background scanning is running, for at least one of [causes]. [bluetoothDevices] names the
@@ -69,6 +70,7 @@ internal fun ScanDecision.explanation(tier: AppTier = AppTier.current): String =
             localized(CommonR.string.always_active_lite)
 
         ALWAYS in causes -> localized(CommonR.string.always_active)
+        causes == setOf(ScanDecision.ActivateCause.SENSOR) -> localized(CommonR.string.active_due_to_sensor)
         else -> causes
             .joinToString(", ") {
                 when (it) {
@@ -117,6 +119,7 @@ private val ScanDecision.ActivateCause.label
         BLUETOOTH -> localized(CommonR.string.cause_bluetooth)
         // Told with the beacons' names, see nearbyLabel()
         BEACON -> localized(CommonR.string.cause_beacon)
+        ScanDecision.ActivateCause.SENSOR -> localized(CommonR.string.cause_sensor)
         ScanDecision.ActivateCause.STAY_ACTIVE -> localized(CommonR.string.cause_stay)
         ALWAYS -> localized(CommonR.string.cause_always)
     }
