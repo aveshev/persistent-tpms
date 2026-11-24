@@ -64,6 +64,8 @@ internal fun PersistentScanningSettings(
     val activateOnBeacon by viewModel.activateOnBeacon.collectAsState()
     val beacons by viewModel.beacons.collectAsState()
     val beacon = activateOnBeacon && beacons.isNotEmpty()
+    val knownSensor by viewModel.activateOnKnownSensor.collectAsState()
+    val anyActivateCondition = listOf(cable, wireless, androidAuto, bluetooth, beacon, knownSensor).any { it }
     val stayActive by viewModel.stayActive.collectAsState()
     val stayActiveMinutes by viewModel.stayActiveMinutes.collectAsState()
     val suspendConditions by viewModel.suspendConditions.collectAsState()
@@ -83,12 +85,12 @@ internal fun PersistentScanningSettings(
         // Leaving a conditions page with nothing selected turns its switch off, which only happens
         // once that page is gone: this page shows it that way from the start rather than flashing
         // "None selected" first
-        activateConditions = activateConditions && listOf(cable, wireless, androidAuto, bluetooth, beacon).any { it },
+        activateConditions = activateConditions && anyActivateCondition,
         // Turned on without any condition to use, the only sensible next step is to pick one. Leaving
         // the page without doing so turns it off again.
         onActivateConditions = { enabled ->
             viewModel.activateConditions.value = enabled
-            if (enabled && listOf(cable, wireless, androidAuto, bluetooth, beacon).none { it }) openActivateConditions()
+            if (enabled && anyActivateCondition.not()) openActivateConditions()
         },
         activateSummary = activateSummary(
             activateConditions,
@@ -97,6 +99,7 @@ internal fun PersistentScanningSettings(
             androidAuto,
             bluetooth,
             beacon,
+            knownSensor,
             stayActiveMinutes.takeIf { stayActive },
         ),
         openActivateConditions = openActivateConditions,
@@ -179,11 +182,13 @@ private fun activateSummary(
     androidAuto: Boolean,
     bluetooth: Boolean,
     beacon: Boolean,
+    knownSensor: Boolean,
     stayActiveMinutes: Int?,
 ): List<String> = listOfNotNull(
     // Same order as their page
     "Bluetooth".takeIf { bluetooth },
     localized(CommonR.string.beacon).takeIf { beacon },
+    localized(CommonR.string.sensors).takeIf { knownSensor },
     localized(CommonR.string.cable_charging).takeIf { cable },
     localized(CommonR.string.wireless_charging).takeIf { wireless },
     "Android Auto".takeIf { androidAuto },
@@ -252,6 +257,7 @@ internal object PersistentScanningSettingsTags {
     const val activateOnCable = "PersistentScanningSettingsTags_activateOnCable"
     const val activateOnWireless = "PersistentScanningSettingsTags_activateOnWireless"
     const val activateOnAndroidAuto = "PersistentScanningSettingsTags_activateOnAndroidAuto"
+    const val activateOnKnownSensor = "PersistentScanningSettingsTags_activateOnKnownSensor"
     const val activateOnBluetooth = "PersistentScanningSettingsTags_activateOnBluetooth"
     const val activateOnBeacon = "PersistentScanningSettingsTags_activateOnBeacon"
     const val suspendOnBluetooth = "PersistentScanningSettingsTags_suspendOnBluetooth"

@@ -12,6 +12,7 @@ import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.Activat
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.BLUETOOTH
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.CABLE
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.MANUAL
+import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.SENSOR
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.STAY_ACTIVE
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision.ActivateCause.WIRELESS
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanSuspensionUseCase.Reason
@@ -48,6 +49,7 @@ internal class ScanPolicyUseCase(
     private val androidAutoUseCase: AndroidAutoUseCase,
     private val bluetoothDevicesUseCase: BluetoothDevicesUseCase,
     private val beaconPresenceUseCase: BeaconPresenceUseCase,
+    private val knownSensorPresenceUseCase: KnownSensorPresenceUseCase,
     scope: CoroutineScope,
     private val timeSource: TimeSource = TimeSource.Monotonic,
     private val tier: AppTier = AppTier.current,
@@ -110,6 +112,18 @@ internal class ScanPolicyUseCase(
     )
         .flatMapLatest { (beacons, mode) -> beaconPresenceUseCase.nearby(beacons, mode) }
         .shareIn(scope, WhileSubscribed(replayExpirationMillis = 0), replay = 1)
+
+    /**
+     * Whether persistent scanning has [SENSOR] to wait for: while nothing else scans, the service
+     * listens to the tyres with the low power scan, which is how a known sensor gets heard
+     */
+    val watchesSensors: Flow<Boolean> = appPreferences
+        .persistentScanning
+        .flatMapLatest { persistent ->
+            if (persistent) enabledCauses().map { SENSOR in it && ALWAYS !in it }
+            else flowOf(false)
+        }
+        .distinctUntilChanged()
 
     /** The latest [decision] if one is known for the current mode, without waiting for it */
     val currentDecision: ScanDecision?
@@ -183,10 +197,11 @@ internal class ScanPolicyUseCase(
             .filter { it.isNotEmpty() }
 
     /**
-     * Lite only has the Bluetooth and the beacon conditions, without a switch for the conditions
-     * as a whole: the others are ignored whatever they're set to, and none of the two selected is
-     * the same as the conditions being off.
+     * Lite only has the Bluetooth, beacon and known sensor conditions, without a switch for the
+     * conditions as a whole: the others are ignored whatever they're set to, and none of the three
+     * selected is the same as the conditions being off.
      */
+    @Suppress("CyclomaticComplexMethod")
     private fun enabledCauses(): Flow<Set<ActivateCause>> = combine(
         appPreferences.activateConditions.map { it || tier == LITE },
         combine(
@@ -208,12 +223,19 @@ internal class ScanPolicyUseCase(
                 if (bluetooth && bluetoothDevices.isNotEmpty()) add(BLUETOOTH)
             }
         }.combine(
-            // Without any beacon to look for, the condition is the same as off: leaving the beacons
-            // page like this turns it off
-            combine(appPreferences.activateOnBeacon, appPreferences.beacons) { beacon, beacons ->
-                beacon && beacons.isNotEmpty()
+            combine(
+                appPreferences.activateOnBeacon,
+                appPreferences.beacons,
+                appPreferences.activateOnKnownSensor,
+            ) { beacon, beacons, sensor ->
+                buildSet {
+                    // Without any beacon to look for, the condition is the same as off: leaving the
+                    // beacons page like this turns it off
+                    if (beacon && beacons.isNotEmpty()) add(BEACON)
+                    if (sensor) add(SENSOR)
+                }
             }
-        ) { selected, beacon -> if (beacon) selected + BEACON else selected },
+        ) { selected, beaconAndSensor -> selected + beaconAndSensor },
         appPreferences.stayActive,
     ) { conditions, selected, stayActive ->
         buildSet {
@@ -262,6 +284,9 @@ internal class ScanPolicyUseCase(
                         .distinctUntilChanged()
                 )
             }
+            if (SENSOR in enabled) {
+                add(knownSensorPresenceUseCase.isPresent.map { if (it) setOf(SENSOR) else emptySet() })
+            }
             if (BLUETOOTH in enabled) {
                 add(
                     combine(
@@ -284,7 +309,8 @@ internal class ScanPolicyUseCase(
      * itself is suspended like any other cause, the beacon's override doesn't extend to it. Starts
      * over each time the conditions end, and nothing is held for conditions that were never
      * fulfilled. A suspension that begins or ends during the stay does not move its end, it is a
-     * fixed point in time.
+     * fixed point in time. Nothing is held after [SENSOR] was the last one: it holds by itself,
+     * for "Stay active"'s duration, see [KnownSensorPresenceUseCase].
      */
     private fun Flow<Set<ActivateCause>>.stayingActive(
         enabled: Set<ActivateCause>,
@@ -292,8 +318,9 @@ internal class ScanPolicyUseCase(
         beaconOverridesSuspend: Boolean,
     ): Flow<Set<ActivateCause>> = flow {
         var wasFulfilled = false
-        // Whether scanning was active the last time a condition was fulfilled
+        // Whether scanning was active the last time a condition was fulfilled, and which ones were
         var wasActive = false
+        var lastFulfilled = emptySet<ActivateCause>()
         var stayEnd: TimeMark? = null
         emitAll(
             combine(this@stayingActive, suspensionReasons) { causes, reasons ->
@@ -302,13 +329,14 @@ internal class ScanPolicyUseCase(
                 if ((causes intersect enabled).isNotEmpty()) {
                     wasFulfilled = true
                     wasActive = active
+                    lastFulfilled = causes intersect enabled
                     stayEnd = null
                     emit(causes)
                     return@transformLatest
                 }
                 if (wasFulfilled) {
                     wasFulfilled = false
-                    stayEnd = if (wasActive) timeSource.markNow() + duration else null
+                    stayEnd = if (wasActive && lastFulfilled != setOf(SENSOR)) timeSource.markNow() + duration else null
                 }
                 val remaining = stayEnd?.let { -it.elapsedNow() }?.takeIf { it.isPositive() }
                 if (remaining == null) {

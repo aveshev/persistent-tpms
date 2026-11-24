@@ -37,6 +37,7 @@ import com.masselis.tpmsadvanced.feature.background.usecase.BluetoothDevicesUseC
 import com.masselis.tpmsadvanced.feature.background.usecase.ChargingStateUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.DeviceIdleModeUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.KeepAliveInstructionsUseCase
+import com.masselis.tpmsadvanced.feature.background.usecase.KnownSensorPresenceUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.PhoneIdleUseCase
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanDecision
 import com.masselis.tpmsadvanced.feature.background.usecase.ScanPolicyUseCase
@@ -204,6 +205,7 @@ public interface Bindings {
         androidAutoUseCase: AndroidAutoUseCase,
         bluetoothDevicesUseCase: BluetoothDevicesUseCase,
         beaconPresenceUseCase: BeaconPresenceUseCase,
+        knownSensorPresenceUseCase: KnownSensorPresenceUseCase,
     ): ScanPolicyUseCase = ScanPolicyUseCase(
         appPreferences,
         scanSuspensionUseCase,
@@ -211,8 +213,14 @@ public interface Bindings {
         androidAutoUseCase,
         bluetoothDevicesUseCase,
         beaconPresenceUseCase,
+        knownSensorPresenceUseCase,
         GlobalScope + Dispatchers.Default,
     )
+
+    @Provides
+    @SingleIn(AppScope::class)
+    private fun knownSensorPresenceUseCase(appPreferences: AppPreferences): KnownSensorPresenceUseCase =
+        KnownSensorPresenceUseCase(appPreferences)
 
     @OptIn(DelicateCoroutinesApi::class)
     @Provides

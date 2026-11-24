@@ -142,6 +142,7 @@ internal class ScanStatusAnnouncer(
                 ANDROID_AUTO -> "Auto"
                 ActivateCause.BLUETOOTH -> "Bluetooth"
                 BEACON -> "beacon"
+                ActivateCause.SENSOR -> "sensor"
                 STAY_ACTIVE -> "stay"
                 ALWAYS -> "always"
             }

@@ -55,6 +55,7 @@ internal class PersistentScanningSettingsViewModel(
         appPreferences.activateBluetoothDevices,
     )
     val activateOnBeacon = appPreferences.activateOnBeacon
+    val activateOnKnownSensor = appPreferences.activateOnKnownSensor
     val beacons = appPreferences.beacons
     val stayActive = appPreferences.stayActive
     val stayActiveMinutes = appPreferences.stayActiveMinutes
@@ -97,7 +98,7 @@ internal class PersistentScanningSettingsViewModel(
     }
 
     fun disableActivateConditionsIfNoneSelected() {
-        listOf(activateOnCableCharging, activateOnWirelessCharging, activateOnAndroidAuto)
+        listOf(activateOnCableCharging, activateOnWirelessCharging, activateOnAndroidAuto, activateOnKnownSensor)
             .none { it.value }
             .also {
                 val beaconSelected = activateOnBeacon.value && beacons.value.isNotEmpty()

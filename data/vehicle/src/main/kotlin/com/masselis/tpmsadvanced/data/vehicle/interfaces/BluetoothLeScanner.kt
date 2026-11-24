@@ -81,12 +81,19 @@ public interface BluetoothLeScanner {
     public fun normalScan(): Flow<Tyre.SensorInput>
 
     /**
-     * The status of the [highDutyScan] and the [normalScan], whoever collects them: the one
-     * scanning when both run, null while neither does
+     * Listens a small part of the time, for persistent scanning to hear the sensors while it has
+     * nothing else to scan for: a sensor that starts sending, because its wheel turns, is heard
+     * within a few of its bursts
+     */
+    public fun lowPowerScan(): Flow<Tyre.SensorInput>
+
+    /**
+     * The status of the tyre scans ([highDutyScan], [normalScan], [lowPowerScan]), whoever
+     * collects them: the one scanning when several run, null while none does
      */
     public val tyreScanStatus: Flow<ScanStatus?>
 
-    /** Whether a [highDutyScan] or a [normalScan] is scanning, whoever collects it */
+    /** Whether one of the tyre scans is scanning, whoever collects it */
     public val isScanningTyres: Flow<Boolean>
         get() = tyreScanStatus
             .map { it == ScanStatus.Scanning }
