@@ -42,6 +42,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableIntStateOf
@@ -50,9 +51,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.boundsInRoot
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalDensity
@@ -79,6 +82,8 @@ import com.masselis.tpmsadvanced.R
 import com.masselis.tpmsadvanced.core.ui.LocalHomeNavController
 import com.masselis.tpmsadvanced.core.ui.isWideWindow
 import com.masselis.tpmsadvanced.core.ui.Spotlight
+import com.masselis.tpmsadvanced.feature.background.interfaces.ui.DemoMonitoringButton
+import com.masselis.tpmsadvanced.feature.background.interfaces.ui.DemoPersistentScanningMenuItem
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.DetectedActivitiesIndicator
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.alertingVehicles
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.MonitoringButton
@@ -95,6 +100,7 @@ import com.masselis.tpmsadvanced.feature.main.interfaces.composable.isReadingSim
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.LocalVehicleComponent
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.ManageSensors
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.MoveSensorToVehicle
+import com.masselis.tpmsadvanced.feature.main.interfaces.composable.OnboardingVehicle
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
 import com.masselis.tpmsadvanced.feature.qrcode.interfaces.QrCodeScan
 import com.masselis.tpmsadvanced.feature.qrcode.model.QrCodeResult
@@ -103,6 +109,8 @@ import com.masselis.tpmsadvanced.feature.qrcode.interfaces.ShareSensors
 import com.masselis.tpmsadvanced.feature.unlocated.interfaces.ui.BluetoothAssign
 import com.masselis.tpmsadvanced.interfaces.composable.HomeTags.backButton
 import com.masselis.tpmsadvanced.interfaces.composable.HomeTags.carListDropdownMenu
+import com.masselis.tpmsadvanced.interfaces.composable.Onboarding.Step.PERSISTENT_MODE
+import com.masselis.tpmsadvanced.interfaces.composable.Onboarding.Step.THRESHOLDS
 import com.masselis.tpmsadvanced.interfaces.viewmodel.HomeViewModel
 import com.masselis.tpmsadvanced.interfaces.viewmodel.VehicleHomeViewModel
 import com.masselis.tpmsadvanced.interfaces.viewmodel.VehicleHomeViewModel.Event
@@ -116,21 +124,27 @@ import androidx.compose.ui.res.stringResource
 @Composable
 internal fun Home(
     expectedVehicle: UUID?,
+    /** The introduction, while it's at its tour of this screen or at its vehicle to add */
+    onboarding: Onboarding? = null,
     viewModel: HomeViewModel = viewModel(key = "HomeViewModel_$expectedVehicle") {
         HomeViewModel(expectedVehicle = expectedVehicle)
     }
 ) {
     val vehicleComponent by viewModel.vehicleComponentStateFlow.collectAsState()
     PersistentScanningHost {
-        ImportOffer()
+        // Offered once the introduction is gone through, rather than over it
+        if (onboarding == null) ImportOffer()
         // Another vehicle starts over with its own screens: its routes carry its id, a new start
         // destination would be a new screen fading in over the previous one, which shows the new
         // vehicle as well, each fitting its text, see CurrentVehicle
         key(vehicleComponent.vehicle.uuid) {
             VehicleHome(
-                vehicleComponent = vehicleComponent
+                vehicleComponent = vehicleComponent,
+                onboarding = onboarding?.takeIf { it.step.isTour },
             )
         }
+        // Out of the vehicle's screens, which start over with the vehicle it adds
+        if (onboarding?.step == Onboarding.Step.VEHICLE) OnboardingVehicle(onDone = onboarding::finish)
     }
 }
 
@@ -138,6 +152,8 @@ internal fun Home(
 @Composable
 internal fun VehicleHome(
     vehicleComponent: VehicleComponent,
+    /** At its tour of the main screen, drawn over it */
+    onboarding: Onboarding? = null,
     viewModel: VehicleHomeViewModel = viewModel { VehicleHomeViewModel() }
 ) {
     val navController = rememberNavController()
@@ -146,6 +162,8 @@ internal fun VehicleHome(
         LocalHomeNavController provides navController
     ) {
         var offsetToFocus by remember { mutableStateOf<Offset?>(null) }
+        // What the introduction's tour points at
+        val tourAnchors = remember { mutableStateMapOf<Onboarding.Anchor, Rect>() }
         var showManualMonitoringSpotlight by remember { mutableStateOf(false) }
         var showAndroidAutoSupportAlert by remember { mutableStateOf(false) }
         var showWicarlinkSupportAlert by remember { mutableStateOf(false) }
@@ -213,7 +231,8 @@ internal fun VehicleHome(
                         // The bell tells the status here, nothing to hear
                         QuietScanStatusAnnouncementsEffect()
                         val alerts = alertingVehicles()
-                        DimWhenIdle(isAlerting = alerts.isNotEmpty()) { isDimmed ->
+                        // Kept bright during the introduction's tour too, which isn't touching it
+                        DimWhenIdle(isAlerting = alerts.isNotEmpty() || onboarding != null) { isDimmed ->
                             CurrentVehicle(
                                 snackbarHostState = snackbarHostState,
                                 // It draws its own top bar, see topBar
@@ -232,7 +251,12 @@ internal fun VehicleHome(
                                     )
                                 },
                                 actions = {
-                                    HomeActions(vehicleUuid, manualBackgroundButtonModifier)
+                                    HomeActions(
+                                        vehicleUuid = vehicleUuid,
+                                        manualBackgroundButtonModifier = manualBackgroundButtonModifier,
+                                        tourStep = onboarding?.step,
+                                        onTourAnchor = { anchor, bounds -> tourAnchors[anchor] = bounds },
+                                    )
                                 },
                             )
                         }
@@ -452,6 +476,25 @@ internal fun VehicleHome(
                     )
                 }
             }
+        // Over the main screen only, every other page was left as the introduction started
+        if (onboarding != null && currentPath is Path.Home) {
+            OnboardingTour(
+                onboarding = onboarding,
+                anchors = tourAnchors,
+                menuItems = { targetModifier ->
+                    HomeMenuItems(
+                        onVehicleSettings = {},
+                        onAppSettings = {},
+                        vehicleSettingsModifier = Modifier.takeIf { onboarding.step != THRESHOLDS } ?: targetModifier,
+                        persistentScanning = {
+                            DemoPersistentScanningMenuItem(
+                                Modifier.takeIf { onboarding.step != PERSISTENT_MODE } ?: targetModifier
+                            )
+                        },
+                    )
+                },
+            )
+        }
         if (showWicarlinkSupportAlert) {
             WicarlinkSupportAlert(
                 onDismissRequest = {
@@ -507,21 +550,30 @@ private fun TopAppBar(
 private fun HomeActions(
     vehicleUuid: UUID,
     manualBackgroundButtonModifier: Modifier,
+    /** The introduction's step, its tour showing the buttons as the step tells, without acting */
+    tourStep: Onboarding.Step? = null,
+    onTourAnchor: (Onboarding.Anchor, Rect) -> Unit = { _, _ -> },
 ) {
     val navController = LocalHomeNavController.current
     var showMenu by remember { mutableStateOf(false) }
     // Out of the menu, which leaves the composition once closed
     var simulateReading by remember { mutableStateOf(false) }
     if (simulateReading) SimulateReadingDialog(onDismissRequest = { simulateReading = false })
-    MonitoringButton(
+    if (tourStep != null) DemoMonitoringButton(
+        persistent = tourStep in listOf(Onboarding.Step.PERSISTENT_MODE, Onboarding.Step.BELL),
+        modifier = Modifier.onGloballyPositioned { onTourAnchor(Onboarding.Anchor.MONITORING, it.boundsInRoot()) },
+    )
+    else MonitoringButton(
         modifier = manualBackgroundButtonModifier
             .testTag(HomeTags.Actions.manualBackground)
     )
     // The menu opens under its button, wherever that is
     Box {
         IconButton(
-            onClick = { showMenu = true },
-            Modifier.testTag(HomeTags.Actions.overflow)
+            onClick = { if (tourStep == null) showMenu = true },
+            Modifier
+                .testTag(HomeTags.Actions.overflow)
+                .onGloballyPositioned { onTourAnchor(Onboarding.Anchor.OVERFLOW, it.boundsInRoot()) }
         ) {
             Icon(
                 ImageVector.vectorResource(R.drawable.more_vert_24px),
@@ -533,34 +585,24 @@ private fun HomeActions(
             onDismissRequest = { showMenu = false },
             modifier = Modifier.testTag(HomeTags.Overflow.root)
         ) {
-            DropdownMenuItem(
-                text = { Text(stringResource(CommonR.string.vehicle_settings)) },
-                leadingIcon = {
-                    Icon(ImageVector.vectorResource(R.drawable.car_gear_24px), contentDescription = null)
-                },
-                onClick = {
+            HomeMenuItems(
+                onVehicleSettings = {
                     showMenu = false
                     navController.navigateTo(Path.Settings(vehicleUuid))
                 },
-                modifier = Modifier.testTag(HomeTags.Overflow.settings)
-            )
-            PersistentScanningMenuItem(
-                onClick = {
-                    showMenu = false
-                    navController.navigateTo(Path.PersistentMode)
-                },
-                modifier = Modifier.testTag(HomeTags.Overflow.persistentScanning)
-            )
-            DropdownMenuItem(
-                text = { Text(stringResource(CommonR.string.app_settings)) },
-                leadingIcon = {
-                    Icon(ImageVector.vectorResource(R.drawable.settings_24px), contentDescription = null)
-                },
-                onClick = {
+                onAppSettings = {
                     showMenu = false
                     navController.navigateTo(Path.AppSettings)
                 },
-                modifier = Modifier.testTag(HomeTags.Overflow.appSettings)
+                persistentScanning = {
+                    PersistentScanningMenuItem(
+                        onClick = {
+                            showMenu = false
+                            navController.navigateTo(Path.PersistentMode)
+                        },
+                        modifier = Modifier.testTag(HomeTags.Overflow.persistentScanning)
+                    )
+                },
             )
             if (isReadingSimulationAvailable()) {
                 HorizontalDivider()
@@ -577,6 +619,33 @@ private fun HomeActions(
             }
         }
     }
+}
+
+/** The main screen menu's items, also drawn by the introduction's tour, see [OnboardingTour] */
+@Composable
+private fun HomeMenuItems(
+    onVehicleSettings: () -> Unit,
+    onAppSettings: () -> Unit,
+    persistentScanning: @Composable () -> Unit,
+    vehicleSettingsModifier: Modifier = Modifier,
+) {
+    DropdownMenuItem(
+        text = { Text(stringResource(CommonR.string.vehicle_settings)) },
+        leadingIcon = {
+            Icon(ImageVector.vectorResource(R.drawable.car_gear_24px), contentDescription = null)
+        },
+        onClick = onVehicleSettings,
+        modifier = vehicleSettingsModifier.testTag(HomeTags.Overflow.settings)
+    )
+    persistentScanning()
+    DropdownMenuItem(
+        text = { Text(stringResource(CommonR.string.app_settings)) },
+        leadingIcon = {
+            Icon(ImageVector.vectorResource(R.drawable.settings_24px), contentDescription = null)
+        },
+        onClick = onAppSettings,
+        modifier = Modifier.testTag(HomeTags.Overflow.appSettings)
+    )
 }
 
 @Composable

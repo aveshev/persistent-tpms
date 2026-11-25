@@ -21,10 +21,7 @@ public class UnitPreferences internal constructor(
         sharedPreferences
             .getString("PRESSURE", null)
             ?.let { name -> PressureUnit.entries.first { it.name == name } }
-            ?: when (Locale.getDefault().country) {
-                "US", "GB", "CA", "AU" -> PressureUnit.PSI
-                else -> PressureUnit.BAR
-            }
+            ?: Locale.getDefault().commonPressureUnit
     ) { _, newValue ->
         sharedPreferences.edit { putString("PRESSURE", newValue.name) }
     }
@@ -33,10 +30,7 @@ public class UnitPreferences internal constructor(
         sharedPreferences
             .getString("TEMPERATURE", null)
             ?.let { name -> TemperatureUnit.entries.first { it.name == name } }
-            ?: when (Locale.getDefault().country) {
-                "US" -> TemperatureUnit.FAHRENHEIT
-                else -> TemperatureUnit.CELSIUS
-            }
+            ?: Locale.getDefault().commonTemperatureUnit
     ) { _, newValue ->
         sharedPreferences.edit { putString("TEMPERATURE", newValue.name) }
     }

@@ -7,6 +7,28 @@ public enum PressureUnit: String, CaseIterable, Identifiable, Sendable {
 
     public var id: String { rawValue }
 
+    /// The unit most people use in a country, at the pump and on forums, rather than the official one:
+    /// Canada's placards say kPa but drivers say psi. Without a region, Russian reads bar.
+    /// Keep in step with the Android app's `Locale.commonPressureUnit`.
+    public static func common(region: String?, language: String?) -> PressureUnit {
+        guard let region, region.isEmpty == false else { return language == "ru" ? .bar : .psi }
+        if kiloPascalRegions.contains(region) { return .kiloPascal }
+        if barRegions.contains(region) { return .bar }
+        return .psi
+    }
+
+    private static let kiloPascalRegions: Set<String> = ["JP"]
+
+    // Continental Europe ("150" being Europe as a whole), the former Soviet Union, Turkey, Israel,
+    // China, the Maghreb and South Africa
+    private static let barRegions: Set<String> = [
+        "150", "AD", "AL", "AT", "BA", "BE", "BG", "CH", "CY", "CZ", "DE", "DK", "EE", "ES", "FI", "FO", "FR",
+        "GR", "HR", "HU", "IS", "IT", "LI", "LT", "LU", "LV", "MC", "ME", "MK", "MT", "NL", "NO", "PL", "PT",
+        "RO", "RS", "SE", "SI", "SK", "SM", "VA", "XK",
+        "AM", "AZ", "BY", "GE", "KG", "KZ", "MD", "RU", "TJ", "TM", "UA", "UZ",
+        "TR", "IL", "CN", "MA", "DZ", "TN", "ZA",
+    ]
+
     /// As written after a value, e.g. "kPa" in "250 kPa"
     public var symbol: String {
         switch self {
@@ -21,6 +43,18 @@ public enum TemperatureUnit: String, CaseIterable, Identifiable, Sendable {
     case celsius = "CELSIUS", fahrenheit = "FAHRENHEIT"
 
     public var id: String { rawValue }
+
+    /// Fahrenheit in the US and the few places that use it like the US, Celsius elsewhere.
+    /// Keep in step with the Android app's `Locale.commonTemperatureUnit`.
+    public static func common(region: String?) -> TemperatureUnit {
+        region.map(fahrenheitRegions.contains) == true ? .fahrenheit : .celsius
+    }
+
+    // The US and its territories, the Bahamas, Belize, the Cayman Islands, Liberia and the Pacific
+    // states in free association with the US
+    private static let fahrenheitRegions: Set<String> = [
+        "US", "PR", "GU", "VI", "AS", "MP", "BS", "BZ", "KY", "LR", "PW", "MH", "FM",
+    ]
 
     public var symbol: String { self == .celsius ? "°C" : "°F" }
 }
@@ -47,6 +81,17 @@ public struct Pressure: Comparable, Hashable, Sendable {
         case .bar: kpa / 100
         case .psi: kpa / 6.895
         }
+    }
+
+    /// To the nearest value that reads plainly in the unit: whole psi, a tenth of a bar, 5 kPa,
+    /// like the Android app's Pressure.rounded
+    public func rounded(_ unit: PressureUnit) -> Pressure {
+        let stepsPerUnit: Float = switch unit {
+        case .kiloPascal: 1 / 5
+        case .bar: 10
+        case .psi: 1
+        }
+        return Pressure((convert(unit) * stepsPerUnit).rounded() / stepsPerUnit, unit)
     }
 
     /// One decimal less from 10 bar and 100 psi, like the Android app

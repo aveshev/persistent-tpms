@@ -63,7 +63,7 @@ internal fun PersistentScanningBell(
 }
 
 @Composable
-private fun PersistentScanningBell(
+internal fun PersistentScanningBell(
     state: BellState,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,

@@ -95,7 +95,7 @@ internal fun PersistentScanningMenuItem(
 
 /** [state] is the bell's, null while persistent scanning is off */
 @Composable
-private fun PersistentScanningMenuItem(
+internal fun PersistentScanningMenuItem(
     state: BellState?,
     setUp: Boolean,
     onPersistentScanning: (Boolean) -> Unit,

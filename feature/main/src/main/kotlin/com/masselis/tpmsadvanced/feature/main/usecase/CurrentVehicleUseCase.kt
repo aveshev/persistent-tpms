@@ -1,5 +1,6 @@
 package com.masselis.tpmsadvanced.feature.main.usecase
 
+import com.masselis.tpmsadvanced.data.unit.interfaces.UnitPreferences
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.VehicleDatabase
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
@@ -17,6 +18,7 @@ import java.util.UUID.randomUUID
 @OptIn(DelicateCoroutinesApi::class, ExperimentalForInheritanceCoroutinesApi::class)
 public class CurrentVehicleUseCase internal constructor(
     private val database: VehicleDatabase,
+    private val unitPreferences: UnitPreferences,
     private val stateFlow: StateFlow<VehicleComponent> = database
         .currentVehicle()
         .let { query ->
@@ -39,5 +41,5 @@ public class CurrentVehicleUseCase internal constructor(
 
     /** Returns the new vehicle's uuid */
     internal suspend fun insertAsCurrent(carName: String, kind: Vehicle.Kind): UUID = randomUUID()
-        .also { database.insert(it, kind, carName, true) }
+        .also { database.insert(it, kind, carName, true, unitPreferences.pressure.value) }
 }

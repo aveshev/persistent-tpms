@@ -276,7 +276,7 @@ private val ALERT_DISC_RADIUS = 10.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Suppress("LongMethod", "CyclomaticComplexMethod")
 @Composable
-private fun AddVehicle(
+internal fun AddVehicle(
     onDismissRequest: () -> Unit,
     onVehicleAdd: (name: String, kind: Vehicle.Kind) -> Unit,
     modifier: Modifier = Modifier

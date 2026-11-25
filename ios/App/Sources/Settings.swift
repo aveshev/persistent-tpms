@@ -174,7 +174,8 @@ final class Settings: ObservableObject {
         didSet { defaults.set(lastAlertSound.rawValue, forKey: "lastAlertSound") }
     }
 
-    /// Vibrates along with the alerts' sound, in the same loops. Works with the sound off too.
+    /// Vibrates along with the alerts' sound, in the same loops. Works with the sound off too. On by
+    /// default.
     @Published var vibrateAlerts: Bool {
         didSet { defaults.set(vibrateAlerts, forKey: "vibrateAlerts") }
     }
@@ -190,12 +191,11 @@ final class Settings: ObservableObject {
     }
 
     init() {
-        // Like the Android app's UnitPreferences
-        let region = Locale.current.region?.identifier
+        // Like the Android app's UnitPreferences: the region's common units
         pressureUnit = defaults.string(forKey: "pressureUnit").flatMap(PressureUnit.init(rawValue:))
-            ?? (["US", "GB", "CA", "AU"].contains(region) ? .psi : .bar)
+            ?? .common(region: Locale.current.region?.identifier, language: Locale.current.language.languageCode?.identifier)
         temperatureUnit = defaults.string(forKey: "temperatureUnit").flatMap(TemperatureUnit.init(rawValue:))
-            ?? (region == "US" ? .fahrenheit : .celsius)
+            ?? .common(region: Locale.current.region?.identifier)
         alerts = defaults.bool(forKey: "alerts")
         backgroundMonitoring = defaults.object(forKey: "backgroundMonitoring") as? Bool ?? true
         rideSensors = defaults.bool(forKey: "rideSensors")
@@ -232,7 +232,8 @@ final class Settings: ObservableObject {
         // Speech until changed, like on Android
         alertSound = defaults.string(forKey: "alertSound").flatMap(AlertSound.init(rawValue:)) ?? .speech
         lastAlertSound = defaults.string(forKey: "lastAlertSound").flatMap(AlertSound.init(rawValue:)) ?? .speech
-        vibrateAlerts = defaults.bool(forKey: "vibrateAlerts")
+        // On until changed, like on Android
+        vibrateAlerts = defaults.object(forKey: "vibrateAlerts") as? Bool ?? true
         pressureLoss = defaults.bool(forKey: "pressureLoss")
         pressureLossMinDrop = Pressure(kpa: defaults.object(forKey: "pressureLossMinDropKpa") as? Float ?? PressureLossTracker.defaultMinDrop.kpa)
     }

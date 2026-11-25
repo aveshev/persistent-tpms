@@ -47,48 +47,37 @@ internal class UnitPreferencesTest {
         .let { UnitPreferences(context) }
 
     @Test
-    fun `the US read psi and Fahrenheit`() {
-        test("en-US").apply {
-            assertEquals(PressureUnit.PSI, pressure.value)
-            assertEquals(TemperatureUnit.FAHRENHEIT, temperature.value)
+    fun `the country's common unit is read, whatever the language`() {
+        mapOf(
+            "en-US" to PressureUnit.PSI, "fr-CA" to PressureUnit.PSI, "en-GB" to PressureUnit.PSI,
+            "en-AU" to PressureUnit.PSI, "es-MX" to PressureUnit.PSI, "pt-BR" to PressureUnit.PSI,
+            "hi-IN" to PressureUnit.PSI, "ru-US" to PressureUnit.PSI,
+            "ru-RU" to PressureUnit.BAR, "en-RU" to PressureUnit.BAR, "uk-UA" to PressureUnit.BAR,
+            "kk-KZ" to PressureUnit.BAR, "de-DE" to PressureUnit.BAR, "fr-FR" to PressureUnit.BAR,
+            "zh-CN" to PressureUnit.BAR, "en-150" to PressureUnit.BAR,
+            "ja-JP" to PressureUnit.KILO_PASCAL,
+        ).forEach { (language, unit) -> assertEquals(unit, test(language).pressure.value, language) }
+    }
+
+    @Test
+    fun `without a country, Russian reads bar and others psi`() {
+        assertEquals(PressureUnit.BAR, test("ru").pressure.value)
+        listOf("en", "de", "es-419", "en-XA").forEach { language ->
+            assertEquals(PressureUnit.PSI, test(language).pressure.value, language)
         }
     }
 
     @Test
-    fun `the UK, Canada and Australia read psi and Celsius`() {
-        listOf("en-GB", "en-CA", "fr-CA", "en-AU").forEach { language ->
-            test(language).apply {
-                assertEquals(PressureUnit.PSI, pressure.value, language)
-                assertEquals(TemperatureUnit.CELSIUS, temperature.value, language)
-            }
+    fun `the US reads Fahrenheit, whatever the language`() {
+        listOf("en-US", "es-US", "ru-US", "es-PR").forEach { language ->
+            assertEquals(TemperatureUnit.FAHRENHEIT, test(language).temperature.value, language)
         }
     }
 
     @Test
-    fun `elsewhere reads bar and Celsius`() {
-        listOf("fr-FR", "de-DE", "ru-RU", "ja-JP").forEach { language ->
-            test(language).apply {
-                assertEquals(PressureUnit.BAR, pressure.value, language)
-                assertEquals(TemperatureUnit.CELSIUS, temperature.value, language)
-            }
-        }
-    }
-
-    @Test
-    fun `a language without a country reads bar and Celsius`() {
-        test("en").apply {
-            assertEquals(PressureUnit.BAR, pressure.value)
-            assertEquals(TemperatureUnit.CELSIUS, temperature.value)
-        }
-    }
-
-    @Test
-    fun `a region without a 3-letter code reads bar and Celsius`() {
-        listOf("en-XA", "ar-XB", "es-419", "en-001", "en-150").forEach { language ->
-            test(language).apply {
-                assertEquals(PressureUnit.BAR, pressure.value, language)
-                assertEquals(TemperatureUnit.CELSIUS, temperature.value, language)
-            }
+    fun `elsewhere reads Celsius`() {
+        listOf("en", "en-GB", "en-CA", "ru-RU", "fr-FR", "es-419").forEach { language ->
+            assertEquals(TemperatureUnit.CELSIUS, test(language).temperature.value, language)
         }
     }
 

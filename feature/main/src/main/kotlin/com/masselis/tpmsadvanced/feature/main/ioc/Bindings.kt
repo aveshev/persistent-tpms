@@ -10,13 +10,16 @@ import com.masselis.tpmsadvanced.data.vehicle.interfaces.VehicleDatabase
 import com.masselis.tpmsadvanced.data.vehicle.usecase.DemoOrBleScannerUseCase
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.DebugSettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.DemoModeSwitchViewModel
+import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.OnboardingVehicleViewModel
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.PreconditionsViewModel
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.PressureLossSettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.SimulateReadingViewModel
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.TyreDisplaySettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.impl.CurrentVehicleDropdownViewModelImpl
+import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleBindings.Companion.DeleteVehicleUseCase
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleComponent
 import com.masselis.tpmsadvanced.feature.main.usecase.CurrentVehicleUseCase
+import com.masselis.tpmsadvanced.feature.main.usecase.DefaultVehicleUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.LowPowerWatchUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.NoveltyUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.VehicleComponentCacheUseCase
@@ -34,8 +37,10 @@ public interface Bindings {
 
     @SingleIn(AppScope::class)
     @Provides
-    private fun currentVehicleUseCase(vehicleDatabase: VehicleDatabase): CurrentVehicleUseCase =
-        CurrentVehicleUseCase(vehicleDatabase)
+    private fun currentVehicleUseCase(
+        vehicleDatabase: VehicleDatabase,
+        unitPreferences: UnitPreferences,
+    ): CurrentVehicleUseCase = CurrentVehicleUseCase(vehicleDatabase, unitPreferences)
 
     @SingleIn(AppScope::class)
     @Provides
@@ -97,6 +102,19 @@ public interface Bindings {
     private fun demoModeSwitchViewModel(demoOrBleScannerUseCase: DemoOrBleScannerUseCase): DemoModeSwitchViewModel =
         DemoModeSwitchViewModel(demoOrBleScannerUseCase)
 
+    @Provides
+    private fun onboardingVehicleViewModel(
+        vehicleDatabase: VehicleDatabase,
+        sensorDatabase: SensorDatabase,
+        currentVehicleUseCase: CurrentVehicleUseCase,
+    ): OnboardingVehicleViewModel = OnboardingVehicleViewModel(
+        DefaultVehicleUseCase(
+            vehicleDatabase,
+            sensorDatabase,
+            currentVehicleUseCase,
+            delete = { VehicleComponent(it).DeleteVehicleUseCase().delete() },
+        )
+    )
 
     public val featureMainInternal: Internal
 
@@ -111,6 +129,7 @@ public interface Bindings {
         internal val currentVehicleDropdownViewModel: CurrentVehicleDropdownViewModelImpl.Factory,
         internal val demoModeSwitchViewModel: () -> DemoModeSwitchViewModel,
         internal val simulateReadingViewModel: () -> SimulateReadingViewModel,
+        internal val onboardingVehicleViewModel: () -> OnboardingVehicleViewModel,
     )
 
     public companion object : Bindings by appGraph as Bindings {
@@ -124,5 +143,6 @@ public interface Bindings {
 
         internal fun DemoModeSwitchViewModel() = featureMainInternal.demoModeSwitchViewModel()
         internal fun SimulateReadingViewModel() = featureMainInternal.simulateReadingViewModel()
+        internal fun OnboardingVehicleViewModel() = featureMainInternal.onboardingVehicleViewModel()
     }
 }

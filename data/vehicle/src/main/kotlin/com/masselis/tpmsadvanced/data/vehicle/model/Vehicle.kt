@@ -1,7 +1,7 @@
 package com.masselis.tpmsadvanced.data.vehicle.model
 
 import android.os.Parcelable
-import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.bar
+import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.psi
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.Axle.FRONT
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.Axle.REAR
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.FRONT_LEFT
@@ -41,7 +41,8 @@ public data class Vehicle(
      * A new vehicle starts with [defaultPressures], from its minimum to its maximum, for every tyre,
      * or for the front only when [defaultRearPressures] gives the rear its own. The minimum is a
      * typical recommended cold pressure and the maximum a typical sidewall maximum, each on the
-     * strict side: an alert the user didn't need is better than one that never came.
+     * strict side: an alert the user didn't need is better than one that never came. All in psi,
+     * each a whole number of them, VehicleDatabase.insert rounding them to the unit in use.
      */
     public enum class Kind(
         public val locations: Set<Location>,
@@ -62,7 +63,7 @@ public data class Vehicle(
                 Wheel(REAR_LEFT),
                 Wheel(REAR_RIGHT)
             ),
-            2.3f.bar..3.2f.bar,
+            33f.psi..46f.psi,
         ),
 
         /**
@@ -71,7 +72,7 @@ public data class Vehicle(
          * ```
          */
         // Trailer tyres run near their sidewall maximum, from car tyres on a caravan to load range D
-        SINGLE_AXLE_TRAILER(setOf(Side(LEFT), Side(RIGHT)), 2.8f.bar..4.5f.bar),
+        SINGLE_AXLE_TRAILER(setOf(Side(LEFT), Side(RIGHT)), 41f.psi..65f.psi),
 
         /**
          * ```
@@ -80,10 +81,12 @@ public data class Vehicle(
          *  N
          * ```
          */
+        // A scooter's, the most common motorcycle by far, whose riders are the least likely to know
+        // their pressures: a few psi under its usual 29 front and 33 rear, up to its sidewall maximum
         MOTORCYCLE(
             setOf(Axle(FRONT), Axle(REAR)),
-            2.5f.bar..3f.bar,
-            2.9f.bar..3.4f.bar,
+            24f.psi..40f.psi,
+            28f.psi..43f.psi,
         ),
 
         /**
@@ -94,10 +97,10 @@ public data class Vehicle(
          */
         TADPOLE_THREE_WHEELER(
             setOf(Wheel(FRONT_LEFT), Wheel(FRONT_RIGHT), Axle(REAR)),
-            // Piaggio MP3's, from 1.6 / 2.0 bar for a 125 ridden alone to 2.0 / 2.4 for a 500, the
-            // minimums at the 125's with a passenger
-            1.8f.bar..2.5f.bar,
-            2.4f.bar..3f.bar,
+            // A motorcycle's, its front a little lower: a few psi under the Piaggio MP3's 23 / 36 and
+            // the Yamaha Tricity's 25 / 33 ridden alone
+            22f.psi..40f.psi,
+            28f.psi..43f.psi,
         ),
 
         /**
@@ -108,10 +111,10 @@ public data class Vehicle(
          */
         DELTA_THREE_WHEELER(
             setOf(Axle(FRONT), Wheel(REAR_LEFT), Wheel(REAR_RIGHT)),
-            // A motorcycle tyre ahead of two car tyres, like Harley-Davidson's Tri Glide's 36 psi
-            // and 26 psi
-            2.5f.bar..3f.bar,
-            1.9f.bar..2.8f.bar,
+            // The minimums a tuk-tuk's, like the Bajaj RE's. Cargo trikes run higher, but their
+            // riders are the most likely to know their pressures.
+            30f.psi..44f.psi,
+            34f.psi..41f.psi,
         ),
 
         /**
@@ -130,7 +133,7 @@ public data class Vehicle(
                 Wheel(REAR_RIGHT),
                 Location.Spare,
             ),
-            2.3f.bar..3.2f.bar,
+            33f.psi..46f.psi,
         ),
 
         /**
@@ -138,7 +141,7 @@ public data class Vehicle(
          *  N
          * ```
          */
-        MONOWHEEL(setOf(Location.Single), 2.8f.bar..3.5f.bar);
+        MONOWHEEL(setOf(Location.Single), 41f.psi..51f.psi);
 
         /**
          * `true` when this [Kind]'s [locations] distinguish a front axle from a rear one, i.e.
