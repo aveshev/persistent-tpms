@@ -1,6 +1,7 @@
 import CoreTelephony
 import Network
 import SwiftUI
+import TPMSCore
 
 /// iOS hides its status bar on an iPhone in landscape, whatever the app asks for: what matters of it
 /// on a ride, the time, the network and the battery. Drawn over the screen's top left corner, it takes
@@ -92,7 +93,7 @@ private struct BatteryIcon: View {
                 .frame(width: 1.5, height: 4)
         }
         .accessibilityElement()
-        .accessibilityLabel("Battery \(Int(level * 100))%\(isCharging ? ", charging" : "")")
+        .accessibilityLabel(isCharging ? tr("Battery \(Int(level * 100))%, charging") : tr("Battery \(Int(level * 100))%"))
     }
 }
 

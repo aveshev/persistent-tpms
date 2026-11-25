@@ -1,5 +1,6 @@
 import AVFoundation
 import Foundation
+import TPMSCore
 import UserNotifications
 
 /// What AlertSpeaker's loops would say, as a notification repeating on its own, see docs/alerts.md
@@ -43,7 +44,7 @@ final class SpeechBackup {
         record(plan) { [weak self] name in
             guard let self, self.generation == generation else { return }
             let content = UNMutableNotificationContent()
-            content.title = plan.isCrimson ? "Critical tyre alert" : "Tyre alert"
+            content.title = plan.isCrimson ? tr("Critical tyre alert") : tr("Tyre alert")
             content.body = plan.text.components(separatedBy: ". ").first.map { $0.hasSuffix(".") ? $0 : $0 + "." } ?? plan.text
             // Its own sound, which a silent recording turns into the vibration alone
             content.sound = name.map { UNNotificationSound(named: UNNotificationSoundName($0)) } ?? .default

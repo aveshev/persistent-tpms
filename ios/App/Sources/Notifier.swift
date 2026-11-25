@@ -410,7 +410,7 @@ final class Notifier {
     /// Driving Focus comes on, which would hold it back until the ride is over.
     func postRidePrompt() {
         let content = UNMutableNotificationContent()
-        content.body = "Going for a ride? Open Persistent TPMS to monitor tyre pressure"
+        content.body = tr("Going for a ride? Open Persistent TPMS to monitor tyre pressure")
         content.interruptionLevel = .timeSensitive
         center.add(UNNotificationRequest(identifier: Self.ridePromptId, content: content, trigger: nil)) { error in
             rideLog("notification added, error: \(String(describing: error))")
@@ -453,19 +453,19 @@ final class Notifier {
         return switch alertClass {
         case .pressure:
             switch level {
-            case .amber: isHigh ? "Pressure getting high" : "Pressure getting low"
-            case .red: isHigh ? "Pressure high" : "Pressure low"
-            case .crimson: isHigh ? "Pressure critically high" : "Pressure critically low"
+            case .amber: isHigh ? tr("Pressure getting high") : tr("Pressure getting low")
+            case .red: isHigh ? tr("Pressure high") : tr("Pressure low")
+            case .crimson: isHigh ? tr("Pressure critically high") : tr("Pressure critically low")
             }
         case .temperature:
             switch level {
-            case .amber: "Tyre getting hot"
-            case .red: "Tyre hot"
-            case .crimson: "Tyre critically hot"
+            case .amber: tr("Tyre getting hot")
+            case .red: tr("Tyre hot")
+            case .crimson: tr("Tyre critically hot")
             }
-        case .battery: level == .amber ? "Sensor battery getting low" : "Sensor battery low"
-        case .pressureLoss: "Losing pressure"
-        case .sensorAlarm: "May be leaking"
+        case .battery: level == .amber ? tr("Sensor battery getting low") : tr("Sensor battery low")
+        case .pressureLoss: tr("Losing pressure")
+        case .sensorAlarm: tr("May be leaking")
         }
     }
 
@@ -483,30 +483,30 @@ final class Notifier {
         let settings = update.settings
         let unit = settings.pressureUnit
         let thresholds = update.vehicle.thresholds(update.location)
-        let values = value(alertClass, reading, settings) + (now.map { " (now \(value(alertClass, $0, settings)))" } ?? "")
+        let values = value(alertClass, reading, settings) + (now.map { tr(" (now \(value(alertClass, $0, settings)))") } ?? "")
         switch alertClass {
         case .pressure:
-            var text = "\(values), " + (update.alerts.isHighPressure ? "max \(thresholds.highPressure.string(unit))" : "min \(thresholds.lowPressure.string(unit))")
+            var text = "\(values), " + (update.alerts.isHighPressure ? tr("max \(thresholds.highPressure.string(unit))") : tr("min \(thresholds.lowPressure.string(unit))"))
             // Not notified on their own then, see AlertAction
             if update.alerts.foldsLeaks {
                 if let loss = update.loss { text += ", \(summary(loss, unit))" }
-                if update.alerts.levels[.sensorAlarm] != nil { text += ", sensor alarm" }
+                if update.alerts.levels[.sensorAlarm] != nil { text += tr(", sensor alarm") }
             }
             return text
         case .temperature:
-            return "\(values), hot from \(thresholds.highTemp.string(settings.temperatureUnit))"
+            return tr("\(values), hot from \(thresholds.highTemp.string(settings.temperatureUnit))")
         case .battery:
             return reading.batteryVoltage != nil
-                ? "\(values), alarm at \(thresholds.lowBatteryVoltage.alarmAt(reading.temperature).string)"
-                : "\(values), alarm at \(thresholds.lowBatteryPercent)%"
+                ? tr("\(values), alarm at \(thresholds.lowBatteryVoltage.alarmAt(reading.temperature).string)")
+                : tr("\(values), alarm at \(thresholds.lowBatteryPercent)%")
         case .pressureLoss:
-            return update.loss.map { "\(summary($0, unit)), now \(reading.pressure.string(unit))" } ?? reading.pressure.string(unit)
+            return update.loss.map { tr("\(summary($0, unit)), now \(reading.pressure.string(unit))") } ?? reading.pressure.string(unit)
         case .sensorAlarm:
-            return "the sensor raised its own alarm, at \(reading.pressure.string(unit))"
+            return tr("the sensor raised its own alarm, at \(reading.pressure.string(unit))")
         }
     }
 
     private func summary(_ loss: PressureLoss, _ unit: PressureUnit) -> String {
-        "down \(loss.drop.string(unit)) in \(max(1, Int(((loss.until - loss.since) / 60).rounded()))) min"
+        tr("down \(loss.drop.string(unit)) in \(max(1, Int(((loss.until - loss.since) / 60).rounded()))) min")
     }
 }

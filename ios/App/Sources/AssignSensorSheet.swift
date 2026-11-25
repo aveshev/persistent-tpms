@@ -45,7 +45,7 @@ struct AssignSensorSheet: View {
                     if let detected = monitor.detected(vehicle: vehicle, location: location) {
                         // The recommended way, under a light tint of the primary color
                         SensorOption(
-                            title: "Assign detected sensor",
+                            title: tr("Assign detected sensor"),
                             subtitle: "Sysgration, \(location.shortPhrase), ID: \(detected.sensorId.asSensorId(detected.brand))"
                         ) {
                             SysgrationBadge()
@@ -55,12 +55,12 @@ struct AssignSensorSheet: View {
                         }
                         .listRowBackground(Theme.primary.opacity(0.12))
                     }
-                    SensorOption(title: "Scan QR code", subtitle: "Printed on the sensors' box, card or cap, or shared by another phone") {
+                    SensorOption(title: tr("Scan QR code"), subtitle: tr("Printed on the sensors' box, card or cap, or shared by another phone")) {
                         Image(systemName: "qrcode")
                     } action: {
                         path.append(.qrCode)
                     }
-                    SensorOption(title: "Scan via Bluetooth", subtitle: "Use pressure changes to detect the correct sensor") {
+                    SensorOption(title: tr("Scan via Bluetooth"), subtitle: tr("Use pressure changes to detect the correct sensor")) {
                         Image(systemName: "antenna.radiowaves.left.and.right")
                     } action: {
                         path.append(.bluetooth)

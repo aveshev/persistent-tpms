@@ -66,7 +66,7 @@ final class Settings: ObservableObject {
     enum Theme: String, CaseIterable, Identifiable {
         case system, light, dark
         var id: String { rawValue }
-        var name: String { rawValue.capitalized }
+        var name: String { tr(String.LocalizationValue(rawValue.capitalized)) }
         var systemImage: String {
             switch self {
             case .system: "circle.lefthalf.filled"
@@ -77,6 +77,10 @@ final class Settings: ObservableObject {
     }
 
     // MARK: Display, like the Android app's AppPreferences
+
+    @Published var language: AppLanguage = .current {
+        didSet { AppLanguage.current = language }
+    }
 
     @Published var theme: Theme {
         didSet { defaults.set(theme.rawValue, forKey: "theme") }
@@ -136,12 +140,23 @@ final class Settings: ObservableObject {
 
     /// Whether the debug options can be reached: 10 taps on the version, like the Android app
     @Published var developer: Bool {
-        didSet { defaults.set(developer, forKey: "developer") }
+        didSet {
+            defaults.set(developer, forKey: "developer")
+            resetLanguageWithoutDebug()
+        }
     }
 
     /// What's selected on the debug page only shows while this is on, and it's kept while it's off
     @Published var debugOptions: Bool {
-        didSet { defaults.set(debugOptions, forKey: "debugOptions") }
+        didSet {
+            defaults.set(debugOptions, forKey: "debugOptions")
+            resetLanguageWithoutDebug()
+        }
+    }
+
+    /// The language is a debug option: with them off, the app follows the phone
+    private func resetLanguageWithoutDebug() {
+        if developer == false || debugOptions == false { language = .system }
     }
 
     var showsSensorId: Bool { developer && debugOptions && showSensorId }
@@ -235,5 +250,6 @@ final class Settings: ObservableObject {
         vibrateAlerts = defaults.bool(forKey: "vibrateAlerts")
         pressureLoss = defaults.bool(forKey: "pressureLoss")
         pressureLossMinDrop = Pressure(kpa: defaults.object(forKey: "pressureLossMinDropKpa") as? Float ?? PressureLossTracker.defaultMinDrop.kpa)
+        resetLanguageWithoutDebug()
     }
 }
