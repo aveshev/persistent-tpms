@@ -58,6 +58,7 @@ import com.masselis.tpmsadvanced.feature.main.interfaces.composable.SensorReadin
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.TimeSinceUpdateDetails
 import com.masselis.tpmsadvanced.feature.main.interfaces.composable.ReadingsSettings
 import com.masselis.tpmsadvanced.feature.unit.interfaces.UnitsSettingsItems
+import com.masselis.tpmsadvanced.ioc.Bindings
 import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.alerts
 import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.persistentMode
 import com.masselis.tpmsadvanced.interfaces.composable.AppSettingsTag.misc
@@ -121,6 +122,11 @@ internal fun AppSettings(
     LocalUriHandler.current.also { uriHandler ->
         SettingsGroup {
             VersionSettingsItem(BuildConfig.VERSION_NAME)
+            // Lite only, like the introduction, which replaces the whole screen once on again
+            if (AppTier.current == LITE) TextSettingsItem(
+                headline = stringResource(CommonR.string.show_the_introduction_again),
+                onClick = { Bindings.appPreferences.onboardingDone.value = false },
+            )
             TextSettingsItem(
                 headline = stringResource(CommonR.string.based_on_tpms_advanced),
                 supporting = stringResource(CommonR.string.by_vincent_masselis_under_the_apache_license),

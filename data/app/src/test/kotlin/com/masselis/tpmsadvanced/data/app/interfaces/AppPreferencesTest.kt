@@ -54,6 +54,7 @@ internal class AppPreferencesTest {
         // Reading a key with another type than it was written with fails, like in the real ones
         val preferences = mockk<SharedPreferences> {
             every { edit() } returns editor
+            every { contains(any()) } answers { stored.containsKey(firstArg()) }
             every { getBoolean(any(), any()) } answers { stored[firstArg()] as Boolean? ?: secondArg() }
             every { getString(any(), any()) } answers { stored[firstArg()] as String? ?: secondArg() }
             every { getInt(any(), any()) } answers { stored[firstArg()] as Int? ?: secondArg() }
@@ -122,8 +123,8 @@ internal class AppPreferencesTest {
     fun `every preference has keys of its own`() {
         preferences()
             .flatMap { property ->
-                writes.clear()
-                test().flow(property.name).run { value = value.changed() }
+                // Only what the change writes, not what the first launch does
+                test().also { writes.clear() }.flow(property.name).run { value = value.changed() }
                 assertTrue(writes.isNotEmpty(), property.name)
                 writes.filterNot { it == "VC" }.distinct().map { it to property.name }
             }
@@ -294,6 +295,7 @@ internal class AppPreferencesTest {
     @Test
     fun `another launch of the version doesn't write it again`() {
         stored["VC"] = CURRENT_VERSION
+        stored["ONBOARDING_DONE"] = true
         test().apply {
             assertEquals(CURRENT_VERSION, previousVersionCode)
             assertEquals(CURRENT_VERSION, currentVersionCode)
@@ -308,6 +310,43 @@ internal class AppPreferencesTest {
         assertTrue(test().isFreshInstallation)
         packageInfo.lastUpdateTime = 2
         assertFalse(test().isFreshInstallation)
+    }
+
+    @Test
+    fun `the introduction is shown when the app was never opened with its data`() {
+        assertFalse(test().onboardingDone.value)
+    }
+
+    @Test
+    fun `an app opened before, by a version without the introduction, doesn't show it`() {
+        stored["VC"] = CURRENT_VERSION - 1
+        assertTrue(test().onboardingDone.value)
+    }
+
+    @Test
+    fun `an introduction not gone through yet is still shown at the next launch`() {
+        test()
+        assertFalse(test().onboardingDone.value)
+    }
+
+    @Test
+    fun `the introduction asked for again is shown whatever the version`() {
+        stored["VC"] = CURRENT_VERSION - 1
+        stored["ONBOARDING_DONE"] = false
+        assertFalse(test().onboardingDone.value)
+    }
+
+    @Test
+    fun `alerts vibrate by default`() {
+        assertTrue(test().vibrateAlerts.value)
+    }
+
+    @Test
+    fun `stay active starts on, for 10 minutes`() {
+        test().apply {
+            assertTrue(stayActive.value)
+            assertEquals(10, stayActiveMinutes.value)
+        }
     }
 
     @Test

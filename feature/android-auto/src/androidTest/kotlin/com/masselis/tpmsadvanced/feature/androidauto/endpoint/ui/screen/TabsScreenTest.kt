@@ -7,6 +7,7 @@ import androidx.car.app.testing.TestCarContext
 import androidx.test.core.app.ApplicationProvider.getApplicationContext
 import androidx.test.platform.app.InstrumentationRegistry.getInstrumentation
 import com.masselis.tpmsadvanced.core.common.appGraph
+import com.masselis.tpmsadvanced.data.unit.model.PressureUnit
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.VehicleDatabase
 import dev.zacsweers.metro.AppScope
 import dev.zacsweers.metro.ContributesTo
@@ -79,7 +80,7 @@ internal class TabsScreenTest {
     @Test
     fun withOtherVehiclesTheCurrentOneOpensTheSwitch() {
         val otherCar = mockVehicle()
-        runBlocking { vehicleDatabase.insert(otherCar.uuid, otherCar.kind, otherCar.name, true) }
+        runBlocking { vehicleDatabase.insert(otherCar.uuid, otherCar.kind, otherCar.name, true, PressureUnit.BAR) }
 
         // "MOCK" was inserted as current, so the list is its own, not "My car"'s
         val vehicleRow = awaitVehicleRow(buildScreen(), otherCar.name).first()

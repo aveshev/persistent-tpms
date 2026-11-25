@@ -128,6 +128,7 @@ public interface VehicleBindings {
         internal val deleteVehicleViewModel: () -> DeleteVehicleViewModelImpl,
         internal val manageSensorsViewModel: () -> ManageSensorsViewModel,
         internal val sensorHistoryViewModel: SensorHistoryViewModel.Factory,
+        internal val deleteVehicleUseCase: () -> DeleteVehicleUseCase,
     )
 
     public companion object {
@@ -141,6 +142,8 @@ public interface VehicleBindings {
             internal.vehicleSettingsViewModel()
 
         internal fun VehicleComponent.DeleteVehicleViewModel() = internal.deleteVehicleViewModel()
+
+        internal fun VehicleComponent.DeleteVehicleUseCase() = internal.deleteVehicleUseCase()
 
         internal fun VehicleComponent.ManageSensorsViewModel() = internal.manageSensorsViewModel()
 

@@ -6,6 +6,7 @@ import com.masselis.tpmsadvanced.core.database.QueryOne
 import com.masselis.tpmsadvanced.core.database.QueryOne.Companion.asOne
 import com.masselis.tpmsadvanced.core.database.QueryOneOrNull
 import com.masselis.tpmsadvanced.core.database.QueryOneOrNull.Companion.asOneOrNull
+import com.masselis.tpmsadvanced.data.unit.model.PressureUnit
 import com.masselis.tpmsadvanced.data.vehicle.Database
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure
 import com.masselis.tpmsadvanced.data.vehicle.model.Temperature
@@ -29,6 +30,8 @@ public class VehicleDatabase internal constructor(database: Database) {
         kind: Vehicle.Kind,
         name: String,
         isCurrent: Boolean,
+        // The kind's default pressures are rounded to it, so they don't read as 33.4 psi or 1.66 bar
+        pressureUnit: PressureUnit,
     ): Unit = withContext(IO) {
         // Runs as a single transaction so a reactive observer (e.g. a settings screen navigated
         // to right after creation) never sees the row with the rear override half-applied.
@@ -37,12 +40,12 @@ public class VehicleDatabase internal constructor(database: Database) {
             // The schema's defaults predate them: SQLite can't change them without rebuilding the
             // table
             kind.defaultPressures.also {
-                queries.updateLowPressure(it.start, id)
-                queries.updateHighPressure(it.endInclusive, id)
+                queries.updateLowPressure(it.start.rounded(pressureUnit), id)
+                queries.updateHighPressure(it.endInclusive.rounded(pressureUnit), id)
             }
             kind.defaultRearPressures?.also {
-                queries.updateRearLowPressure(it.start, id)
-                queries.updateRearHighPressure(it.endInclusive, id)
+                queries.updateRearLowPressure(it.start.rounded(pressureUnit), id)
+                queries.updateRearHighPressure(it.endInclusive.rounded(pressureUnit), id)
                 queries.updateSeparateRearPressure(true, id)
             }
         }

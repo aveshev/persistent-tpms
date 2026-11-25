@@ -64,4 +64,18 @@ internal class PressureTest {
         assertEquals("230 кПа", 230f.kpa.string(KILO_PASCAL))
         assertEquals("33,0 psi", 33f.psi.string(PSI))
     }
+
+    @Test
+    fun `rounded reads plainly in its unit`() {
+        assertEquals("33", 2.3f.bar.rounded(PSI).numberString(PSI))
+        assertEquals("46", 3.2f.bar.rounded(PSI).numberString(PSI))
+        assertEquals("1.7", 24f.psi.rounded(BAR).numberString(BAR))
+        assertEquals("1.9", 28f.psi.rounded(BAR).numberString(BAR))
+        assertEquals("3", 43f.psi.rounded(BAR).numberString(BAR))
+        assertEquals("165", 24f.psi.rounded(KILO_PASCAL).numberString(KILO_PASCAL))
+        assertEquals("230", 2.3f.bar.rounded(KILO_PASCAL).numberString(KILO_PASCAL))
+        // Already round, kept
+        assertEquals("40", 40f.psi.rounded(PSI).numberString(PSI))
+        assertEquals("2.5", 2.5f.bar.rounded(BAR).numberString(BAR))
+    }
 }

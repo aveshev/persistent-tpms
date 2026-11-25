@@ -169,9 +169,9 @@ public class AppPreferences internal constructor(
 
     /**
      * Vibrates along with the red and crimson tyre alerts' sound, in the same loops, harder for a
-     * crimson one. Works with [AlertSound.NONE] too, vibrating on its own.
+     * crimson one. Works with [AlertSound.NONE] too, vibrating on its own. On by default.
      */
-    public val vibrateAlerts: MutableStateFlow<Boolean> = sharedPreferences.booleanFlow("VIBRATE_ALERTS", false)
+    public val vibrateAlerts: MutableStateFlow<Boolean> = sharedPreferences.booleanFlow("VIBRATE_ALERTS", true)
 
     public val persistentScanning: MutableStateFlow<Boolean> =
         sharedPreferences.booleanFlow("PERSISTENT_SCANNING", false)
@@ -294,8 +294,8 @@ public class AppPreferences internal constructor(
             minutes.takeIf { inUse } ?: DEFAULT_RIDE_STALE_MINUTES
         }
 
-    /** Keeps scanning for [stayActiveMinutes] once every activate condition has ended */
-    public val stayActive: MutableStateFlow<Boolean> = sharedPreferences.booleanFlow("STAY_ACTIVE", false)
+    /** Keeps scanning for [stayActiveMinutes] once every activate condition has ended. On by default. */
+    public val stayActive: MutableStateFlow<Boolean> = sharedPreferences.booleanFlow("STAY_ACTIVE", true)
 
     public val stayActiveMinutes: MutableStateFlow<Int> =
         sharedPreferences.intFlow("STAY_ACTIVE_MINUTES", DEFAULT_STAY_ACTIVE_MINUTES)
@@ -386,12 +386,27 @@ public class AppPreferences internal constructor(
     public val isFreshInstallation: Boolean =
         packageInfo.let { it.firstInstallTime == it.lastUpdateTime }
 
+    /**
+     * Whether the introduction shown at the first launch (Lite only) was gone through or skipped.
+     * Shown when the app was never opened with this data: installed, or its data cleared. An app
+     * updated from a version without it has run before, its [previousVersionCode] is stored:
+     * done. Written at the first launch, which stores that version too, so an introduction not
+     * gone through yet is still shown afterwards.
+     */
+    public val onboardingDone: MutableStateFlow<Boolean> = (previousVersionCode != null).let { default ->
+        sharedPreferences
+            .also { if (it.contains(ONBOARDING_DONE).not()) it.edit { putBoolean(ONBOARDING_DONE, default) } }
+            .booleanFlow(ONBOARDING_DONE, default)
+    }
+
     init {
         if (currentVersionCode != previousVersionCode)
             sharedPreferences.edit { putLong("VC", currentVersionCode) }
     }
 
     public companion object {
+        private const val ONBOARDING_DONE = "ONBOARDING_DONE"
+
         /** See [beaconMinRssi] */
         public const val DEFAULT_BEACON_MIN_RSSI: Int = -85
         private const val DEFAULT_STAY_ACTIVE_MINUTES = 10

@@ -115,23 +115,25 @@ public enum VehicleKind: String, CaseIterable, Identifiable, Sendable {
 
     public var locations: [TyreLocation] { rows.flatMap { $0 } }
 
-    /// From a typical recommended cold pressure to a typical sidewall maximum, see Vehicle.kt
+    /// From a typical recommended cold pressure to a typical sidewall maximum, in whole psi, see Vehicle.kt
     public var defaultPressures: ClosedRange<Pressure> {
         switch self {
-        case .car, .carWithSpare: .bar(2.3)...(.bar(3.2))
-        case .singleAxleTrailer: .bar(2.8)...(.bar(4.5))
-        case .motorcycle: .bar(2.5)...(.bar(3))
-        case .tadpoleThreeWheeler: .bar(1.8)...(.bar(2.5))
-        case .deltaThreeWheeler: .bar(2.5)...(.bar(3))
-        case .monowheel: .bar(2.8)...(.bar(3.5))
+        case .car, .carWithSpare: .psi(33)...(.psi(46))
+        case .singleAxleTrailer: .psi(41)...(.psi(65))
+        // A scooter's, see Vehicle.kt
+        case .motorcycle: .psi(24)...(.psi(40))
+        // A motorcycle's, its front a little lower, and a tuk-tuk's minimums, see Vehicle.kt
+        case .tadpoleThreeWheeler: .psi(22)...(.psi(40))
+        case .deltaThreeWheeler: .psi(30)...(.psi(44))
+        case .monowheel: .psi(41)...(.psi(51))
         }
     }
 
     public var defaultRearPressures: ClosedRange<Pressure>? {
         switch self {
-        case .motorcycle: .bar(2.9)...(.bar(3.4))
-        case .tadpoleThreeWheeler: .bar(2.4)...(.bar(3))
-        case .deltaThreeWheeler: .bar(1.9)...(.bar(2.8))
+        case .motorcycle: .psi(28)...(.psi(43))
+        case .tadpoleThreeWheeler: .psi(28)...(.psi(43))
+        case .deltaThreeWheeler: .psi(34)...(.psi(41))
         default: nil
         }
     }
@@ -158,13 +160,16 @@ public struct Vehicle: Identifiable, Hashable, Sendable {
     public var lowBatteryPercent: Int
 
     /// A new vehicle starts from its kind's pressures, see VehicleKind.defaultPressures, and the
-    /// temperatures Vehicle.sq's insert sets
-    public static func new(name: String, kind: VehicleKind) -> Vehicle {
+    /// temperatures Vehicle.sq's insert sets. The pressures are rounded to the unit, so they don't
+    /// read as 33.4 psi or 1.66 bar.
+    public static func new(name: String, kind: VehicleKind, unit: PressureUnit = .kiloPascal) -> Vehicle {
         let rear = kind.defaultRearPressures
         return Vehicle(
             id: UUID(), name: name, kind: kind, isCurrent: false,
-            lowPressure: kind.defaultPressures.lowerBound, highPressure: kind.defaultPressures.upperBound,
-            rearLowPressure: rear?.lowerBound, rearHighPressure: rear?.upperBound, separateRearPressure: rear != nil,
+            lowPressure: kind.defaultPressures.lowerBound.rounded(unit),
+            highPressure: kind.defaultPressures.upperBound.rounded(unit),
+            rearLowPressure: rear?.lowerBound.rounded(unit), rearHighPressure: rear?.upperBound.rounded(unit),
+            separateRearPressure: rear != nil,
             spareLowPressure: nil, spareHighPressure: nil, separateSparePressure: false,
             lowTemp: Temperature(celsius: 7), highTemp: Temperature(celsius: 65),
             lowBatteryVoltage: Voltage(volts: 2.6), lowBatteryPercent: 10

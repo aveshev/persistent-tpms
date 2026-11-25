@@ -205,7 +205,7 @@ final class Monitor: ObservableObject {
             try? FileManager.default.setAttributes([.protectionKey: FileProtectionType.none], ofItemAtPath: url.path + suffix)
         }
         if try database.vehicles().isEmpty {
-            var vehicle = Vehicle.new(name: "My car", kind: .car)
+            var vehicle = Vehicle.new(name: "My car", kind: .car, unit: settings.pressureUnit)
             vehicle.isCurrent = true
             try database.save(vehicle)
         }
@@ -360,7 +360,7 @@ final class Monitor: ObservableObject {
     }
 
     func add(name: String, kind: VehicleKind) {
-        var vehicle = Vehicle.new(name: name, kind: kind)
+        var vehicle = Vehicle.new(name: name, kind: kind, unit: settings.pressureUnit)
         vehicle.isCurrent = true
         save(vehicle)
     }

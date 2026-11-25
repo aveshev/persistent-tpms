@@ -7,9 +7,10 @@ import com.masselis.tpmsadvanced.data.unit.model.PressureUnit.BAR
 import com.masselis.tpmsadvanced.data.unit.model.PressureUnit.KILO_PASCAL
 import com.masselis.tpmsadvanced.data.unit.model.PressureUnit.PSI
 import java.text.DecimalFormatSymbols
+import kotlin.math.roundToInt
 
 /* Cannot use @Parcelize here: https://issuetracker.google.com/issues/177856519 */
-@Suppress("MagicNumber")
+@Suppress("MagicNumber", "TooManyFunctions")
 @JvmInline
 public value class Pressure(public val kpa: Float) : Parcelable, Comparable<Pressure> {
 
@@ -47,6 +48,13 @@ public value class Pressure(public val kpa: Float) : Parcelable, Comparable<Pres
     }
 
     public fun hasPressure(): Boolean = kpa > 0f
+
+    /** To the nearest value that reads plainly in [unit]: whole psi, a tenth of a bar, 5 kPa */
+    public fun rounded(unit: PressureUnit): Pressure = when (unit) {
+        KILO_PASCAL -> 1f / 5f
+        BAR -> 10f
+        PSI -> 1f
+    }.let { stepsPerUnit -> convert(unit).times(stepsPerUnit).roundToInt().div(stepsPerUnit).toPressure(unit) }
 
     override operator fun compareTo(other: Pressure): Int = kpa.compareTo(other.kpa)
 
