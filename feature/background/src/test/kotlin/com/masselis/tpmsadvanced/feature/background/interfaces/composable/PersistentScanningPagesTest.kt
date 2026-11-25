@@ -56,6 +56,11 @@ internal class PersistentScanningPagesTest {
     }
 
     @Test
+    fun sensorsOnlyWarning() {
+        snapshot { SensorsOnlyWarningPreview() }
+    }
+
+    @Test
     fun beaconScanList() {
         snapshot { BeaconScanListPreview() }
     }

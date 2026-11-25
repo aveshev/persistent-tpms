@@ -163,7 +163,7 @@
     <string name="dim_after">Затемнять через</string>
     <string name="dim_when_idle">Затемнять при бездействии</string>
     <string name="disable_bluetooth">Выключить Bluetooth</string>
-    <string name="disable_persistent_scanning">Отключить постоянное сканирование</string>
+    <string name="disable_persistent_mode">Отключить постоянный режим</string>
     <string name="disabled_tpms_background_monitoring">Фоновый мониторинг TPMS выключен</string>
     <string name="discard">Отменить</string>
     <string name="discard_your_changes">Отменить изменения?</string>
@@ -177,6 +177,7 @@
     <string name="enable_background_monitoring">Включить фоновый мониторинг</string>
     <string name="enable_bluetooth">Включить Bluetooth</string>
     <string name="enable_persistent_mode">Включите постоянный режим</string>
+    <string name="enable_persistent_mode_2">Включить постоянный режим</string>
     <string name="enable_vehicle_detection">Включите обнаружение транспорта</string>
     <string name="error_reading_qr_please_assign_via_bluetooth">Ошибка чтения QR, назначьте через Bluetooth</string>
     <string name="error_reading_the_shared_sensors_please_scan">Ошибка чтения переданных датчиков, отсканируйте код ещё раз</string>

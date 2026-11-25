@@ -64,26 +64,31 @@ internal fun PersistentScanningMenuItem(
     val setUp by viewModel.persistentScanningSetUp.collectAsState()
     val decision by viewModel.decision.collectAsState(initial = viewModel.currentDecision ?: ScanDecision.Idle)
     val permissionsOk = LocalMonitoringPermissions.current.status == MonitoringPermissions.Status.Ok
-    var alwaysOnWarning by rememberSaveable { mutableStateOf(false) }
+    var warning by rememberSaveable { mutableStateOf<AlwaysOnWarning?>(null) }
     PersistentScanningMenuItem(
         state = BellState.of(permissionsOk, decision).takeIf { persistentScanning },
         setUp = setUp,
         onPersistentScanning = { enabled ->
-            if (enabled && viewModel.scansAlwaysOnceOn()) alwaysOnWarning = true
-            else viewModel.setPersistentScanning(enabled)
+            viewModel
+                .warningOnceOn()
+                ?.takeIf { enabled }
+                ?.also { warning = it }
+                ?: viewModel.setPersistentScanning(enabled)
         },
         onClick = onClick,
         modifier = modifier,
     )
-    // Lite only: tells before turning it on that nothing would ever stop the scan
-    if (alwaysOnWarning) {
+    // Lite only: tells before turning it on that nothing would ever stop the scan, or that the
+    // known sensors alone are slow to start it
+    warning?.also { shown ->
         AlwaysOnWarning(
-            onKeepAlwaysOn = {
-                alwaysOnWarning = false
+            sensorsOnly = shown == AlwaysOnWarning.EnablingWithSensorsOnly,
+            onConfirm = {
+                warning = null
                 viewModel.setPersistentScanning(true)
             },
-            onDisable = { alwaysOnWarning = false },
-            onDismiss = { alwaysOnWarning = false },
+            onDisable = { warning = null },
+            onDismiss = { warning = null },
         )
     }
 }
