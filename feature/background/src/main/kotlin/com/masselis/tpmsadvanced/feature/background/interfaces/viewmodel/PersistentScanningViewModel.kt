@@ -11,6 +11,7 @@ import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.LITE
 import com.masselis.tpmsadvanced.data.app.interfaces.OtherApp
 import com.masselis.tpmsadvanced.feature.background.interfaces.MonitorService
 import com.masselis.tpmsadvanced.feature.background.interfaces.MonitoringController
+import com.masselis.tpmsadvanced.feature.background.interfaces.composable.AlwaysOnWarning
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningViewModel.OtherAppCheck.Clear
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningViewModel.OtherAppCheck.Conflict
 import com.masselis.tpmsadvanced.feature.background.interfaces.viewmodel.PersistentScanningViewModel.OtherAppCheck.Unchecked
@@ -71,12 +72,17 @@ internal class PersistentScanningViewModel(
 
     /**
      * Lite without any Bluetooth device or beacon to activate it: turned on, it would scan all the
-     * time. Read when the switch is tapped, so the current values are enough.
+     * time, or rely on the known sensors alone, which are slow to detect the vehicle. Read when the
+     * switch is tapped, so the current values are enough.
      */
-    fun scansAlwaysOnceOn(): Boolean = with(appPreferences) {
-        tier == LITE &&
-            (activateOnBluetooth.value && activateBluetoothDevices.value.isNotEmpty()).not() &&
-            (activateOnBeacon.value && beacons.value.isNotEmpty()).not()
+    fun warningOnceOn(): AlwaysOnWarning? = with(appPreferences) {
+        when {
+            tier != LITE -> null
+            activateOnBluetooth.value && activateBluetoothDevices.value.isNotEmpty() -> null
+            activateOnBeacon.value && beacons.value.isNotEmpty() -> null
+            activateOnKnownSensor.value -> AlwaysOnWarning.EnablingWithSensorsOnly
+            else -> AlwaysOnWarning.EnablingWithoutTrigger
+        }
     }
 
     // Read before anything restarts the service. Consumed even when persistent scanning is off,

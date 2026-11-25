@@ -164,7 +164,7 @@
     <string name="dim_after">Dim after</string>
     <string name="dim_when_idle">Dim when idle</string>
     <string name="disable_bluetooth">Disable Bluetooth</string>
-    <string name="disable_persistent_scanning">Disable persistent scanning</string>
+    <string name="disable_persistent_mode">Disable Persistent mode</string>
     <string name="disabled_tpms_background_monitoring">Disabled TPMS background monitoring</string>
     <string name="discard">Discard</string>
     <string name="discard_your_changes">Discard your changes?</string>
@@ -178,6 +178,7 @@
     <string name="enable_background_monitoring">Enable background monitoring</string>
     <string name="enable_bluetooth">Enable bluetooth</string>
     <string name="enable_persistent_mode">Enable persistent mode</string>
+    <string name="enable_persistent_mode_2">Enable Persistent mode</string>
     <string name="enable_vehicle_detection">Enable vehicle detection</string>
     <string name="error_reading_qr_please_assign_via_bluetooth">Error reading QR, please assign via Bluetooth instead</string>
     <string name="error_reading_the_shared_sensors_please_scan">Error reading the shared sensors, please scan the code again</string>

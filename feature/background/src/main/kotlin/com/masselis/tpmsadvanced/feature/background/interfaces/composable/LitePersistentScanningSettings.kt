@@ -35,7 +35,8 @@ import androidx.compose.foundation.verticalScroll
  * pages of their own like [PersistentScanningSettings]. The ride notification and
  * [LiteSuspendSettings] follow, outside. They stay usable while
  * persistent scanning is off, so that a trigger can be set up before turning it on. Without any
- * trigger it scans all the time, which [AlwaysOnWarning] tells when that's about to happen.
+ * trigger it scans all the time, which [AlwaysOnWarning] tells when that's about to happen, as it
+ * tells how slow the known sensors alone are to detect the vehicle.
  */
 @Composable
 public fun LitePersistentScanningSettings(
@@ -102,6 +103,7 @@ internal fun LitePersistentScanningSettings(
             when {
                 enabled.not() -> viewModel.disablePersistentScanning()
                 anyTrigger.not() -> warning = AlwaysOnWarning.EnablingWithoutTrigger
+                (bluetooth || beacon).not() -> warning = AlwaysOnWarning.EnablingWithSensorsOnly
                 else -> permissions.request()
             }
         },
@@ -136,10 +138,11 @@ internal fun LitePersistentScanningSettings(
 
     warning?.also { shown ->
         AlwaysOnWarning(
-            onKeepAlwaysOn = {
+            sensorsOnly = shown == AlwaysOnWarning.EnablingWithSensorsOnly,
+            onConfirm = {
                 warning = null
                 // Already on when the last trigger went, nothing more to do then
-                if (shown == AlwaysOnWarning.EnablingWithoutTrigger) permissions.request()
+                if (shown != AlwaysOnWarning.LastTriggerRemoved) permissions.request()
             },
             onDisable = {
                 warning = null
@@ -153,28 +156,40 @@ internal fun LitePersistentScanningSettings(
 }
 
 /** Why the [AlwaysOnWarning] dialog is shown */
-internal enum class AlwaysOnWarning { EnablingWithoutTrigger, LastTriggerRemoved }
+internal enum class AlwaysOnWarning { EnablingWithoutTrigger, EnablingWithSensorsOnly, LastTriggerRemoved }
 
-/** Persistent scanning is, or is about to be, on without any trigger: it would scan all the time */
+/**
+ * Persistent scanning is, or is about to be, on without any trigger: it would scan all the time.
+ * Or, when [sensorsOnly], about to be on with the known sensors as its only trigger, which can take
+ * a while to detect the vehicle.
+ */
 @Suppress("MaxLineLength")
 @Composable
-internal fun AlwaysOnWarning(onKeepAlwaysOn: () -> Unit, onDisable: () -> Unit, onDismiss: () -> Unit) = AlertDialog(
+internal fun AlwaysOnWarning(
+    onConfirm: () -> Unit,
+    onDisable: () -> Unit,
+    onDismiss: () -> Unit,
+    sensorsOnly: Boolean = false,
+) = AlertDialog(
     text = {
         Text(
-            stringResource(CommonR.string.when_no_bluetooth_connections_or_beacons_are),
+            stringResource(
+                if (sensorsOnly) CommonR.string.tpms_sensors_run_on_small_batteries
+                else CommonR.string.when_no_bluetooth_connections_or_beacons_are
+            ),
             // Scrolls when the largest font sizes make it taller than the dialog
             Modifier.verticalScroll(rememberScrollState()),
         )
     },
     onDismissRequest = onDismiss,
     confirmButton = {
-        TextButton(onClick = onKeepAlwaysOn, Modifier.testTag(PersistentScanningSettingsTags.keepAlwaysOn)) {
-            Text(stringResource(CommonR.string.keep_always_on))
+        TextButton(onClick = onConfirm, Modifier.testTag(PersistentScanningSettingsTags.keepAlwaysOn)) {
+            Text(stringResource(if (sensorsOnly) CommonR.string.enable_persistent_mode_2 else CommonR.string.keep_always_on))
         }
     },
     dismissButton = {
         TextButton(onClick = onDisable, Modifier.testTag(PersistentScanningSettingsTags.disablePersistent)) {
-            Text(stringResource(CommonR.string.disable_persistent_scanning))
+            Text(stringResource(if (sensorsOnly) CommonR.string.cancel else CommonR.string.disable_persistent_mode))
         }
     },
 )
@@ -300,5 +315,11 @@ internal fun LitePersistentScanningSettingsPreview() {
 @Preview
 @Composable
 internal fun AlwaysOnWarningPreview() {
-    AlwaysOnWarning(onKeepAlwaysOn = {}, onDisable = {}, onDismiss = {})
+    AlwaysOnWarning(onConfirm = {}, onDisable = {}, onDismiss = {})
+}
+
+@Preview
+@Composable
+internal fun SensorsOnlyWarningPreview() {
+    AlwaysOnWarning(onConfirm = {}, onDisable = {}, onDismiss = {}, sensorsOnly = true)
 }
