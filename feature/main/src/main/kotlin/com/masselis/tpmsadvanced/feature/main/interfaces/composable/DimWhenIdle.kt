@@ -88,7 +88,8 @@ import androidx.compose.ui.res.stringResource
 /**
  * Lowers the screen's brightness over [content] once nothing happened for as long as the settings
  * say, see [DimDisplayDelay]: no touch, no new warning or alert of the shown vehicle's tyres. While
- * [isAlerting], a red or critical alert of any vehicle going on, it stays bright. So it does while
+ * [isAlerting], a red or critical alert of any vehicle going on and not silenced or ignored from the
+ * main screen's button, it stays bright. So it does while
  * none of the app's windows has the focus, the notification shade pulled down over it: dimmed, the
  * shade would be too. On Android 10 and up only, the app's own dialogs taking the focus otherwise.
  * A notification sounding, whichever app's, brightens it like a touch, its heads-up shown over the

@@ -96,7 +96,7 @@ internal class AlertSpeakerTest {
     @Test
     fun `a vehicle alerts with its worst alert going on`() = runTest {
         val speaker = test()
-        val levels = AlertingVehiclesUseCase(speaker).levels
+        val levels = AlertingVehiclesUseCase(speaker, mockk { every { silence } returns MutableStateFlow(null) }).levels
         speaker.red(TAG, CAR, PRESSURE)
         speaker.crimson(OTHER_TAG, CAR, BATTERY)
         speaker.red(MOTORCYCLE_TAG, MOTORCYCLE, PRESSURE)

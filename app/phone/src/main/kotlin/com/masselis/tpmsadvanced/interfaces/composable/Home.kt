@@ -86,6 +86,7 @@ import com.masselis.tpmsadvanced.feature.background.interfaces.ui.DemoMonitoring
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.DemoPersistentScanningMenuItem
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.DetectedActivitiesIndicator
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.alertingVehicles
+import com.masselis.tpmsadvanced.feature.background.interfaces.ui.unsilencedAlertingVehicles
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.MonitoringButton
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.PersistentScanningHost
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.PersistentScanningMenuItem
@@ -231,13 +232,14 @@ internal fun VehicleHome(
                         // The bell tells the status here, nothing to hear
                         QuietScanStatusAnnouncementsEffect()
                         val alerts = alertingVehicles()
-                        // Kept bright during the introduction's tour too, which isn't touching it
-                        DimWhenIdle(isAlerting = alerts.isNotEmpty() || onboarding != null) { isDimmed ->
+                        // Kept bright during the introduction's tour too, which isn't touching it. Not
+                        // for the alerts silenced or ignored with the button, seen already.
+                        DimWhenIdle(isAlerting = unsilencedAlertingVehicles().isNotEmpty() || onboarding != null) { isDimmed ->
                             CurrentVehicle(
                                 snackbarHostState = snackbarHostState,
                                 // It draws its own top bar, see topBar
                                 modifier = withoutBar,
-                                // Never both: an alert to silence keeps the screen bright
+                                // Never both: an alert to silence keeps the screen bright, a silenced one shows again on a touch
                                 overlay = { if (isDimmed) DimmedNotice() else SilenceAlertsButton() },
                                 scanQrCode = { navController.navigateTo(Path.QrCode(vehicleUuid, locations.indexOf(it))) },
                                 scanBluetooth = {

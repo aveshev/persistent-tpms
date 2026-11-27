@@ -10,7 +10,9 @@ import com.masselis.tpmsadvanced.core.test.MainDispatcherRule
 import com.masselis.tpmsadvanced.core.test.mockLocalizedAsEnglish
 import io.mockk.unmockkAll
 import org.junit.After
+import com.masselis.tpmsadvanced.feature.background.interfaces.ui.AlertsIgnoredPreview
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.AlertsSilencedPreview
+import com.masselis.tpmsadvanced.feature.background.interfaces.ui.IgnoreAlertsPreview
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.OtherAppPersistentScanningAlertPreview
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.SilenceAlertsPreview
 import com.masselis.tpmsadvanced.feature.background.interfaces.ui.SilenceCriticalAlertsPreview
@@ -96,5 +98,15 @@ internal class AlertsPagesTest {
     @Test
     fun alertsSilenced() {
         snapshot { AlertsSilencedPreview() }
+    }
+
+    @Test
+    fun ignoreAlerts() {
+        snapshot { IgnoreAlertsPreview() }
+    }
+
+    @Test
+    fun alertsIgnored() {
+        snapshot { AlertsIgnoredPreview() }
     }
 }

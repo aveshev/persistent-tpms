@@ -255,7 +255,7 @@ struct MainView: View {
             .overlayPreferenceValue(VehicleBounds.Key.self) { bounds in
                 ClearOfReadouts(bounds: bounds, bar: [bar], bottomInset: isBeside ? geometry.safeAreaInsets.bottom : 0) {
                     // Never both: an alert to silence keeps the screen bright
-                    if isDimmed { DimmedNotice() } else { SilenceAlertsButton(speaker: monitor.speaker) }
+                    if isDimmed { DimmedNotice() } else { SilenceAlertsButton(speaker: monitor.speaker, monitor: monitor, settings: settings) }
                 }
                 // iOS hides its status bar there, in the corner the bar leaves empty
                 if isBeside, verticalSizeClass == .compact {
@@ -531,22 +531,26 @@ private struct MagnifierTitleRow: Layout {
 }
 
 /// Silences the alerts' sound for a while, while a red or critical alert has yet to be said, like the
-/// Android app's SilenceAlertsButton. Big enough to hit while riding.
+/// Android app's SilenceAlertsButton. Big enough to hit while riding. With nothing to say but an alert
+/// going on, the sound off or its speech over, it ignores it: it then lets the screen dim.
 private struct SilenceAlertsButton: View {
     @ObservedObject var speaker: AlertSpeaker
+    @ObservedObject var monitor: Monitor
+    @ObservedObject var settings: Settings
 
     var body: some View {
+        let alerting = monitor.alertingLevel()
         Group {
-            switch SilenceButton.of(highest: speaker.level, silence: speaker.silence) {
+            switch SilenceButton.of(highest: speaker.level, alerting: alerting, silence: speaker.silence, isSoundOff: settings.alertSound == .none && settings.vibrateAlerts == false) {
             case .idle:
                 EmptyView()
-            case let .offer(isCritical):
-                Button { speaker.silenceNow() } label: {
+            case let .offer(isCritical, isIgnoring):
+                Button { speaker.silenceNow(isCritical ? .crimson : .red) } label: {
                     // Wrapped to the width it's given, "for 10 min" kept together
-                    Label("Silence \(isCritical ? "critical alerts" : "alerts") for\u{00A0}10\u{00A0}min", systemImage: "speaker.wave.2.fill")
+                    Label("\(isIgnoring ? "Ignore" : "Silence") \(isCritical ? "critical alerts" : "alerts") for\u{00A0}10\u{00A0}min", systemImage: "speaker.wave.2.fill")
                 }
                 .tint(Theme.error)
-            case let .silenced(isCritical, until):
+            case let .silenced(isCritical, until, isIgnoring):
                 // The speaker only drops an ended silence at its next reading. Nothing's left to
                 // silence by then, what it dropped isn't kept, so the button just goes away.
                 TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -555,8 +559,8 @@ private struct SilenceAlertsButton: View {
                         Button { speaker.unmute() } label: {
                             Label {
                                 VStack(spacing: 2) {
-                                    Text(isCritical ? "All alerts silenced" : "Alerts silenced")
-                                    Text("\(minutesLeft) min left, tap to unmute")
+                                    Text(isIgnoring ? (isCritical ? "All alerts ignored" : "Alerts ignored") : (isCritical ? "All alerts silenced" : "Alerts silenced"))
+                                    Text(isIgnoring ? "\(minutesLeft) min left, tap to stop ignoring" : "\(minutesLeft) min left, tap to unmute")
                                         .font(.callout)
                                 }
                             } icon: {

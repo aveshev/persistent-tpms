@@ -43,7 +43,9 @@ import androidx.compose.ui.res.stringResource
 /**
  * Silences the alerts' speech for a while, shown over the vehicle, clear of its readings, while a
  * red or critical alert is notified, see docs/alerts.md. Big enough to hit while riding, and as wide
- * as it's given. Its icon tells whether the alerts are audible now, its text what a tap does.
+ * as it's given. Its icon tells whether the alerts are audible now, its text what a tap does. With
+ * nothing to say, the sound off or the speech over, it ignores the alerts instead, which then let the
+ * screen dim, see [SilenceAlertsUseCase].
  */
 @Composable
 public fun SilenceAlertsButton(modifier: Modifier = Modifier): Unit = SilenceAlertsButton(
@@ -60,6 +62,7 @@ internal fun SilenceAlertsButton(
     SilenceAlertsButton(state, viewModel::silence, viewModel::unmute, modifier)
 }
 
+@Suppress("LongMethod", "CyclomaticComplexMethod")
 @Composable
 private fun SilenceAlertsButton(
     state: State,
@@ -87,8 +90,15 @@ private fun SilenceAlertsButton(
             Spacer(Modifier.width(12.dp))
             // Wrapped to the width it's given, see ClearOfReadouts, "for 10 min" kept together
             Text(
-                text = if (state.isCritical) stringResource(CommonR.string.silence_critical_alerts_for, SilenceAlertsUseCase.DURATION.inWholeMinutes)
-                else stringResource(CommonR.string.silence_alerts_for, SilenceAlertsUseCase.DURATION.inWholeMinutes),
+                text = stringResource(
+                    when {
+                        state.isIgnoring && state.isCritical -> CommonR.string.ignore_critical_alerts_for
+                        state.isIgnoring -> CommonR.string.ignore_alerts_for
+                        state.isCritical -> CommonR.string.silence_critical_alerts_for
+                        else -> CommonR.string.silence_alerts_for
+                    },
+                    SilenceAlertsUseCase.DURATION.inWholeMinutes,
+                ),
                 style = MaterialTheme.typography.headlineSmall,
                 textAlign = TextAlign.Center,
             )
@@ -109,12 +119,22 @@ private fun SilenceAlertsButton(
             Spacer(Modifier.width(12.dp))
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    text = if (state.isCritical) stringResource(CommonR.string.all_alerts_silenced) else stringResource(CommonR.string.alerts_silenced),
+                    text = stringResource(
+                        when {
+                            state.isIgnoring && state.isCritical -> CommonR.string.all_alerts_ignored
+                            state.isIgnoring -> CommonR.string.alerts_ignored
+                            state.isCritical -> CommonR.string.all_alerts_silenced
+                            else -> CommonR.string.alerts_silenced
+                        }
+                    ),
                     style = MaterialTheme.typography.headlineSmall,
                     textAlign = TextAlign.Center,
                 )
                 Text(
-                    text = stringResource(CommonR.string.min_left_tap_to_unmute, minutesLeft),
+                    text = stringResource(
+                        if (state.isIgnoring) CommonR.string.min_left_tap_to_stop_ignoring else CommonR.string.min_left_tap_to_unmute,
+                        minutesLeft,
+                    ),
                     style = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center,
                 )
@@ -146,11 +166,24 @@ internal fun SilenceAlertsPreview() = SilenceAlertsButton(State.Offer(isCritical
 @Composable
 internal fun SilenceCriticalAlertsPreview() = SilenceAlertsButton(State.Offer(isCritical = true), {}, {})
 
+@Preview
+@Composable
+internal fun IgnoreAlertsPreview() = SilenceAlertsButton(State.Offer(isCritical = false, isIgnoring = true), {}, {})
+
 @Suppress("MagicNumber")
 @Preview
 @Composable
 internal fun AlertsSilencedPreview() = SilenceAlertsButton(
     State.Silenced(isCritical = false, until = System.currentTimeMillis() + 8 * MILLIS_PER_MINUTE.toLong()),
+    {},
+    {},
+)
+
+@Suppress("MagicNumber")
+@Preview
+@Composable
+internal fun AlertsIgnoredPreview() = SilenceAlertsButton(
+    State.Silenced(isCritical = false, until = System.currentTimeMillis() + 8 * MILLIS_PER_MINUTE.toLong(), isIgnoring = true),
     {},
     {},
 )

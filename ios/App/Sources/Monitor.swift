@@ -85,11 +85,26 @@ final class Monitor: ObservableObject {
     /// however old, so a sensor not heard lately doesn't count: one left flat, or away from the phone,
     /// would keep the screen bright for good.
     func isAlerting(_ vehicleId: UUID? = nil, now: Date = Date()) -> Bool {
-        tyres.contains { key, tyre in
-            (vehicleId == nil || key.vehicleId == vehicleId)
-                && tyre.latest.map { now.timeIntervalSince1970 - $0.timestamp < OngoingAlerts.heldFor } == true
-                && tyre.alerts.levels.contains { $0.key != .battery && $0.value >= .red }
-        }
+        alertingLevel(vehicleId, now: now) != nil
+    }
+
+    /// The worst of the alerts [isAlerting] counts, nil without any
+    func alertingLevel(_ vehicleId: UUID? = nil, now: Date = Date()) -> AlertLevel? {
+        tyres
+            .filter { key, tyre in
+                (vehicleId == nil || key.vehicleId == vehicleId)
+                    && tyre.latest.map { now.timeIntervalSince1970 - $0.timestamp < OngoingAlerts.heldFor } == true
+            }
+            .flatMap { _, tyre in tyre.alerts.levels.filter { $0.key != .battery && $0.value >= .red }.map(\.value) }
+            .max()
+    }
+
+    /// An alert [isAlerting] counts, above what the main screen's button silenced or ignored: what
+    /// keeps the screen bright, like the Android app's AlertingVehiclesUseCase.unsilenced
+    func isAlertingUnsilenced(now: Date = Date()) -> Bool {
+        guard let level = alertingLevel(now: now) else { return false }
+        guard let silence = speaker.silence, silence.until > now else { return true }
+        return level > silence.level
     }
 
     /// Opens the database and starts the scan. Called at launch, also when iOS relaunches the app

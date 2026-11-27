@@ -14,7 +14,7 @@ internal class AlertSilenceViewModel(
 ) : ViewModel() {
 
     val stateFlow: StateFlow<State> = silenceAlertsUseCase
-        .state
+        .button
         .stateIn(viewModelScope, WhileSubscribed(), State.Idle)
 
     fun silence(isCritical: Boolean) = silenceAlertsUseCase.silence(isCritical)

@@ -123,8 +123,10 @@ final class AlertSpeaker: ObservableObject {
         scheduled()
     }
 
-    func silenceNow() {
-        guard let level else { return }
+    /// Silences up to [level], the highest one yet to be said by default. With nothing to say, from
+    /// the button ignoring the alerts going on, only that: they no longer keep the screen bright.
+    func silenceNow(_ level: AlertLevel? = nil) {
+        guard let level = [level, self.level].compactMap({ $0 }).max() else { return }
         silence = (level, Date().addingTimeInterval(Self.silenceDuration))
         scheduled()
     }
