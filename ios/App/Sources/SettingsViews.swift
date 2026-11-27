@@ -387,16 +387,18 @@ struct TimeSinceUpdateView: View {
     }
 }
 
-/// How often each sensor brand sends an update, and how to tell a silent sensor from a broken one.
-/// Only the schedules and pressure steps measured on real sensors, see RawWicarlink.pressure.
+/// Why sensors update at different rates, a link to each model's schedule and pressure steps on the
+/// website (docs/sensors.md), and how to tell a silent sensor from a broken one, like the Android
+/// app's SensorReadingsUpdateDetails.
 struct SensorReadingsUpdateDetailsView: View {
     var body: some View {
         Form {
             PageIntro(text: "Sensors from different manufacturers differ in how often they send an update, and in whether they can tell that the wheel is rolling.")
             Section("Known schedules") {
-                SettingsRow("WiCarLink", "Every 5.5 minutes, whether the vehicle moves or not, and whenever pressure changes significantly. Older sensors read the pressure in steps of 0.1 bar (about 1.5 psi): a tyre between two steps can read one step lower when cold, and the next one up once warm. Newer ones read it in steps of about 0.45 psi (3.1 kPa), and send it about every 2 minutes while riding")
-                SettingsRow("Pecham", "Every minute while the wheel rotates. While stationary, only when the pressure is below ~22 psi, and in either case, whenever pressure changes significantly. Reads the pressure in steps of about 0.45 psi (3.1 kPa), shown rounded to 0.1 psi: a steady tyre can go back and forth by one step")
-                SettingsRow("TC.TPMS", "Every 5 minutes, whether the vehicle moves or not, and at once when the pressure changes by about 1.5 psi. Reads the pressure in steps of 0.1 psi")
+                // On the website, where each model's description is updated without a new release
+                Link(destination: URL(string: "https://aveshev.com/persistent-tpms/sensors/")!) {
+                    SettingsRow("Sensor models", "Each model's updates and pressure steps, on the app's website")
+                }
             }
             PageIntro("When updates seem to be missing", text: "If the app does not show the sensor updating as often as you think it should, it could be due to the following reasons:\n\n1. The sensor is not sending any updates at all. You can verify that by briefly taking it off the wheel: it should sense 0 pressure, which should force an update, and the app should show an alert. If it does not, either the sensor itself or its battery may be dead.\n\n2. The sensor is sending updates, but they are not getting to the phone. Changing the phone's position relative to the wheel may help, and so may replacing the sensor's battery with a fresh one. In the worst case, you may need a different sensor brand.\n\n3. The sensor reacts to pressure changes, but fails to detect wheel rotation (if it has rotation detection). Swapping it with a sensor that reports regularly helps tell this apart from #2: if it still doesn't send updates from where the other one does, it's likely faulty and should be replaced. You can use \"Manage sensors\" in the vehicle settings to quickly move them between the wheels.")
         }
