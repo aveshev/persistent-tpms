@@ -340,7 +340,7 @@ struct ManageSensorSheet: View {
                     }
                 } header: {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Type: \(sensor.brand.name)")
+                        Text("Type: \(sensor.brand.name(variant: monitor.tyres[Monitor.TyreKey(vehicleId: vehicle.id, location: location)]?.latest?.variant))")
                         // A sensor without an ID has nothing to show, see isIdentifiedByAddress
                         Text(sensor.brand.isIdentifiedByAddress ? "No ID, told apart by this iPhone" : "ID: \(sensor.id.asSensorId(sensor.brand))")
                     }

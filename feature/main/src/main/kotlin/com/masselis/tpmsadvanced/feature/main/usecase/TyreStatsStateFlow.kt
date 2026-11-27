@@ -8,6 +8,7 @@ import com.masselis.tpmsadvanced.data.vehicle.model.AlertClass
 import com.masselis.tpmsadvanced.data.vehicle.model.AlertLevel
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorVariant
 import com.masselis.tpmsadvanced.data.vehicle.model.Temperature
 import com.masselis.tpmsadvanced.data.vehicle.model.TyreAtmosphere
 import com.masselis.tpmsadvanced.data.vehicle.model.Voltage
@@ -60,6 +61,7 @@ public class TyreStatsStateFlow internal constructor(
                 atmosphere.batteryPercent,
                 alerts.isHighPressure,
                 bound?.brand,
+                atmosphere.variant,
             )
         }
         }
@@ -107,6 +109,8 @@ public class TyreStatsStateFlow internal constructor(
             public val isHighPressure: Boolean = false,
             /** The bound sensor's, to show its id the way it's printed */
             public val brand: SensorBrand? = null,
+            /** Which of its brand's kinds of sensors it is, see Tyre.variant */
+            public val variant: SensorVariant? = null,
         ) : State()
     }
 }

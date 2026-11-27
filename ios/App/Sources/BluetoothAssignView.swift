@@ -271,7 +271,7 @@ struct BluetoothAssignView: View {
             VStack(spacing: 12) {
                 ForEach(readings, id: \.sensorId) { reading in
                     VStack(spacing: 2) {
-                        Text("\(reading.brand.name) \(reading.sensorId.asSensorId(reading.brand))")
+                        Text("\(reading.brandName) \(reading.sensorId.asSensorId(reading.brand))")
                             .font(.subheadline.weight(.semibold))
                         Text("\(reading.pressure.string(settings.pressureUnit)) · \(reading.temperature.string(settings.temperatureUnit))")
                             .font(.subheadline)

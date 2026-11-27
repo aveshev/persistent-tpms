@@ -216,8 +216,9 @@ public interface TyreBindings {
         sensorBindingUseCase: SensorBindingUseCase,
         scannerUseCase: LocatedTyreScannerUseCase,
         demoOrBleScannerUseCase: DemoOrBleScannerUseCase,
+        tyreStats: TyreStatsStateFlow,
     ): TyreActionsViewModel =
-        TyreActionsViewModel(sensorBindingUseCase, scannerUseCase, demoOrBleScannerUseCase)
+        TyreActionsViewModel(sensorBindingUseCase, scannerUseCase, demoOrBleScannerUseCase, tyreStats)
 
     public val internal: Internal
 

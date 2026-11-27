@@ -100,6 +100,11 @@ public sealed interface Tyre : Parcelable {
 public val Tyre.flags: List<UByte>?
     get() = raw?.let { AdvertisingPacket(it.hexToByteArray()).statusBytes }
 
+/** Which of its brand's kinds of sensors sent it, read from [Tyre.raw], see [SensorVariant] */
+@OptIn(ExperimentalStdlibApi::class)
+public val Tyre.variant: SensorVariant?
+    get() = raw?.let { AdvertisingPacket(it.hexToByteArray()).decode()?.variant }
+
 /**
  * The atmosphere shown for this record, its pressure corrected by [calibration] when the vehicle has
  * one
@@ -114,6 +119,7 @@ public fun Tyre.toAtmosphere(calibration: PressureCalibration?): TyreAtmosphere 
     flags,
     batteryPercent,
     rssi,
+    variant,
 ).let { atmosphere ->
     calibration
         ?.let { atmosphere.copy(pressure = it.applyTo(atmosphere.pressure)) }

@@ -1,6 +1,9 @@
 package com.masselis.tpmsadvanced.data.vehicle.interfaces.impl
 
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.WICARLINK
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorVariant.V1
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorVariant.V2
+import com.masselis.tpmsadvanced.data.vehicle.model.variant
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -67,5 +70,11 @@ internal class WircarlinkTest {
         // air was let out
         assertFalse(assertNotNull("0201060303B0FB12FFAC00C78952000D3800D510FF1100C42122".hexToByteArray().decodedTyre()).isAlarm)
         assertTrue(assertNotNull("0201060303B0FB12FFAC00C67C53010D0400F010FF1100C42122".hexToByteArray().decodedTyre()).isAlarm)
+    }
+
+    @Test
+    fun `the older and newer sensors are told apart, from what they send`() {
+        assertEquals(V1, assertNotNull("0201060303B0FB12FFAC00C22D51000DC2001C10FF1100C52122".hexToByteArray().decodedTyre()).variant)
+        assertEquals(V2, assertNotNull("0201060303B0FB12FFAC00B63757030AF800272811111101555B".hexToByteArray().decodedTyre()).variant)
     }
 }

@@ -44,6 +44,7 @@ import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.FRONT_LEFT
 import com.masselis.tpmsadvanced.data.vehicle.model.Temperature.CREATOR.celsius
 import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location
+import com.masselis.tpmsadvanced.data.vehicle.model.variant
 import com.masselis.tpmsadvanced.data.vehicle.model.Voltage.CREATOR.volts
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.SensorHistoryViewModel
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.SensorHistoryViewModel.State
@@ -114,7 +115,7 @@ private fun SensorHistory(
             Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
                 Text(
                     text = buildString {
-                        state.sensor?.also { append("${it.brand.label} · ") }
+                        state.sensor?.also { append("${it.brand.label(state.readings.firstOrNull()?.variant)} · ") }
                         append("ID: ${state.sensorId.asSensorId(state.sensor?.brand)}")
                     },
                     style = MaterialTheme.typography.titleMedium,
