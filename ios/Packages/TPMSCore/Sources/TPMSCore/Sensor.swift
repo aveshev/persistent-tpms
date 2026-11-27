@@ -3,7 +3,7 @@ import Foundation
 /// The sensors the app decodes. The raw value is what the database stores, the same as Android's
 /// `SensorBrand.code`: it never changes, a new brand takes the next one.
 public enum SensorBrand: Int, CaseIterable, Sendable {
-    case pecham = 1, bekubeeKy = 2, wicarlink = 3, bekubeeTpms = 4, sysgration = 5, tcTpms = 6
+    case pecham = 1, bekubeeKy = 2, wicarlink = 3, bekubeeTpms = 4, sysgration = 5, tcTpms = 6, sy4300 = 7, yc0001 = 8
 
     public var name: String {
         switch self {
@@ -13,16 +13,19 @@ public enum SensorBrand: Int, CaseIterable, Sendable {
         case .bekubeeTpms: "Bekubee TPMS"
         case .sysgration: "Sysgration"
         case .tcTpms: "TC.TPMS"
+        case .sy4300: "SY-4300"
+        // Decoded from the vendor app's code, no YC-0001 was ever captured, see RawSy4300.kt
+        case .yc0001: "YC-0001 (experimental)"
         }
     }
 
     /// Sysgration reports its battery as a percentage, the others as a voltage
     public var reportsPercent: Bool { self == .sysgration }
 
-    /// Pecham's and Bekubee KY's advertisements carry no ID: Android identifies them by their
+    /// Pecham's, Bekubee KY's, SY-4300's and YC-0001's advertisements carry no ID: Android identifies them by their
     /// Bluetooth address, which iOS doesn't give. iOS gives each phone its own identifier for them
     /// instead, so they're bound again on each iPhone.
-    public var isIdentifiedByAddress: Bool { self == .pecham || self == .bekubeeKy }
+    public var isIdentifiedByAddress: Bool { [.pecham, .bekubeeKy, .sy4300, .yc0001].contains(self) }
 }
 
 /// Where a Sysgration sensor says it is, from its own standpoint

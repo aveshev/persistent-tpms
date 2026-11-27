@@ -229,7 +229,7 @@ internal class BluetoothLeScannerImpl(
         .distinctWithin(BluetoothLeScanner.BURST, { it.address to it.advertisement }, Packet::receivedAt)
         .mapNotNull { (address, rssi, advertisement) ->
             AdvertisingPacket(advertisement.hexToByteArray())
-                .decode()
+                .decode(address)
                 ?.let { raw -> raw.asTyre(now(), rssi, raw.sensorId ?: sensorIdOf(address), advertisement) }
                 ?: run {
                     logger.d { "Sensor not parsed. Scan bytes: $advertisement" }
@@ -268,7 +268,8 @@ internal class BluetoothLeScannerImpl(
                     name = result.scanRecord?.deviceName,
                     rssi = result.rssi,
                     timestamp = result.timestampNanos.nanoseconds,
-                    isTyreSensor = result.scanRecord?.serviceUuids.orEmpty().any { it in SERVICE_UUIDS },
+                    isTyreSensor = result.scanRecord?.serviceUuids.orEmpty().any { it in SERVICE_UUIDS } ||
+                        result.scanRecord?.deviceName == RawSy4300.YC_0001_NAME,
                 )
             }
         }
@@ -357,8 +358,11 @@ internal class BluetoothLeScannerImpl(
             RawBekubeeKy.SERVICE_UUID,
             RawBekubeeTpms.SERVICE_UUID,
             RawTcTpms.SERVICE_UUID,
+            RawSy4300.SERVICE_UUID,
         )
-        private val FILTERS = SERVICE_UUIDS.map { ScanFilter.Builder().setServiceUuid(it).build() }
+        private val FILTERS = SERVICE_UUIDS.map { ScanFilter.Builder().setServiceUuid(it).build() } +
+            // YC-0001's service UUID is unknown, see RawSy4300
+            ScanFilter.Builder().setDeviceName(RawSy4300.YC_0001_NAME).build()
 
         // Android's limit, see AppScanStats in the Bluetooth stack
         private const val MAX_STARTS = 5
