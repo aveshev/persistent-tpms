@@ -16,7 +16,7 @@ struct TyreDetailView: View {
             List {
                 Section("Sensor") {
                     if let sensor {
-                        LabeledContent("Brand", value: sensor.brand.name)
+                        LabeledContent("Brand", value: sensor.brand.name(variant: tyre?.latest?.variant))
                         LabeledContent("ID", value: sensor.brand.isIdentifiedByAddress ? "Told apart by this iPhone" : sensor.id.asSensorId(sensor.brand))
                     } else {
                         Text("No sensor is assigned to this tyre.").foregroundStyle(.secondary)

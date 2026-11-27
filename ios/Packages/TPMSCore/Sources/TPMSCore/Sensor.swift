@@ -26,6 +26,26 @@ public enum SensorBrand: Int, CaseIterable, Sendable {
     /// Bluetooth address, which iOS doesn't give. iOS gives each phone its own identifier for them
     /// instead, so they're bound again on each iPhone.
     public var isIdentifiedByAddress: Bool { [.pecham, .bekubeeKy, .sy4300, .yc0001].contains(self) }
+
+    /// With which of its kinds sent [variant], named like on the sensor models page, or the brand
+    /// alone when it's unknown: a sensor not heard yet. Like the Android app's SensorBrand.label.
+    public func name(variant: SensorVariant?) -> String {
+        switch variant {
+        case .v1: "\(name) v1"
+        case .v2: "\(name) v2"
+        case nil: name
+        }
+    }
+}
+
+/// Which of a brand's kinds of sensors sent a packet, for the brands which make several that behave
+/// differently: only Wicarlink so far, see AdvertisingPacket.variant. Read from each packet rather
+/// than stored with the sensor, like the Android app's SensorVariant.
+public enum SensorVariant: Sendable {
+    /// Wicarlink's older sensors: in steps of 0.1 bar, every 5.5 minutes
+    case v1
+    /// Wicarlink's newer sensors: in steps of 3.1 kPa, every 10 minutes, every 2 riding
+    case v2
 }
 
 /// Where a Sysgration sensor says it is, from its own standpoint
@@ -75,4 +95,12 @@ public struct SensorReading: Hashable, Sendable {
         self.location = location
         self.raw = raw
     }
+}
+
+extension SensorReading {
+    /// Which of its brand's kinds of sensors sent it, read from [raw], see SensorVariant
+    public var variant: SensorVariant? { AdvertisingPacket(bytes: raw).variant }
+
+    /// The brand of the sensor which sent it, with its kind, see SensorBrand.name(variant:)
+    public var brandName: String { brand.name(variant: variant) }
 }

@@ -335,7 +335,7 @@ private fun Sensors(
         tyres.forEach { tyre ->
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    "${tyre.brand.label} ${tyre.sensorId.asSensorId(tyre.brand)}",
+                    "${tyre.label} ${tyre.sensorId.asSensorId(tyre.brand)}",
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(

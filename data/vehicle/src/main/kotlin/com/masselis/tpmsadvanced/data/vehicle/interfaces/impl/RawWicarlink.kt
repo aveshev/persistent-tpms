@@ -3,6 +3,9 @@ package com.masselis.tpmsadvanced.data.vehicle.interfaces.impl
 import android.os.ParcelUuid
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.kpa
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.WICARLINK
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorVariant
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorVariant.V1
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorVariant.V2
 import com.masselis.tpmsadvanced.data.vehicle.model.Temperature.CREATOR.celsius
 import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import com.masselis.tpmsadvanced.data.vehicle.model.Voltage.CREATOR.volts
@@ -12,6 +15,15 @@ import java.util.UUID.fromString
 internal class RawWicarlink private constructor(private val data: ByteArray) : Raw {
 
     override val brand = WICARLINK
+
+    // Byte 19, the BLE version times ten in the official app: 1.6 on the older sensors, 4.0 on the
+    // newer ones, which send every unit of pressure and every 2 minutes while riding. Bytes 20 to
+    // 22 differ too, 0xFF1100 and 0x111111. Another value isn't known, nor told.
+    override val variant: SensorVariant? = when (data[19].toInt() and 0xFF) {
+        0x10 -> V1
+        0x28 -> V2
+        else -> null
+    }
 
     override val sensorId: Int = (data[23].toInt() and 0xFF) or
         ((data[24].toInt() and 0xFF) shl 8) or

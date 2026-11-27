@@ -78,6 +78,15 @@ final class DecoderTests: XCTestCase {
         XCTAssertTrue(try XCTUnwrap(decode("0201060303B0FB12FFAC00C67C53010D0400F010FF1100C42122")).isAlarm)
     }
 
+    func testWicarlinkOlderAndNewerSensorsAreToldApart() throws {
+        let older = try XCTUnwrap(decode("0201060303B0FB12FFAC00C22D51000DC2001C10FF1100C52122"))
+        XCTAssertEqual(older.variant, .v1)
+        XCTAssertEqual(older.brandName, "Wicarlink v1")
+        XCTAssertEqual(try XCTUnwrap(decode("0201060303B0FB12FFAC00B63757030AF800272811111101555B")).variant, .v2)
+        // Not a sensor's, no kind
+        XCTAssertNil(AdvertisingPacket(bytes: Data()).variant)
+    }
+
     func testBekubeeTpmsWhateverItsCompanyId() throws {
         let mounted = try XCTUnwrap(decode("050854504D530CFF0200AF4500A7002D56A8B4030327A8"))
         XCTAssertEqual(mounted.brand, .bekubeeTpms)

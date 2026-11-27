@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.masselis.tpmsadvanced.core.ui.viewModel
 import com.masselis.tpmsadvanced.data.vehicle.model.Sensor
+import com.masselis.tpmsadvanced.data.vehicle.model.SensorVariant
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorBrand.PECHAM
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.FRONT_RIGHT
 import com.masselis.tpmsadvanced.data.vehicle.model.Vehicle.Kind.Location
@@ -171,6 +172,7 @@ internal fun TyreTapArea(
             ManageSensorDialog(
                 location = location,
                 sensor = assigned.sensor,
+                variant = assigned.variant,
                 move = { isOpen = false; startMove(location) },
                 canMove = canMove,
                 moveToVehicle = { isOpen = false; isMovingToVehicle = true },
@@ -282,6 +284,7 @@ private fun Modifier.outset(outset: Dp, extraTop: Int = 0) = layout { measurable
 private fun ManageSensorDialog(
     location: Location,
     sensor: Sensor,
+    variant: SensorVariant?,
     move: () -> Unit,
     canMove: Boolean,
     moveToVehicle: () -> Unit,
@@ -298,7 +301,7 @@ private fun ManageSensorDialog(
             Column {
                 Text(buildString { appendLoc(location, withType = false, capitalized = true) })
                 Text(
-                    stringResource(CommonR.string.type, sensor.brand.label),
+                    stringResource(CommonR.string.type, sensor.brand.label(variant)),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.testTag(TyreTapAreaTags.brand),
@@ -371,6 +374,7 @@ internal fun ManageSensorDialogPreview() {
     ManageSensorDialog(
         Location.Wheel(FRONT_RIGHT),
         Sensor(0x0A0B0C, Location.Wheel(FRONT_RIGHT), PECHAM),
+        variant = null,
         move = {},
         canMove = true,
         moveToVehicle = {},

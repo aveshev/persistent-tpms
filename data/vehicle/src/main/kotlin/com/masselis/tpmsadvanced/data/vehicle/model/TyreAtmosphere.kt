@@ -18,4 +18,6 @@ public data class TyreAtmosphere(
     val batteryPercent: Int? = null,
     /** The signal (dBm) the record was received at, null when unknown */
     val rssi: Int? = null,
+    // See Tyre.variant
+    val variant: SensorVariant? = null,
 ) : Parcelable

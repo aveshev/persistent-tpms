@@ -168,6 +168,18 @@ public struct AdvertisingPacket {
         return nil
     }
 
+    /// Which of its brand's kinds of sensors sent it, nil when the brand makes a single one or it
+    /// can't tell. Wicarlink's byte 19, the BLE version times ten in the official app: 1.6 on the
+    /// older sensors, 4.0 on the newer ones, see RawWicarlink.kt.
+    public var variant: SensorVariant? {
+        guard decode()?.brand == .wicarlink else { return nil }
+        switch [UInt8](bytes)[19] {
+        case 0x10: return .v1
+        case 0x28: return .v2
+        default: return nil
+        }
+    }
+
     /// Shown for debugging: what is known or suspected to be a status byte, see AdvertisingPacket.kt
     public var statusBytes: [UInt8]? {
         let a = [UInt8](bytes)
