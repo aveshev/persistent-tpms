@@ -73,24 +73,33 @@ internal class SilenceAlertsUseCaseTest {
     }
 
     @Test
-    fun `an alert going on with the sound off offers to ignore it`() = runTest {
+    fun `with the sound off, the same button only tells it ignores the alerts`() = runTest {
         alertSound.value = NONE
         alerting(vehicle to CRIMSON)
         assertEquals(State.Offer(isCritical = true, isIgnoring = true), test().button.first())
+        silence.value = Silence(CRIMSON, 1L)
+        assertEquals(State.Silenced(isCritical = true, until = 1L, isIgnoring = true), test().button.first())
     }
 
     @Test
-    fun `an alert going on after its speech was silenced offers to ignore it`() = runTest {
+    fun `an alert going on with nothing left to say is offered too`() = runTest {
         alerting(vehicle to RED)
-        assertEquals(State.Offer(isCritical = false, isIgnoring = true), test().button.first())
+        assertEquals(State.Offer(isCritical = false), test().button.first())
     }
 
     @Test
-    fun `the sound off with nothing going on shows nothing`() = runTest {
-        alertSound.value = NONE
-        assertEquals(State.Disabled, test().button.first())
+    fun `a silence is shown until it ends, whatever the sound`() = runTest {
         silence.value = Silence(RED, 1L)
-        assertEquals(State.Disabled, test().button.first())
+        assertEquals(State.Silenced(isCritical = false, until = 1L), test().button.first())
+        alertSound.value = NONE
+        assertEquals(State.Silenced(isCritical = false, until = 1L, isIgnoring = true), test().button.first())
+    }
+
+    @Test
+    fun `nothing going on shows nothing, whatever the sound`() = runTest {
+        assertEquals(State.Idle, test().button.first())
+        alertSound.value = NONE
+        assertEquals(State.Idle, test().button.first())
     }
 
     @Test
@@ -103,19 +112,21 @@ internal class SilenceAlertsUseCaseTest {
     }
 
     @Test
-    fun `ignored alerts say so`() = runTest {
-        alertSound.value = NONE
-        alerting(vehicle to RED)
-        silence.value = Silence(RED, 1L)
-        assertEquals(State.Silenced(isCritical = false, until = 1L, isIgnoring = true), test().button.first())
-    }
-
-    @Test
     fun `a critical alert gets through ignored red ones`() = runTest {
         alertSound.value = NONE
         alerting(vehicle to RED, other to CRIMSON)
         silence.value = Silence(RED, 1L)
         assertEquals(State.Offer(isCritical = true, isIgnoring = true), test().button.first())
+    }
+
+    @Test
+    fun `ignored alerts are only offered again by a new one, whatever the sound`() = runTest {
+        ongoing.value = mapOf("tag" to Ongoing(vehicle, RED, isIgnored = true))
+        assertEquals(State.Idle, test().button.first())
+        alertSound.value = NONE
+        assertEquals(State.Idle, test().button.first())
+        ongoing.value += "other" to Ongoing(other, RED)
+        assertEquals(State.Offer(isCritical = false, isIgnoring = true), test().button.first())
     }
 
     @Test
@@ -125,18 +136,5 @@ internal class SilenceAlertsUseCaseTest {
         assertEquals(State.Disabled, test().state.first())
         alertSound.value = SPEECH
         assertEquals(State.Idle, test().state.first())
-    }
-
-    @Test
-    fun `silenced alerts don't keep the screen bright, those above the silence do`() = runTest {
-        val useCase = AlertingVehiclesUseCase(speaker, alertSilence)
-        alerting(vehicle to RED, other to CRIMSON)
-        assertEquals(mapOf(vehicle to RED, other to CRIMSON), useCase.unsilenced.first())
-        silence.value = Silence(RED, 1L)
-        assertEquals(mapOf(other to CRIMSON), useCase.unsilenced.first())
-        silence.value = Silence(CRIMSON, 1L)
-        assertEquals(emptyMap(), useCase.unsilenced.first())
-        // The picker still blinks for them all
-        assertEquals(mapOf(vehicle to RED, other to CRIMSON), useCase.levels.first())
     }
 }

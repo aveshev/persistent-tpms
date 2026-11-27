@@ -56,15 +56,18 @@ internal class AlertSpeakerTest {
         silenced.value = CRIMSON
         val speaker = test()
         speaker.red(TAG, CAR, PRESSURE)
-        assertEquals(mapOf(TAG to Ongoing(CAR, RED)), speaker.ongoing.value)
+        assertEquals(mapOf(TAG to Ongoing(CAR, RED, isIgnored = true)), speaker.ongoing.value)
         speaker.crimson(TAG, CAR, PRESSURE)
         speaker.red(MOTORCYCLE_TAG, MOTORCYCLE, PRESSURE)
         assertEquals(
-            mapOf(TAG to Ongoing(CAR, CRIMSON), MOTORCYCLE_TAG to Ongoing(MOTORCYCLE, RED)),
+            mapOf(
+                TAG to Ongoing(CAR, CRIMSON, isIgnored = true),
+                MOTORCYCLE_TAG to Ongoing(MOTORCYCLE, RED, isIgnored = true),
+            ),
             speaker.ongoing.value,
         )
         speaker.stop(TAG, isDismissed = true)
-        assertEquals(mapOf(MOTORCYCLE_TAG to Ongoing(MOTORCYCLE, RED)), speaker.ongoing.value)
+        assertEquals(mapOf(MOTORCYCLE_TAG to Ongoing(MOTORCYCLE, RED, isIgnored = true)), speaker.ongoing.value)
     }
 
     @Test
@@ -94,9 +97,33 @@ internal class AlertSpeakerTest {
     }
 
     @Test
+    fun `a silence ignores the alerts it covers until they're raised, lifted or not`() = runTest {
+        val speaker = test()
+        val unsilenced = AlertingVehiclesUseCase(speaker).unsilenced
+        speaker.red(TAG, CAR, PRESSURE)
+        speaker.crimson(OTHER_TAG, CAR, BATTERY)
+        silenced.value = RED
+        runCurrent()
+        assertEquals(mapOf(CAR to CRIMSON), unsilenced.first())
+        // Lifted, the red one stays ignored, even read again
+        silenced.value = null
+        runCurrent()
+        speaker.red(TAG, CAR, PRESSURE)
+        speaker.stop(OTHER_TAG)
+        assertEquals(emptyMap(), unsilenced.first())
+        // Raised, it's new
+        speaker.crimson(TAG, CAR, PRESSURE)
+        assertEquals(mapOf(CAR to CRIMSON), unsilenced.first())
+        // As is another one
+        speaker.stop(TAG)
+        speaker.red(MOTORCYCLE_TAG, MOTORCYCLE, PRESSURE)
+        assertEquals(mapOf(MOTORCYCLE to RED), unsilenced.first())
+    }
+
+    @Test
     fun `a vehicle alerts with its worst alert going on`() = runTest {
         val speaker = test()
-        val levels = AlertingVehiclesUseCase(speaker, mockk { every { silence } returns MutableStateFlow(null) }).levels
+        val levels = AlertingVehiclesUseCase(speaker).levels
         speaker.red(TAG, CAR, PRESSURE)
         speaker.crimson(OTHER_TAG, CAR, BATTERY)
         speaker.red(MOTORCYCLE_TAG, MOTORCYCLE, PRESSURE)

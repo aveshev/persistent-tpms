@@ -311,10 +311,10 @@ alert notification.
 
 The main screen shows a big button over the vehicle, between its axles or in the middle of the
 screen for a single axle trailer, while the speech has a red or critical alert left to say: waiting
-for its announcement, or repeated by the loops. Also while one is going on with nothing left to say,
-to ignore it (below). A notification still shown isn't enough: once the loops dropped its alert
-(scanning stopped, dismissed...), nothing keeps the screen bright nor would speak again. It's there
-to be hit
+for its announcement, or repeated by the loops. Also while one is going on that it didn't silence
+yet, with nothing left to say, since it keeps the screen bright (below). A notification still shown
+isn't enough: once the loops dropped its alert (silenced, scanning stopped, dismissed...), nothing
+keeps the screen bright nor would speak again. It's there to be hit
 while riding: finding a notification's buttons in the drawer is too much then. Reaching the screen
 is left to the usual ways (the notification, the launcher): opening it by itself would take over
 the navigation.
@@ -324,18 +324,19 @@ the navigation.
 | Red only | "Silence alerts for 10 min" | Every red alert's speech, including new ones. A new critical alert is still said, and the button turns into the critical one |
 | A critical one | "Silence critical alerts for 10 min" | All the speech, new critical alerts included |
 
-It also ignores the alerts going on up to its level for that while: they no longer keep the main
-screen bright, which dims as it would without them (see the display settings). A critical alert
-still keeps it bright through ignored red ones, and the ignored ones do again once the 10 minutes
-end. The notifications and the vehicle picker's blinking don't change.
+It also ignores the alerts it covers, going on or coming during the 10 minutes: they no longer keep
+the main screen bright, which dims as it would without them (see the display settings), nor offer
+the button again. Like the speech, they stay so once the silence ends or is lifted: only a new alert,
+or one of theirs rising to critical, brightens the screen and brings the button back. A critical
+alert still keeps it bright through ignored red ones. The notifications and the vehicle picker's
+blinking don't change.
 
-With nothing to say but a red or critical alert going on, the alert sound and the vibration off, or
-its speech over (silenced before, or a reading said once), the button only ignores it: "Ignore
-alerts for 10 min", "Ignore critical alerts for 10 min", then "Alerts ignored" or "All alerts
+With the alert sound and the vibration off, the button is the same, offered while a red or critical
+alert is going on, with nothing to say: only its label changes, as it then only ignores them.
+"Ignore alerts for 10 min", "Ignore critical alerts for 10 min", then "Alerts ignored" or "All alerts
 ignored" with "N min left, tap to stop ignoring". Without it, the only way to let the screen dim
-would be dismissing the notifications, too much while riding. With the sound or vibration back on
-meanwhile, the alerts are silenced as well, the button saying so. Android Auto has no screen to dim:
-its item only follows the speech.
+would be dismissing the notifications, too much while riding. Android Auto has no screen to dim: its
+item only follows the speech.
 
 - Only the speech, and its vibration: notifications still post and sound as usual, the dismiss
   buttons are unchanged.

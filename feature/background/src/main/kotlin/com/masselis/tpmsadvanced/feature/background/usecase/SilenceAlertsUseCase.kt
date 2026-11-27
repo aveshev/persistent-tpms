@@ -2,7 +2,7 @@ package com.masselis.tpmsadvanced.feature.background.usecase
 
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.AlertSound.NONE
-import com.masselis.tpmsadvanced.data.vehicle.model.AlertLevel.AMBER
+import com.masselis.tpmsadvanced.data.vehicle.model.AlertLevel
 import com.masselis.tpmsadvanced.data.vehicle.model.AlertLevel.CRIMSON
 import com.masselis.tpmsadvanced.data.vehicle.model.AlertLevel.RED
 import kotlinx.coroutines.flow.Flow
@@ -11,9 +11,9 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 
 /**
  * The button silencing the alerts' speech for a while, on the main screen and in Android Auto, see
- * docs/alerts.md. On the main screen, it also ignores the alerts going on for that while, which then
- * no longer keep the screen bright, see [AlertingVehiclesUseCase.unsilenced]: with the alerts making
- * no sound nor vibration, or nothing left to say, that's all it does, and it says so.
+ * docs/alerts.md. On the main screen, it also ignores the alerts going on, which then no longer keep
+ * the screen bright, see [AlertingVehiclesUseCase.unsilenced]: with the alerts making no sound nor
+ * vibration, that's all it does, and it says so.
  */
 public class SilenceAlertsUseCase internal constructor(
     appPreferences: AppPreferences,
@@ -29,8 +29,8 @@ public class SilenceAlertsUseCase internal constructor(
         public data object Idle : State
 
         /**
-         * Silences the alerts, all of them once [isCritical]. Ignores them once [isIgnoring]: nothing
-         * would be said, only the alerts going on would stop keeping the screen bright.
+         * Silences the alerts, all of them once [isCritical]. Told as ignoring them once [isIgnoring],
+         * the alerts making no sound nor vibration: they would only stop keeping the screen bright.
          */
         public data class Offer(val isCritical: Boolean, val isIgnoring: Boolean = false) : State
 
@@ -48,21 +48,16 @@ public class SilenceAlertsUseCase internal constructor(
         alertSpeaker.level,
         alertSilenceUseCase.silence,
     ) { sound, vibrate, highest, silence ->
-        when {
-            sound == NONE && vibrate.not() -> State.Disabled
-            // A critical alert gets through a silence of the red ones, which can be silenced too
-            highest == CRIMSON && silence?.level != CRIMSON -> State.Offer(isCritical = true)
-            silence != null -> State.Silenced(silence.level == CRIMSON, silence.until)
-            highest == RED -> State.Offer(isCritical = false)
-            else -> State.Idle
-        }
+        if (sound == NONE && vibrate.not()) State.Disabled
+        else stateOf(highest, silence, isIgnoring = false)
     }.distinctUntilChanged()
 
     /**
-     * What the main screen's button shows: also offered for an alert going on with nothing left to
-     * say, the sound off or its speech over, since it keeps the screen bright, see [AlertingVehiclesUseCase]
+     * What the main screen's button shows: the same as [state], silencing and ignoring being one, with
+     * the alerts going on offered too since they keep the screen bright, see [AlertingVehiclesUseCase].
+     * The ignored ones are only offered again by a new alert, as the silenced speech by a new reading.
+     * Only its label tells whether the alerts make a sound.
      */
-    @Suppress("MaxLineLength")
     public val button: Flow<State> = combine(
         appPreferences.alertSound,
         appPreferences.vibrateAlerts,
@@ -70,20 +65,22 @@ public class SilenceAlertsUseCase internal constructor(
         alertSpeaker.ongoing,
         alertSilenceUseCase.silence,
     ) { sound, vibrate, spoken, ongoing, silence ->
-        val isSoundOff = sound == NONE && vibrate.not()
-        val highest = listOfNotNull(spoken, ongoing.values.maxOfOrNull { it.level }).maxOrNull()
-        // Only ignored when there's no speech to silence: none of the alerts at the level offered
-        val isIgnoring = isSoundOff || (spoken ?: AMBER) < (highest ?: AMBER)
-        when {
-            // A critical alert gets through a silence of the red ones, which can be silenced too
-            highest == CRIMSON && silence?.level != CRIMSON -> State.Offer(isCritical = true, isIgnoring)
-            // Silent alerts have nothing left to tell once they're over
-            silence != null && (isSoundOff.not() || highest != null) -> State.Silenced(silence.level == CRIMSON, silence.until, isSoundOff)
-            highest == RED -> State.Offer(isCritical = false, isIgnoring)
-            isSoundOff -> State.Disabled
-            else -> State.Idle
-        }
+        listOfNotNull(spoken, ongoing.values.filter { it.isIgnored.not() }.maxOfOrNull { it.level })
+            .maxOrNull()
+            .let { highest -> stateOf(highest, silence, isIgnoring = sound == NONE && vibrate.not()) }
     }.distinctUntilChanged()
+
+    private fun stateOf(
+        highest: AlertLevel?,
+        silence: AlertSilenceUseCase.Silence?,
+        isIgnoring: Boolean,
+    ): State = when {
+        // A critical alert gets through a silence of the red ones, which can be silenced too
+        highest == CRIMSON && silence?.level != CRIMSON -> State.Offer(isCritical = true, isIgnoring)
+        silence != null -> State.Silenced(silence.level == CRIMSON, silence.until, isIgnoring)
+        highest == RED -> State.Offer(isCritical = false, isIgnoring)
+        else -> State.Idle
+    }
 
     public fun silence(isCritical: Boolean): Unit = alertSilenceUseCase.silence(if (isCritical) CRIMSON else RED)
 

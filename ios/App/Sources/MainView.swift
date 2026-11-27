@@ -539,7 +539,8 @@ private struct SilenceAlertsButton: View {
     @ObservedObject var settings: Settings
 
     var body: some View {
-        let alerting = monitor.alertingLevel()
+        // The ignored ones are only offered again by a new alert, as the silenced speech by a new reading
+        let alerting = monitor.alertingLevel(includingIgnored: false)
         Group {
             switch SilenceButton.of(highest: speaker.level, alerting: alerting, silence: speaker.silence, isSoundOff: settings.alertSound == .none && settings.vibrateAlerts == false) {
             case .idle:
