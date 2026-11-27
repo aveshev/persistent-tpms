@@ -46,6 +46,24 @@ public struct SharedSensors: Hashable, Sendable {
     public var uri: String { QrCodeResult.uri(of: self) }
 }
 
+/// The sensor IDs the camera read printed next to a code, like the Android app's
+/// QRCodeViewModel.suggestedId: offered once the code itself hasn't been read for a while, since a
+/// code too small or blurry to be decoded can still be read as text. Only an ID read 3 times is, the
+/// one read the most.
+public struct PrintedIdReadings: Sendable {
+    private var counts = [String: Int]()
+
+    public init() {}
+
+    public mutating func read(_ ids: [String]) {
+        for id in ids { counts[id, default: 0] += 1 }
+    }
+
+    public var suggestion: String? {
+        counts.filter { $0.value >= 3 }.max { $0.value < $1.value }?.key
+    }
+}
+
 /// What a scanned QR code holds, like the Android app's QrCodeResult
 public enum QrCodeResult: Hashable, Sendable {
     /// A Sysgration kit's 2 or 4 sensors
@@ -84,6 +102,57 @@ public enum QrCodeResult: Hashable, Sendable {
         return firstMatch(of: "^([0-9a-fA-F]{6})$", in: code.trimmingCharacters(in: .whitespacesAndNewlines))
             .flatMap { Int($0[0], radix: 16) }
             .map(QrCodeResult.wicarlink)
+    }
+
+    /// The TPMS codes of pictures, each once, in their order: like the Android app's
+    /// QrCodeSensorUseCase.read and QRCodeViewModel.read. A picture without one gives the sensor IDs
+    /// printed on it instead, see printedId, and the codes which can't be used are left out when
+    /// another can.
+    public static func parse(pictures: [(codes: [String], texts: [String])]) -> [QrCodeResult] {
+        var seen = Set<QrCodeResult>()
+        let results = pictures
+            .flatMap { picture in
+                let codes = picture.codes.compactMap(parse)
+                return codes.isEmpty ? printedIds(in: picture.texts).compactMap(parse) : codes
+            }
+            .filter { seen.insert($0).inserted }
+        let usable = results.filter(\.isUsable)
+        return usable.isEmpty ? results : usable
+    }
+
+    /// The sensor ID [text] reads, nil when it isn't one: 6 hexadecimal characters, as a Wicarlink
+    /// cap prints them below its code. Spaces are left out and the letters a hexadecimal ID can't
+    /// hold read as the digits they're mistaken for, O for 0, I and L for 1.
+    public static func printedId(_ text: String) -> String? {
+        let id = String(text.uppercased().compactMap { character -> Character? in
+            if character.isWhitespace { return nil }
+            switch character {
+            case "O": return "0"
+            case "I", "L": return "1"
+            default: return character
+            }
+        })
+        return id.count == 6 && id.allSatisfy({ ("0"..."9").contains($0) || ("A"..."F").contains($0) }) ? id : nil
+    }
+
+    /// The sensor IDs printed in [texts], each once
+    public static func printedIds(in texts: [String]) -> [String] {
+        var seen = Set<String>()
+        return texts.compactMap(printedId).filter { seen.insert($0).inserted }
+    }
+
+    /// Only what a typed sensor ID can hold, its 6 hexadecimal characters as a Wicarlink cap prints
+    /// them, so a mistyped O or I shows rather than being refused later
+    public static func typedSensorId(_ text: String) -> String {
+        String(text.uppercased().filter { ("0"..."9").contains($0) || ("A"..."F").contains($0) }.prefix(6))
+    }
+
+    /// Holds sensors to assign
+    public var isUsable: Bool {
+        switch self {
+        case .sensors, .wicarlink, .shared: true
+        case .duplicateWheelLocation, .duplicateId, .sharedByNewerApp, .sharedUnreadable: false
+        }
     }
 
     private static func firstMatch(of pattern: String, in code: String) -> [String]? {

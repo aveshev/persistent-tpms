@@ -105,6 +105,54 @@ final class QrCodeTests: XCTestCase {
         XCTAssertEqual(QrCode("AAAAAA&AAAAAA"), .duplicateId([id(0xAA, 0xAA, 0xAA)]))
     }
 
+    func testPicturesKeepEachCodeOnceWithoutTheUnknownOnes() {
+        XCTAssertEqual(
+            QrCodeResult.parse(pictures: [(["2221C5", "hello"], []), (["ABCDEF", "2221C5"], [])]),
+            [.wicarlink(0x2221C5), .wicarlink(0xABCDEF)]
+        )
+    }
+
+    func testAPictureCodeWhichCantBeUsedIsLeftOutNextToOneWhichCan() {
+        XCTAssertEqual(QrCodeResult.parse(pictures: [(["tpmsadvanced://sensors?v=1&d=AB12CD", "2221C5"], [])]), [.wicarlink(0x2221C5)])
+        XCTAssertEqual(QrCodeResult.parse(pictures: [(["tpmsadvanced://sensors?v=1&d=AB12CD"], [])]), [.sharedUnreadable])
+    }
+
+    func testAPictureWithoutATpmsCodeGivesTheIdPrintedOnIt() {
+        XCTAssertEqual(QrCodeResult.parse(pictures: [(["hello"], ["224822", "ID"])]), [.wicarlink(0x224822)])
+        // A misread ID next to the code isn't offered as another sensor
+        XCTAssertEqual(QrCodeResult.parse(pictures: [(["224822"], ["224B22"])]), [.wicarlink(0x224822)])
+    }
+
+    func testAPrintedIdIsSixHexadecimalCharactersTheLookAlikeLettersReadAsDigits() {
+        XCTAssertEqual(QrCodeResult.printedId("224822"), "224822")
+        XCTAssertEqual(QrCodeResult.printedId("224 822"), "224822")
+        XCTAssertEqual(QrCodeResult.printedId("2221c5"), "2221C5")
+        XCTAssertEqual(QrCodeResult.printedId("2O1lI0"), "201110")
+        XCTAssertNil(QrCodeResult.printedId("22482"))
+        XCTAssertNil(QrCodeResult.printedId("2248222"))
+        XCTAssertNil(QrCodeResult.printedId("22G822"))
+        XCTAssertNil(QrCodeResult.printedId("ID 224822"))
+    }
+
+    func testOnlyAPrintedIdReadThreeTimesIsSuggestedTheMostReadOne() {
+        var readings = PrintedIdReadings()
+        readings.read(["224822"])
+        readings.read(["224822", "224B22"])
+        XCTAssertNil(readings.suggestion)
+        readings.read(["224B22"])
+        readings.read(["224B22"])
+        XCTAssertEqual(readings.suggestion, "224B22")
+        readings.read(["224822"])
+        readings.read(["224822"])
+        XCTAssertEqual(readings.suggestion, "224822")
+    }
+
+    func testATypedIdKeepsItsHexadecimalCharacters() {
+        XCTAssertEqual(QrCodeResult.typedSensorId("22 21c5"), "2221C5")
+        XCTAssertEqual(QrCodeResult.typedSensorId("O0I1ABCDEFG"), "01ABCD")
+        XCTAssertEqual(QrCodeResult.parse(QrCodeResult.typedSensorId("2221c5")), .wicarlink(0x2221C5))
+    }
+
     func testAWicarlinkCapHoldsItsIdAlone() {
         XCTAssertEqual(QrCode(" 2221C5\n"), .wicarlink(0x2221C5))
         XCTAssertNil(QrCode("x2221C5"))

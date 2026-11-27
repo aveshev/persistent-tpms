@@ -447,6 +447,17 @@
     <string name="qr_assign_sensors_of">"Назначить датчики транспорта "</string>
     <string name="qr_assign_sysgration">"Назначить датчики Sysgration из этого QR (%1$s) на транспорт "</string>
     <string name="qr_assign_wicarlink">"Назначить датчик Wicarlink "</string>
+    <string name="qr_enter_id">Ввести ID</string>
+    <string name="qr_from_gallery">Из галереи</string>
+    <string name="qr_use_printed_id">Взять ID, напечатанный на датчике: %1$s</string>
+    <string name="qr_sensor_id">ID датчика</string>
+    <string name="qr_sensor_id_hint">6 символов рядом с QR-кодом датчика: цифры от 0 до 9 и буквы от A до F</string>
+    <string name="qr_no_code_in_pictures">На выбранных фото нет QR-кода TPMS</string>
+    <string name="qr_several_codes">Найдено несколько QR-кодов</string>
+    <string name="qr_choice_wicarlink">Датчик Wicarlink %1$s</string>
+    <string name="qr_choice_sysgration">%1$d датчика Sysgration</string>
+    <string name="qr_choice_shared">Датчики «%1$s»</string>
+    <string name="qr_choice_unusable">QR-код, который нельзя использовать</string>
     <string name="qr_dup_id">"\n\n⚠️ В QR-коде один ID датчика указан несколько раз"</string>
     <string name="qr_dup_wheel">"\n\n⚠️ В QR-коде одному колесу соответствуют разные датчики, "</string>
     <string name="qr_duplication">совпадение:</string>
