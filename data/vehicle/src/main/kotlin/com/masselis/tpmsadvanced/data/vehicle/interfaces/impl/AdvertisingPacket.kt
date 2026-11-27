@@ -67,7 +67,9 @@ internal class AdvertisingPacket(val bytes: ByteArray) {
 
         // Wicarlink's state, as the official app names it: 0x01 "leakage", on the packets sent at once
         // when the pressure drops, 0x02 "inflating", 0x00 on the ones it sends every 5 and a half
-        // minutes (TPMS-advanced#428, bkbilly/tpms_ble#27)
+        // minutes (TPMS-advanced#428, bkbilly/tpms_ble#27). Newer sensors also send 0x03, at once
+        // when the wheel starts turning: seen setting off and on a wheel spun by hand, never on a
+        // still one
         SERVICE_FBB0 in serviceUuids16 -> listOf(14)
             .takeIf { bytes.size > 14 }
             ?.map { bytes[it].toUByte() }

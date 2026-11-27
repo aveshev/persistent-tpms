@@ -92,7 +92,8 @@ internal class TyrePressureLossStateFlowTest {
 
     @Test
     fun `detects a loss started before the app was opened`() = runTest {
-        stored = listOf(record(0, 214f), record(2, 206f))
+        // Warming up in steps of 2 kPa, so the 8 kPa drop is four of them
+        stored = listOf(record(-1, 212f), record(0, 214f), record(2, 206f))
         listened = listOf(record(4, 206f))
         val loss = test().awaitLoss()
         assertNotNull(loss)

@@ -3,6 +3,7 @@ package com.masselis.tpmsadvanced.data.vehicle.model
 import android.os.Parcelable
 import com.masselis.tpmsadvanced.data.vehicle.model.Pressure.CREATOR.kpa
 import kotlinx.parcelize.Parcelize
+import kotlin.math.abs
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.DurationUnit.SECONDS
@@ -19,11 +20,18 @@ public data class PressureLoss(
     val until: Double,
 ) : Parcelable {
 
-    /** Warns about a tyre which lost at least [minDrop] since its highest reading of the ride */
+    /**
+     * Warns about a tyre which lost at least [minDrop] since its highest reading of the ride, and
+     * at least two of its sensor's steps, see [Tracker]
+     */
     public data class Rule(val minDrop: Pressure = DEFAULT_MIN_DROP) {
         public companion object {
-            /** Two steps of the sensors' resolution, 3.45 kPa (0.5 psi) at worst */
-            public val DEFAULT_MIN_DROP: Pressure = 7f.kpa
+            /**
+             * The smallest option, 0.7 psi: under two steps of most sensors, about 3.1 kPa (0.45
+             * psi) each, which [Tracker] asks for anyway. Coarser sensors, like the older Wicarlink
+             * ones in steps of about 10 kPa, need two of their own steps.
+             */
+            public val DEFAULT_MIN_DROP: Pressure = 5f.kpa
         }
     }
 
@@ -39,6 +47,11 @@ public data class PressureLoss(
      * which catches it once the tyre is cold. A ride starts with the first reading after a gap of
      * [RIDE_GAP].
      *
+     * A sensor reads the pressure in steps, from about 3.1 kPa to 10 kPa (older Wicarlink sensors),
+     * which a steady tyre can flicker between: a drop counts once it's at least two of them. A
+     * sensor's step is the smallest change between two of its readings, learned from every ride
+     * since it was bound, warming up included. Until it changed once, only [Rule.minDrop] applies.
+     *
      * Once found, [loss] stays until the ride ends or the pressure gets back to its highest.
      */
     public data class Tracker(
@@ -48,6 +61,8 @@ public data class PressureLoss(
         private val latest: TyreAtmosphere? = null,
         /** How many readings in a row lost at least the minimum drop, the tyre not cooling down */
         private val confirmations: Int = 0,
+        /** The smallest change between two of the sensor's readings, null until it changed */
+        private val step: Pressure? = null,
     ) {
 
         @Suppress("CyclomaticComplexMethod", "MaxLineLength", "NestedBlockDepth")
@@ -56,13 +71,15 @@ public data class PressureLoss(
             latest != null && reading.timestamp <= latest.timestamp -> this
             // The sensor taken off the valve reads the atmosphere, whether to pump the tyre up or
             // not: some air is let out either way, the readings start over from the next one
-            reading.pressure < OFF_VALVE -> Tracker()
-            // Another sensor was bound to this tyre, or another ride starts
-            latest != null && (reading.sensorId != latest.sensorId || reading.timestamp - latest.timestamp >= RIDE_GAP.toDouble(SECONDS)) ->
-                Tracker().next(reading, rule)
+            reading.pressure < OFF_VALVE -> Tracker(step = step)
+            // Another sensor was bound to this tyre, it reads in its own steps
+            latest != null && reading.sensorId != latest.sensorId -> Tracker().next(reading, rule)
+            // Another ride starts
+            latest != null && reading.timestamp - latest.timestamp >= RIDE_GAP.toDouble(SECONDS) ->
+                Tracker(step = step).next(reading, rule)
             // The same pressure later on is the peak too: a leak starting then is measured from it
             peak == null || reading.pressure >= peak.pressure ->
-                Tracker(peak = reading, latest = reading)
+                Tracker(peak = reading, latest = reading, step = step.smallestWith(latest, reading))
 
             else -> (peak.pressure.kpa - reading.pressure.kpa)
                 .let { drop ->
@@ -74,17 +91,25 @@ public data class PressureLoss(
                     )
                 }
                 .let { measured ->
-                    (measured.drop >= rule.minDrop && peak.temperature.celsius - reading.temperature.celsius <= TEMPERATURE_FALL)
+                    (measured.drop >= rule.minDrop && (step == null || measured.drop.kpa >= step.kpa * MIN_STEPS - FLOAT_MARGIN) && peak.temperature.celsius - reading.temperature.celsius <= TEMPERATURE_FALL)
                         .let { if (it) confirmations + 1 else 0 }
                         .let { confirmations ->
                             copy(
                                 loss = measured.takeIf { confirmations >= CONFIRMATIONS } ?: loss,
                                 latest = reading,
                                 confirmations = confirmations,
+                                step = step.smallestWith(latest, reading),
                             )
                         }
                 }
         }
+
+        /** This step, or the change from [latest] to [reading] if it's a smaller one */
+        private fun Pressure?.smallestWith(latest: TyreAtmosphere?, reading: TyreAtmosphere): Pressure? = latest
+            ?.let { abs(reading.pressure.kpa - it.pressure.kpa) }
+            ?.takeIf { change -> change > 0f && (this == null || change < this.kpa) }
+            ?.kpa
+            ?: this
 
         public companion object {
             public val RIDE_GAP: Duration = 10.minutes
@@ -96,6 +121,12 @@ public data class PressureLoss(
 
             /** A single reading can be a step of the sensor's resolution flickering */
             private const val CONFIRMATIONS = 2
+
+            /** A drop of a single step can be the sensor's resolution flickering too */
+            private const val MIN_STEPS = 2
+
+            /** In kPa: two steps away can read a hair under twice the step, through float rounding */
+            private const val FLOAT_MARGIN = 0.01f
             private const val SECONDS_PER_HOUR = 3600.0
         }
     }

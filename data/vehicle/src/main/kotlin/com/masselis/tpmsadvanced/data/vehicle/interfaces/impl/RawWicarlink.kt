@@ -7,7 +7,6 @@ import com.masselis.tpmsadvanced.data.vehicle.model.Temperature.CREATOR.celsius
 import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import com.masselis.tpmsadvanced.data.vehicle.model.Voltage.CREATOR.volts
 import java.util.UUID.fromString
-import kotlin.math.roundToInt
 
 @Suppress("MagicNumber")
 internal class RawWicarlink private constructor(private val data: ByteArray) : Raw {
@@ -18,14 +17,12 @@ internal class RawWicarlink private constructor(private val data: ByteArray) : R
         ((data[24].toInt() and 0xFF) shl 8) or
         ((data[25].toInt() and 0xFF) shl 16)
 
-    // The sensor reads steps of 0.1 bar, sent rounded to units of 3.144 kPa: 48 units are its 150
-    // kPa, not 150.9. Every value of real sensors is the nearest unit to a step.
+    // Units of 3.144 kPa. Older sensors only send the unit nearest to a step of 0.1 bar, 48 units
+    // for 150 kPa read as 150.9, newer ones every unit: rounding to 0.1 bar made a newer sensor
+    // jump by 10 kPa between two units 3.1 kPa apart.
     fun pressure() = (data[12].toInt() and 0xFF)
         .let { raw -> if ((data[17].toInt() and 0xFF) == 1) raw + 256 else raw }
         .times(KPA_PER_UNIT)
-        .div(KPA_PER_STEP)
-        .roundToInt()
-        .times(KPA_PER_STEP)
         .kpa
 
     fun voltage() = (data[11].toInt() and 0xFF) * 0.01f + 1.22f // Returns 2.7 for 2.7 Volts
@@ -33,7 +30,8 @@ internal class RawWicarlink private constructor(private val data: ByteArray) : R
     fun temperature() = ((data[13].toInt() and 0xFF) - 55).toFloat().celsius
 
     // The state the official app shows as "leakage": set on the packets sent at once when the
-    // pressure drops, which a fall in temperature may cause too. 0x02, "inflating", isn't an alarm.
+    // pressure drops, which a fall in temperature may cause too. 0x02, "inflating", isn't an alarm,
+    // nor is 0x03, sent by newer sensors when the wheel starts turning.
     fun isAlarm() = data[14] == LEAKAGE_STATE
 
     override fun asTyre(timestamp: Double, rssi: Int, sensorId: Int, raw: String): Tyre.SensorInput = Tyre.Unlocated(
@@ -51,9 +49,6 @@ internal class RawWicarlink private constructor(private val data: ByteArray) : R
     companion object {
         private const val LEAKAGE_STATE: Byte = 0x01
         internal const val KPA_PER_UNIT = 3.144f
-
-        /** 0.1 bar */
-        internal const val KPA_PER_STEP = 10f
 
         internal val SERVICE_UUID = ParcelUuid(fromString("0000fbb0-0000-1000-8000-00805f9b34fb"))
 

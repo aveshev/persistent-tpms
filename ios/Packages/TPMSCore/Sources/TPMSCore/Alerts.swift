@@ -145,32 +145,43 @@ public struct PressureLoss: Hashable, Sendable {
 }
 
 /// Looks for a leak while riding: the pressure falling from its highest reading of the ride, the
-/// tyre not cooling down. A ride starts after a gap of 10 minutes. See PressureLoss.kt.
+/// tyre not cooling down. A ride starts after a gap of 10 minutes. A drop counts once it's at
+/// least two of the sensor's steps, the smallest change between two of its readings, learned
+/// from every ride since it was bound. See PressureLoss.kt.
 public struct PressureLossTracker: Hashable, Sendable {
     public private(set) var loss: PressureLoss?
     private var peak: SensorReading?
     private var latest: SensorReading?
     private var confirmations = 0
+    /// The smallest change between two of the sensor's readings, nil until it changed
+    private var step: Pressure?
     /// The least drop which warns, the settings' "Minimum drop"
     public let minDrop: Pressure
 
     public static let rideGap: Double = 10 * 60
     /// Below it, a sensor reads the open air: taken off the valve
     public static let offValve = Pressure(kpa: 10)
-    public static let defaultMinDrop = Pressure(kpa: 7)
+    /// The smallest option: coarser sensors need two of their own steps anyway
+    public static let defaultMinDrop = Pressure(kpa: 5)
     private static let temperatureFall: Float = 1
     private static let requiredConfirmations = 2
+    /// A drop of a single step can be the sensor's resolution flickering
+    private static let minSteps: Float = 2
+    /// In kPa: two steps away can read a hair under twice the step, through float rounding
+    private static let floatMargin: Float = 0.01
 
     public init(minDrop: Pressure = defaultMinDrop) { self.minDrop = minDrop }
 
     public func next(_ reading: SensorReading) -> PressureLossTracker {
         if let latest, reading.timestamp <= latest.timestamp { return self }
-        if reading.pressure < Self.offValve { return PressureLossTracker(minDrop: minDrop) }
-        if let latest, reading.sensorId != latest.sensorId || reading.timestamp - latest.timestamp >= Self.rideGap {
-            return PressureLossTracker(minDrop: minDrop).next(reading)
+        if reading.pressure < Self.offValve { return PressureLossTracker(minDrop: minDrop, step: step) }
+        // Another sensor reads in its own steps
+        if let latest, reading.sensorId != latest.sensorId { return PressureLossTracker(minDrop: minDrop).next(reading) }
+        if let latest, reading.timestamp - latest.timestamp >= Self.rideGap {
+            return PressureLossTracker(minDrop: minDrop, step: step).next(reading)
         }
         guard let peak, reading.pressure < peak.pressure else {
-            var next = PressureLossTracker(minDrop: minDrop)
+            var next = PressureLossTracker(minDrop: minDrop, step: smallestStep(with: reading))
             next.peak = reading
             next.latest = reading
             return next
@@ -180,11 +191,26 @@ public struct PressureLossTracker: Hashable, Sendable {
             perHour: Pressure(kpa: drop / Float((reading.timestamp - peak.timestamp) / 3600)),
             drop: Pressure(kpa: drop), since: peak.timestamp, until: reading.timestamp
         )
-        let confirmed = measured.drop >= minDrop && peak.temperature.celsius - reading.temperature.celsius <= Self.temperatureFall
+        let manySteps = step.map { drop >= $0.kpa * Self.minSteps - Self.floatMargin } ?? true
+        let confirmed = measured.drop >= minDrop && manySteps && peak.temperature.celsius - reading.temperature.celsius <= Self.temperatureFall
         var next = self
         next.confirmations = confirmed ? confirmations + 1 : 0
         next.loss = next.confirmations >= Self.requiredConfirmations ? measured : loss
         next.latest = reading
+        next.step = smallestStep(with: reading)
         return next
+    }
+
+    private init(minDrop: Pressure, step: Pressure?) {
+        self.minDrop = minDrop
+        self.step = step
+    }
+
+    /// The step, or the change from the latest reading to this one if it's a smaller one
+    private func smallestStep(with reading: SensorReading) -> Pressure? {
+        guard let latest else { return step }
+        let change = abs(reading.pressure.kpa - latest.pressure.kpa)
+        guard change > 0, step.map({ change < $0.kpa }) ?? true else { return step }
+        return Pressure(kpa: change)
     }
 }

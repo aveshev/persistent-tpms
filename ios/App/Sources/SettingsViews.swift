@@ -394,7 +394,7 @@ struct SensorReadingsUpdateDetailsView: View {
         Form {
             PageIntro(text: "Sensors from different manufacturers differ in how often they send an update, and in whether they can tell that the wheel is rolling.")
             Section("Known schedules") {
-                SettingsRow("WiCarLink", "Every 5.5 minutes, whether the vehicle moves or not, and whenever pressure changes significantly. Reads the pressure in steps of 0.1 bar (about 1.5 psi): a tyre between two steps can read one step lower when cold, and the next one up once warm")
+                SettingsRow("WiCarLink", "Every 5.5 minutes, whether the vehicle moves or not, and whenever pressure changes significantly. Older sensors read the pressure in steps of 0.1 bar (about 1.5 psi): a tyre between two steps can read one step lower when cold, and the next one up once warm. Newer ones read it in steps of about 0.45 psi (3.1 kPa), and send it about every 2 minutes while riding")
                 SettingsRow("Pecham", "Every minute while the wheel rotates. While stationary, only when the pressure is below ~22 psi, and in either case, whenever pressure changes significantly. Reads the pressure in steps of about 0.45 psi (3.1 kPa), shown rounded to 0.1 psi: a steady tyre can go back and forth by one step")
                 SettingsRow("TC.TPMS", "Every 5 minutes, whether the vehicle moves or not, and at once when the pressure changes by about 1.5 psi. Reads the pressure in steps of 0.1 psi")
             }

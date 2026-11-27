@@ -145,4 +145,38 @@ final class AlertTests: XCTestCase {
         }
         XCTAssertNil(cooling.loss)
     }
+
+    private func track(_ readings: [(minute: Double, kpa: Float)]) -> PressureLoss? {
+        readings.reduce(PressureLossTracker()) { $0.next(reading(kpa: $1.kpa, celsius: 30, at: $1.minute * 60)) }.loss
+    }
+
+    func testASingleStepOfACoarseSensorIsNotALeak() {
+        // An older Wicarlink sensor, in steps of 10 kPa
+        XCTAssertNil(track([(0, 220), (2, 230), (4, 240), (6, 230), (8, 230)]))
+        XCTAssertEqual(try XCTUnwrap(track([(0, 220), (2, 230), (4, 240), (6, 230), (8, 220), (10, 220)])).drop.kpa, 20, accuracy: 0.01)
+    }
+
+    func testADropReadInOneGoIsASingleStep() {
+        XCTAssertNil(track([(0, 214), (2, 206), (4, 206)]))
+    }
+
+    func testASensorsStepCarriesOverFromItsEarlierRides() {
+        let later: [(minute: Double, kpa: Float)] = [(60, 240), (62, 220), (64, 220)]
+        XCTAssertNil(track(later))
+        XCTAssertNotNil(track([(0, 220), (2, 230)] + later))
+    }
+
+    func testANewerWicarlinkSensorsRideIsNotALeak() {
+        // Gold's front left on 2026-11-27, in units of 3.144 kPa which 0.1 bar steps turned into a
+        // 10 kPa drop at 09:39: (minute, units, celsius)
+        let ride: [(Double, Int, Float)] = [
+            (0, 55, 32), (0.6, 55, 33), (2.6, 55, 33), (4.6, 55, 34), (8.7, 55, 36), (10.75, 57, 34),
+            (22.9, 56, 33), (24.9, 56, 32), (26.9, 56, 32), (28.9, 56, 31), (30, 56, 30), (32, 55, 30),
+            (34, 55, 31), (36, 56, 31),
+        ]
+        let tracker = ride.reduce(PressureLossTracker()) {
+            $0.next(reading(kpa: Float($1.1) * 3.144, celsius: $1.2, at: $1.0 * 60))
+        }
+        XCTAssertNil(tracker.loss)
+    }
 }
