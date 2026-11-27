@@ -101,10 +101,11 @@ public struct AdvertisingPacket {
         if flags == 0x06, serviceUUIDs16.contains(0xFBB0), a.count >= 26, Self.isValidWicarlinkCRC(a) {
             let id = Int(a[23]) | Int(a[24]) << 8 | Int(a[25]) << 16
             let units = Int(a[12]) + (a[17] == 1 ? 256 : 0)
-            // The sensor reads steps of 0.1 bar, sent rounded to units of 3.144 kPa
-            let kpa = (Float(units) * 3.144 / 10).rounded() * 10
+            // Units of 3.144 kPa, not rounded to 0.1 bar: older sensors only send the unit nearest
+            // to a step of 0.1 bar, newer ones every unit. See RawWicarlink.kt.
+            let kpa = Float(units) * 3.144
             return reading(.wicarlink, id, Pressure(kpa: kpa), Temperature(celsius: Float(Int(a[13]) - 55)),
-                           // 0x01 "leakage", sent at once on a pressure drop. 0x02, "inflating", isn't an alarm.
+                           // 0x01 "leakage", sent at once on a pressure drop. 0x02, "inflating", isn't an alarm, nor 0x03, sent by newer sensors when the wheel starts turning.
                            alarm: a[14] == 0x01, volts: Float(a[11]) * 0.01 + 1.22)
         }
 

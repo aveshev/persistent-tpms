@@ -416,7 +416,7 @@ public class AppPreferences internal constructor(
 
         /** See [rideStaleMinutes] */
         public const val DEFAULT_RIDE_STALE_MINUTES: Int = 60
-        private const val DEFAULT_PRESSURE_LOSS_MIN_DROP = 7f
+        private const val DEFAULT_PRESSURE_LOSS_MIN_DROP = 5f
         private const val DEFAULT_MAGNIFIER_SECONDS = 5
         private const val DEFAULT_DIM_DISPLAY_SECONDS = 60
         private const val DEFAULT_DIM_DISPLAY_DIVISOR = 50
