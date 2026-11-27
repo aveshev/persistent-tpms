@@ -32,6 +32,8 @@
     <string name="alerts">Оповещения</string>
     <string name="alerts_silenced">Оповещения без звука</string>
     <string name="all_alerts_silenced">Все оповещения без звука</string>
+    <string name="alerts_ignored">Оповещения игнорируются</string>
+    <string name="all_alerts_ignored">Все оповещения игнорируются</string>
     <string name="all_permissions_granted_starting_monitoring">Все разрешения получены, запуск мониторинга</string>
     <string name="all_vehicles_sensors_readings_and_settings_where">Весь транспорт, датчики, показания и настройки (где применимо) скопированы сюда.</string>
     <string name="along_with_the_alert_sound_harder_for">Вместе со звуком оповещения, сильнее при критическом оповещении</string>
@@ -301,6 +303,7 @@
     <string name="may_be_leaking">Возможна утечка</string>
     <string name="min">%1$s мин</string>
     <string name="min_left_tap_to_unmute">Осталось %1$s мин, нажмите, чтобы включить звук</string>
+    <string name="min_left_tap_to_stop_ignoring">Осталось %1$s мин, нажмите, чтобы отменить</string>
     <string name="minimum">мин. %1$s</string>
     <string name="minimum_2">Минимум</string>
     <string name="minimum_drop_in">Минимальное падение, %1$s</string>
@@ -523,6 +526,8 @@
     <string name="show_the_introduction_again">Показать вступление снова</string>
     <string name="silence_alerts_for">Выключить оповещения на\u00A0%1$s\u00A0мин</string>
     <string name="silence_critical_alerts_for">Выключить критические оповещения на\u00A0%1$s\u00A0мин</string>
+    <string name="ignore_alerts_for">Игнорировать оповещения на\u00A0%1$s\u00A0мин</string>
+    <string name="ignore_critical_alerts_for">Игнорировать критические оповещения на\u00A0%1$s\u00A0мин</string>
     <string name="single_axle_trailer">Одноосный прицеп</string>
     <string name="some_newer_cars_and_motorcycles_feature_always">В некоторых новых автомобилях и мотоциклах есть BLE-маячки, которые работают постоянно или во время движения. Их можно использовать для запуска сканирования. Скорее всего, их не будет на экране сопряжения Bluetooth, но здесь их можно добавить.\n\nВАЖНО: AirTag и похожие персональные трекеры используют закрытые протоколы, скрывают имена и меняют адреса, поэтому не поддерживаются.</string>
     <string name="some_phones_stop_background_apps_on_their">Некоторые телефоны сами останавливают фоновые приложения. Посмотрите, какие настройки этому мешают</string>

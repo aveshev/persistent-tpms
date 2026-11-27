@@ -15,3 +15,14 @@ public fun alertingVehicles(): Map<UUID, AlertLevel> =
         .stateFlow
         .collectAsState()
         .value
+
+/**
+ * [alertingVehicles] without the alerts silenced or ignored from the main screen's button, what keeps
+ * the screen bright, see [AlertingVehiclesUseCase.unsilenced]
+ */
+@Composable
+public fun unsilencedAlertingVehicles(): Map<UUID, AlertLevel> =
+    viewModel { Bindings.featureBackgroundInternal.alertingVehiclesViewModel() }
+        .unsilenced
+        .collectAsState()
+        .value

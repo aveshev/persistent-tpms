@@ -22,4 +22,20 @@ public class AlertingVehiclesUseCase internal constructor(alertSpeaker: AlertSpe
                 .mapValues { (_, levels) -> levels.max() }
         }
         .distinctUntilChanged()
+
+    /**
+     * [levels] without the alerts silenced or ignored from the main screen's button, see
+     * [AlertSpeaker.Ongoing.isIgnored]: what keeps the main screen bright. A critical alert gets
+     * through a silence of the red ones, and a tyre alerting at a higher level is new again.
+     */
+    public val unsilenced: Flow<Map<UUID, AlertLevel>> = alertSpeaker
+        .ongoing
+        .map { ongoing ->
+            ongoing
+                .values
+                .filter { it.isIgnored.not() }
+                .groupBy(Ongoing::vehicle, Ongoing::level)
+                .mapValues { (_, levels) -> levels.max() }
+        }
+        .distinctUntilChanged()
 }

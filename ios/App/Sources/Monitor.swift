@@ -35,6 +35,11 @@ final class Monitor: ObservableObject {
     @Published private(set) var tyres: [TyreKey: Tyre] = [:]
     /// What the vehicle menu blinks for
     @Published private(set) var ongoing = OngoingAlerts()
+    /// The tyres whose alert a silence covered, from the main screen's button, at its level: it no
+    /// longer keeps the screen bright nor offers the button again, the silence over or lifted, until
+    /// the tyre alerts at a higher level, like the Android app's AlertSpeaker.Ongoing.isIgnored
+    @Published private(set) var ignored: [TyreKey: AlertLevel] = [:]
+    private var silenceWatch: AnyCancellable?
     @Published private(set) var nearby: [Int: Nearby] = [:]
     @Published private(set) var bluetooth: CBManagerState = .unknown
     @Published private(set) var error: String?
@@ -78,6 +83,18 @@ final class Monitor: ObservableObject {
 
     private init() {
         ride = RidePrompts(settings: settings, notifier: notifier)
+        // Ignored for good, the silence lifted or not
+        silenceWatch = speaker.$silence.sink { [weak self] silence in
+            guard let self, let silence else { return }
+            for (key, tyre) in tyres {
+                if let worst = Self.worstAlert(tyre), worst <= silence.level { ignored[key] = max(worst, ignored[key] ?? worst) }
+            }
+        }
+    }
+
+    /// The tyre's worst red or critical alert, but its battery's, nil without any
+    private static func worstAlert(_ tyre: Tyre) -> AlertLevel? {
+        tyre.alerts.levels.filter { $0.key != .battery && $0.value >= .red }.map(\.value).max()
     }
 
     /// A red or critical tyre alert going on, of a vehicle. Android's stops with a reading lowering it
@@ -85,11 +102,31 @@ final class Monitor: ObservableObject {
     /// however old, so a sensor not heard lately doesn't count: one left flat, or away from the phone,
     /// would keep the screen bright for good.
     func isAlerting(_ vehicleId: UUID? = nil, now: Date = Date()) -> Bool {
-        tyres.contains { key, tyre in
-            (vehicleId == nil || key.vehicleId == vehicleId)
-                && tyre.latest.map { now.timeIntervalSince1970 - $0.timestamp < OngoingAlerts.heldFor } == true
-                && tyre.alerts.levels.contains { $0.key != .battery && $0.value >= .red }
-        }
+        alertingLevel(vehicleId, now: now) != nil
+    }
+
+    /// The worst of the alerts [isAlerting] counts, nil without any. Without the ignored ones, or
+    /// silenced, unless [includingIgnored], see [ignored].
+    func alertingLevel(_ vehicleId: UUID? = nil, now: Date = Date(), includingIgnored: Bool = true) -> AlertLevel? {
+        let silence = speaker.silence.flatMap { $0.until > now ? $0.level : nil }
+        return tyres
+            .filter { key, tyre in
+                (vehicleId == nil || key.vehicleId == vehicleId)
+                    && tyre.latest.map { now.timeIntervalSince1970 - $0.timestamp < OngoingAlerts.heldFor } == true
+            }
+            .compactMap { key, tyre in
+                Self.worstAlert(tyre).flatMap { worst in
+                    let isIgnored = silence.map { worst <= $0 } == true || ignored[key].map { worst <= $0 } == true
+                    return includingIgnored || isIgnored == false ? worst : nil
+                }
+            }
+            .max()
+    }
+
+    /// An alert [isAlerting] counts, not silenced nor ignored from the main screen's button: what
+    /// keeps the screen bright, like the Android app's AlertingVehiclesUseCase.unsilenced
+    func isAlertingUnsilenced(now: Date = Date()) -> Bool {
+        alertingLevel(now: now, includingIgnored: false) != nil
     }
 
     /// Opens the database and starts the scan. Called at launch, also when iOS relaunches the app
@@ -309,6 +346,13 @@ final class Monitor: ObservableObject {
         tyre.loss = tyre.loss.next(reading)
         tyre.alerts = tyre.alerts.next(reading, vehicle.thresholds(location), warnedLoss(tyre))
         tyres[key] = tyre
+        // A higher alert is new, the same one again or a lower one stays ignored, see [ignored]
+        if let worst = Self.worstAlert(tyre) {
+            if let level = ignored[key], worst > level { ignored[key] = nil }
+            if let silence = speaker.silence, silence.until > Date(), worst <= silence.level { ignored[key] = max(worst, ignored[key] ?? worst) }
+        } else {
+            ignored[key] = nil
+        }
         ongoing = ongoing.next(OngoingAlerts.Tyre(vehicleId: vehicle.id, location: location), levels: tyre.alerts.notifiable, at: reading.timestamp)
         notifier.update(Notifier.Update(vehicle: vehicle, location: location, alerts: tyre.alerts, loss: warnedLoss(tyre), settings: settings, isPosted: settings.alerts))
     }

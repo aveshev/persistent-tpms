@@ -27,6 +27,24 @@ final class SilenceButtonTests: XCTestCase {
         XCTAssertEqual(SilenceButton.of(highest: .crimson, silence: (.crimson, until)), .silenced(isCritical: true, until: until))
     }
 
+    func testWithTheSoundOffTheSameButtonOnlyTellsItIgnores() {
+        XCTAssertEqual(SilenceButton.of(highest: nil, alerting: .crimson, silence: nil, isSoundOff: true), .offer(isCritical: true, isIgnoring: true))
+        XCTAssertEqual(SilenceButton.of(highest: nil, alerting: .red, silence: (.red, until), isSoundOff: true), .silenced(isCritical: false, until: until, isIgnoring: true))
+        XCTAssertEqual(SilenceButton.of(highest: nil, alerting: nil, silence: (.red, until), isSoundOff: true), .silenced(isCritical: false, until: until, isIgnoring: true))
+    }
+
+    func testAnAlertGoingOnWithNothingLeftToSayIsOfferedToo() {
+        XCTAssertEqual(SilenceButton.of(highest: nil, alerting: .red, silence: nil), .offer(isCritical: false))
+    }
+
+    func testACriticalAlertGetsThroughIgnoredRedOnes() {
+        XCTAssertEqual(SilenceButton.of(highest: nil, alerting: .crimson, silence: (.red, until), isSoundOff: true), .offer(isCritical: true, isIgnoring: true))
+    }
+
+    func testNothingGoingOnShowsNothingWhateverTheSound() {
+        XCTAssertEqual(SilenceButton.of(highest: nil, alerting: nil, silence: nil, isSoundOff: true), .idle)
+    }
+
     func testTheMinutesLeftAreRoundedUp() {
         XCTAssertEqual(SilenceButton.minutesLeft(until: until, now: until.addingTimeInterval(-600)), 10)
         XCTAssertEqual(SilenceButton.minutesLeft(until: until, now: until.addingTimeInterval(-599)), 10)

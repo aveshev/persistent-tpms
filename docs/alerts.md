@@ -292,14 +292,15 @@ alert notification.
     burst of 3 and 2 pulses at 880 Hz twice for crimson (alarm audio). Generated in the app, a tone
     with a few harmonics carrying through road noise and a helmet better than a pure one. They
     also work whatever the phone's language, the phrases being English only.
-  - **None**, the switch off: only the notifications sound. The silence button is then hidden.
+  - **None**, the switch off: only the notifications sound. The silence button then only ignores
+    the alerts, see "Silencing the speech".
 
   The item's subtitle says which: "Speech", "Tones" or "Off".
 
   Upgrading keeps the previous choice: the former "Spoken alerts" switch off becomes None.
 - **"Vibrate"**, a switch under "Alert sound", off by default: the phone also vibrates with each
   phrase or tone pattern, in the same queue and loops, and waits for both to end before the next.
-  With the sound on None, it only vibrates, on the same schedule, and the silence button stays. The
+  With the sound on None, it only vibrates, on the same schedule, and the silence button silences. The
   same rhythm as the tones, twice: 3 pulses of 150 ms at half strength for red, a burst of 3 and 2
   pulses of 250 ms at full strength for crimson. Phones without amplitude control vibrate every
   pulse at the same strength, crimson's longer and closer pulses still tell it apart. It uses the
@@ -310,9 +311,10 @@ alert notification.
 
 The main screen shows a big button over the vehicle, between its axles or in the middle of the
 screen for a single axle trailer, while the speech has a red or critical alert left to say: waiting
-for its announcement, or repeated by the loops. A notification still shown isn't enough: once the
-loops dropped its alert (silenced, scanning stopped...), only a new reading would speak again,
-there's nothing to silence. It's there to be hit
+for its announcement, or repeated by the loops. Also while one is going on that it didn't silence
+yet, with nothing left to say, since it keeps the screen bright (below). A notification still shown
+isn't enough: once the loops dropped its alert (silenced, scanning stopped, dismissed...), nothing
+keeps the screen bright nor would speak again. It's there to be hit
 while riding: finding a notification's buttons in the drawer is too much then. Reaching the screen
 is left to the usual ways (the notification, the launcher): opening it by itself would take over
 the navigation.
@@ -321,6 +323,20 @@ the navigation.
 |---|---|---|
 | Red only | "Silence alerts for 10 min" | Every red alert's speech, including new ones. A new critical alert is still said, and the button turns into the critical one |
 | A critical one | "Silence critical alerts for 10 min" | All the speech, new critical alerts included |
+
+It also ignores the alerts it covers, going on or coming during the 10 minutes: they no longer keep
+the main screen bright, which dims as it would without them (see the display settings), nor offer
+the button again. Like the speech, they stay so once the silence ends or is lifted: only a new alert,
+or one of theirs rising to critical, brightens the screen and brings the button back. A critical
+alert still keeps it bright through ignored red ones. The notifications and the vehicle picker's
+blinking don't change.
+
+With the alert sound and the vibration off, the button is the same, offered while a red or critical
+alert is going on, with nothing to say: only its label changes, as it then only ignores them.
+"Ignore alerts for 10 min", "Ignore critical alerts for 10 min", then "Alerts ignored" or "All alerts
+ignored" with "N min left, tap to stop ignoring". Without it, the only way to let the screen dim
+would be dismissing the notifications, too much while riding. Android Auto has no screen to dim: its
+item only follows the speech.
 
 - Only the speech, and its vibration: notifications still post and sound as usual, the dismiss
   buttons are unchanged.

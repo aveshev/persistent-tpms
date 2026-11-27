@@ -140,8 +140,12 @@ internal class AlertSpeaker(
 
     private val queue = MutableStateFlow(Queue())
 
-    /** A red or crimson alert of [vehicle] which the loops would repeat */
-    data class Ongoing(val vehicle: UUID, val level: AlertLevel)
+    /**
+     * A red or crimson alert of [vehicle] which the loops would repeat. [isIgnored] once a silence
+     * covered it, from the main screen's button: it no longer keeps the screen bright, nor offers the
+     * button again, whether the silence ended or was lifted, until its tyre alerts at a higher level.
+     */
+    data class Ongoing(val vehicle: UUID, val level: AlertLevel, val isIgnored: Boolean = false)
 
     private val mutableOngoing = MutableStateFlow(emptyMap<String, Ongoing>())
 
@@ -154,7 +158,12 @@ internal class AlertSpeaker(
 
     /** Only while the loops can go on, the alert is otherwise said once and forgotten */
     private fun ongoing(tag: String, vehicle: UUID, level: AlertLevel) {
-        if (queue.value.isRepeating) mutableOngoing.update { it + (tag to Ongoing(vehicle, level)) }
+        if (queue.value.isRepeating) mutableOngoing.update { ongoing ->
+            // The same alert again, or a lower one, stays ignored: only a higher one is new
+            val isIgnored = queue.value.silenced?.let { level <= it } == true ||
+                ongoing[tag]?.let { it.isIgnored && level <= it.level } == true
+            ongoing + (tag to Ongoing(vehicle, level, isIgnored))
+        }
     }
 
     /** Whether the alerts sound or vibrate, the queue staying empty otherwise */
@@ -259,6 +268,14 @@ internal class AlertSpeaker(
         // Once it ends, only a new reading is said again
         silenced
             .onEach { silenced -> queue.update { it.copy(silenced = silenced).scheduled() } }
+            // Ignored for good, the silence lifted or not, see Ongoing
+            .onEach { silenced ->
+                silenced?.also { level ->
+                    mutableOngoing.update { ongoing ->
+                        ongoing.mapValues { (_, it) -> if (it.level <= level) it.copy(isIgnored = true) else it }
+                    }
+                }
+            }
             .launchIn(scope)
 
         combine(appPreferences.alertSound, appPreferences.vibrateAlerts) { sound, vibrate -> sound != NONE || vibrate }

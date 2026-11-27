@@ -33,6 +33,8 @@
     <string name="alerts">Alerts</string>
     <string name="alerts_silenced">Alerts silenced</string>
     <string name="all_alerts_silenced">All alerts silenced</string>
+    <string name="alerts_ignored">Alerts ignored</string>
+    <string name="all_alerts_ignored">All alerts ignored</string>
     <string name="all_permissions_granted_starting_monitoring">All permissions granted, starting monitoring</string>
     <string name="all_vehicles_sensors_readings_and_settings_where">All vehicles, sensors, readings and settings (where applicable) have been copied here.</string>
     <string name="along_with_the_alert_sound_harder_for">Along with the alert sound, harder for a critical alert</string>
@@ -302,6 +304,7 @@
     <string name="may_be_leaking">May be leaking</string>
     <string name="min">%1$s min</string>
     <string name="min_left_tap_to_unmute">%1$s min left, tap to unmute</string>
+    <string name="min_left_tap_to_stop_ignoring">%1$s min left, tap to stop ignoring</string>
     <string name="minimum">min %1$s</string>
     <string name="minimum_2">Minimum</string>
     <string name="minimum_drop_in">Minimum drop, in %1$s</string>
@@ -524,6 +527,8 @@
     <string name="show_the_introduction_again">Show the introduction again</string>
     <string name="silence_alerts_for">Silence alerts for\u00A0%1$s\u00A0min</string>
     <string name="silence_critical_alerts_for">Silence critical alerts for\u00A0%1$s\u00A0min</string>
+    <string name="ignore_alerts_for">Ignore alerts for\u00A0%1$s\u00A0min</string>
+    <string name="ignore_critical_alerts_for">Ignore critical alerts for\u00A0%1$s\u00A0min</string>
     <string name="single_axle_trailer">Single axle trailer</string>
     <string name="some_newer_cars_and_motorcycles_feature_always">Some newer cars and motorcycles feature always-on or on-while-riding BLE beacons that can be used to activate scanning. These likely won\'t show up on your phone\'s Bluetooth pairing screen, but you can add them here.\n\nNOTE: AirTags and similar personal trackers use proprietary protocols, hide their names and randomize their addresses, so they aren\'t supported.</string>
     <string name="some_phones_stop_background_apps_on_their">Some phones stop background apps on their own, see which settings prevent it</string>

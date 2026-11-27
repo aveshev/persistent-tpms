@@ -9,9 +9,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import java.util.UUID
 
-/** The vehicles alerting, for the vehicle picker */
+/** The vehicles alerting, for the vehicle picker, and those not silenced, for the main screen's brightness */
 internal class AlertingVehiclesViewModel(alertingVehiclesUseCase: AlertingVehiclesUseCase) : ViewModel() {
     val stateFlow: StateFlow<Map<UUID, AlertLevel>> = alertingVehiclesUseCase
         .levels
+        .stateIn(viewModelScope, WhileSubscribed(), emptyMap())
+
+    val unsilenced: StateFlow<Map<UUID, AlertLevel>> = alertingVehiclesUseCase
+        .unsilenced
         .stateIn(viewModelScope, WhileSubscribed(), emptyMap())
 }

@@ -56,7 +56,11 @@ struct DimWhenIdle: ViewModifier {
                 #endif
                 guard isShown, settings.dimDisplay else { return wake() }
                 lastActivity = Date()
+                // A silence ending brightens it again, without anything to make the view update
+                var wasAlerting = isAlerting
                 while Task.isCancelled == false {
+                    if isAlerting, wasAlerting == false { wake() }
+                    wasAlerting = isAlerting
                     if isDimmed == false, isAlerting == false, Date().timeIntervalSince(lastActivity) >= Double(settings.dimDisplaySeconds) {
                         dim()
                     }
@@ -100,7 +104,8 @@ struct DimWhenIdle: ViewModifier {
         }
     }
 
-    private var isAlerting: Bool { monitor.isAlerting() }
+    /// Not for the alerts silenced or ignored with the button, seen already
+    private var isAlerting: Bool { monitor.isAlertingUnsilenced() }
 
     private func dim() {
         isDimmed = true
