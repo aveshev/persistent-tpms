@@ -36,7 +36,11 @@ public struct AdvertisingPacket {
         let uuidList = Self.structure(0x03, Data(uuids.flatMap { [UInt8($0 & 0xFF), UInt8($0 >> 8)] }))
         let shortName = name.map { Self.structure(0x08, Data($0.utf8)) } ?? Data()
         let flags = Self.structure(0x01, Data([0x06]))
-        let bytes: Data = if uuids.contains(0x27A5) {
+        let bytes: Data = if name == "SY-4300" || name == "YC-0001" {
+            // SY-4300: "080853592D34333030" "030213CC" "07FF...", its UUID in an incomplete list.
+            // YC-0001's UUID is unknown, it is laid out the same, see RawSy4300.kt
+            shortName + (uuids.isEmpty ? Data() : Self.structure(0x02, Data(uuids.flatMap { [UInt8($0 & 0xFF), UInt8($0 >> 8)] }))) + mfg
+        } else if uuids.contains(0x27A5) {
             // Pecham and Bekubee KY: "0303A527" "03084252" "08FF..."
             uuidList + shortName + mfg
         } else if uuids.contains(0xA827) || uuids.contains(0xA828) {
@@ -130,6 +134,20 @@ public struct AdvertisingPacket {
                            volts: Float(m.companyId >> 8 & 0xFF) / 10)
         }
 
+        // SY-4300 and YC-0001, see RawSy4300.kt: status, decivolts, °C, the pressure (absolute, in
+        // 0.1 psi, 146 at 0 psi) then a checksum. The manufacturer data's first 2 bytes aren't a
+        // company ID. YC-0001's CRC covers the Bluetooth address, which iOS doesn't give: it isn't
+        // checked here. The status bit 0x02 is an air leak, the alarm.
+        if let brand = (name == "SY-4300" ? SensorBrand.sy4300 : name == "YC-0001" ? .yc0001 : nil),
+           let m = manufacturer, m.data.count >= 4 {
+            let d = [UInt8(m.companyId & 0xFF), UInt8(m.companyId >> 8)] + [UInt8](m.data)
+            return reading(brand, addressId,
+                           .psi(Float((Int(d[3]) << 8 | Int(d[4])) - 146) / 10),
+                           Temperature(celsius: Float(Int8(bitPattern: d[2]))),
+                           alarm: d[0] & 0x02 != 0,
+                           volts: Float(d[1]) / 10)
+        }
+
         // Sysgration: location, EA CA, ID, pressure, temperature, battery and alarm
         if let m = manufacturer?.data, m.count >= 16 {
             let d = [UInt8](m)
@@ -157,6 +175,8 @@ public struct AdvertisingPacket {
         if name == "TPMS" { return manufacturer.map { [UInt8($0.companyId & 0xFF)] } }
         // 0x01 after the pressure rose, 0x02 after it fell, 0x00 steady
         if name == "TC.TPMS" { return manufacturer.map { [UInt8($0.companyId & 0xFF)] } }
+        // Low voltage, air leak, pressurizing and low pressure, from the lowest bit
+        if name == "SY-4300" || name == "YC-0001" { return manufacturer.map { [UInt8($0.companyId & 0xFF)] } }
         if let m = manufacturer?.data, m.count > 15, m[m.startIndex + 1] == 0xEA, m[m.startIndex + 2] == 0xCA {
             return [m[m.startIndex + 15]]
         }

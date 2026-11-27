@@ -141,6 +141,25 @@ internal enum class MockSensor {
             // Name "TC.TPMS", manufacturer data, service UUID 0xA828
             "080854432E54504D530CFF".hexToByteArray() + manufacturerData + "030328A8".hexToByteArray()
         }
+    },
+
+    /**
+     * The sensor ID comes from the Bluetooth address, the advertisement doesn't carry one. `flags`
+     * is the first data byte, 0x00 by default, whose bit 0x02 (air leak) is the alarm: `isAlarm`
+     * sets it. The last byte isn't checked, the capture's is kept (see Sy4300Test).
+     */
+    SY_4300 {
+        override fun advertisement(reading: Reading): ByteArray =
+            // Name "SY-4300", service UUID 0xCC13 in an incomplete list, then the data
+            "080853592D34333030030213CC07FF".hexToByteArray() + reading.sy4300Data() + 0xD8.toByte()
+    },
+
+    /** Same as [SY_4300], without a service UUID, and with a CRC covering `address` */
+    YC_0001 {
+        override fun advertisement(reading: Reading): ByteArray = reading
+            .sy4300Data()
+            .let { data -> data + RawSy4300.yc0001Crc(data, reading.address) }
+            .let { "080859432D3030303107FF".hexToByteArray() + it }
     };
 
     abstract fun advertisement(reading: Reading): ByteArray
@@ -148,11 +167,13 @@ internal enum class MockSensor {
     /**
      * @param battery What the app shows as the battery: decivolts (30 for 3.0 V) for every sensor
      * but SYSGRATION, a percentage for it. `null` picks a healthy value.
-     * @param id The sensor ID the app shows. Ignored by PECHAM and BEKUBEE_KY, see their doc.
+     * @param id The sensor ID the app shows. Ignored by PECHAM, BEKUBEE_KY, SY_4300 and YC_0001, see
+     * their doc.
      * @param location Only SYSGRATION advertises its location.
-     * @param isAlarm Only SYSGRATION and WICARLINK advertise an alarm. The others report their battery
+     * @param isAlarm Only SYSGRATION, WICARLINK, SY_4300 and YC_0001 advertise an alarm. The others report their battery
      * as a voltage, which the app compares to the vehicle's low voltage alarm.
      * @param flags The raw status byte, 0 to 255. `null` sends what real sensors do, see each entry.
+     * @param address The Bluetooth address the packet is sent from, which YC_0001's CRC covers.
      */
     data class Reading(
         val kpa: Float,
@@ -162,6 +183,7 @@ internal enum class MockSensor {
         val location: SensorLocation,
         val isAlarm: Boolean,
         val flags: Int? = null,
+        val address: String = "00:11:22:33:44:55",
     )
 
     protected fun Reading.pechamLike(name: String, pressureOffset: Int, crc: (ByteArray) -> ByteArray): ByteArray =
@@ -183,6 +205,24 @@ internal enum class MockSensor {
                 )
             )
             .let { it + crc(it) }
+
+    /** SY-4300 and YC-0001: status, decivolts, °C and pressure, absolute in 0.1 psi */
+    protected fun Reading.sy4300Data(): ByteArray = byteArrayOf(
+        (
+            flags
+                ?.also { require(isAlarm.not()) { "Send either flags or alarm for ${this@MockSensor}, flags 2 is the alarm" } }
+                ?.within("flags", 0..255)
+                ?: if (isAlarm) 0x02 else 0x00
+            ).toByte(),
+        (battery ?: 30).within("battery", 0..255).toByte(),
+        celsius.within("celsius", -128f..127f).roundToInt().toByte(),
+        *Pressure(kpa.within("kpa", 0f..1000f))
+            .asPsi()
+            .times(10)
+            .roundToInt()
+            .plus(146)
+            .let { byteArrayOf((it shr 8).toByte(), it.toByte()) },
+    )
 
     /** Wicarlink and Bekubee TPMS: volts = byte * 0.01 + 1.22 */
     protected fun Reading.voltageByte(default: Int): Byte = (battery ?: default)

@@ -68,13 +68,14 @@ private val logger = Logger.withTag("MockAdvertisements")
  * adb shell am broadcast -a com.masselis.tpmsadvanced.MOCK_ADVERTISEMENT -p com.aveshev.persistenttpms.pro \
  *     --es brand pecham --ef kpa 230 --ef celsius 21 --ei battery 30
  * ```
- * - `brand`: pecham, bekubee_ky, wicarlink, bekubee_tpms, tc_tpms or sysgration. `kpa` is required,
+ * - `brand`: pecham, bekubee_ky, wicarlink, bekubee_tpms, tc_tpms, sysgration, sy_4300 or yc_0001. `kpa` is required,
  *   `celsius` (20), `battery` (a healthy value) and `id` (0x123400) are optional.
- * - Sysgration only: `wheel` (FL, FR, RL or RR, default FL). Sysgration and Wicarlink only:
- *   `alarm` (`--ez`, default false).
+ * - Sysgration only: `wheel` (FL, FR, RL or RR, default FL). Sysgration, Wicarlink, SY-4300 and
+ *   YC-0001 only: `alarm` (`--ez`, default false).
  * - `flags`: the raw status byte (0 to 255, in decimal), see [MockSensor] for where each brand
  *   carries it. Defaults to what real sensors send.
- * - Both forms: `address` (the ID of Pecham and Bekubee KY sensors) and `rssi` are optional.
+ * - Both forms: `address` (the ID of Pecham, Bekubee KY, SY-4300 and YC-0001 sensors, covered by
+ *   YC-0001's CRC) and `rssi` are optional.
  *
  * Numbers can be sent with `--ei` or `--ef`, a value sent with the wrong type is rejected rather
  * than replaced by its default. Packets are only received while a scan is running, and only from a
@@ -95,7 +96,7 @@ internal fun Flow<ScanResult>.withMockAdvertisements(
                             ?: intent.string(EXTRA_BRAND)?.let { brand ->
                                 MockSensor.entries
                                     .firstOrNull { it.name.equals(brand, ignoreCase = true) }
-                                    ?.advertisement(intent.asReading())
+                                    ?.advertisement(intent.asReading(address = intent.address()))
                                     ?: error("Unknown brand \"$brand\", expected one of ${MockSensor.entries}")
                             }
                             ?: error("Send either \"$EXTRA_BYTES\" or \"$EXTRA_BRAND\"")
@@ -103,7 +104,7 @@ internal fun Flow<ScanResult>.withMockAdvertisements(
                         .asScanResult(
                             device = context.getSystemService<BluetoothManager>()
                                 ?.adapter
-                                ?.getRemoteDevice(intent.string(EXTRA_ADDRESS)?.uppercase() ?: DEFAULT_ADDRESS)
+                                ?.getRemoteDevice(intent.address())
                                 ?: error("No Bluetooth adapter"),
                             rssi = intent.number(EXTRA_RSSI)?.toInt() ?: DEFAULT_RSSI,
                         )
@@ -121,7 +122,9 @@ internal fun Flow<ScanResult>.withMockAdvertisements(
     }
 )
 
-private fun Intent.asReading() = MockSensor.Reading(
+private fun Intent.address() = string(EXTRA_ADDRESS)?.uppercase() ?: DEFAULT_ADDRESS
+
+private fun Intent.asReading(address: String) = MockSensor.Reading(
     kpa = requireNotNull(number(EXTRA_KPA)) { "Missing \"$EXTRA_KPA\"" }.toFloat(),
     celsius = number(EXTRA_CELSIUS)?.toFloat() ?: DEFAULT_CELSIUS,
     battery = number(EXTRA_BATTERY)?.toInt(),
@@ -135,6 +138,7 @@ private fun Intent.asReading() = MockSensor.Reading(
         ?: FRONT_LEFT,
     isAlarm = extra(EXTRA_ALARM)?.let { requireNotNull(it as? Boolean) { "\"$EXTRA_ALARM\" must be sent with --ez" } } ?: false,
     flags = number(EXTRA_FLAGS)?.toInt(),
+    address = address,
 )
 
 // `Intent.getXxxExtra` return their default when the extra has another type, which hides a wrong

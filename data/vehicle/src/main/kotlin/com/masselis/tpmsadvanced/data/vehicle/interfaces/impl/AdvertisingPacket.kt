@@ -34,13 +34,18 @@ internal class AdvertisingPacket(val bytes: ByteArray) {
     val serviceUuids16: List<Int> = listOfNotNull(structures[INCOMPLETE_UUIDS_16], structures[COMPLETE_UUIDS_16])
         .flatMap { it.toList().chunked(2) { (low, high) -> (low.toInt() and 0xFF) or ((high.toInt() and 0xFF) shl 8) } }
 
-    /** null when this isn't the advertisement of a known sensor, or it doesn't pass its checks */
-    fun decode(): Raw? = RawPecham(this)
+    /**
+     * null when this isn't the advertisement of a known sensor, or it doesn't pass its checks.
+     * [address] is the Bluetooth address the scan reports, which some checks cover: null for a
+     * stored reading, which passed them when it was received.
+     */
+    fun decode(address: String? = null): Raw? = RawPecham(this)
         ?: RawBekubeeKy(this)
         ?: RawWicarlink(this)
         ?: RawBekubeeTpms(this)
         ?: RawSysgration(this)
         ?: RawTcTpms(this)
+        ?: RawSy4300(this, address)
 
     /**
      * The status bytes: shown for debugging, since what most of their bits mean is unknown. Only
@@ -60,6 +65,10 @@ internal class AdvertisingPacket(val bytes: ByteArray) {
 
         // The first manufacturer data byte: 0x01 after the pressure rose, 0x02 after it fell, 0x00 steady
         name == RawTcTpms.NAME -> manufacturer?.let { (companyId) -> listOf((companyId and 0xFF).toUByte()) }
+
+        // From the lowest bit: low voltage, air leak, pressurizing and low pressure, see RawSy4300
+        name == RawSy4300.SY_4300_NAME || name == RawSy4300.YC_0001_NAME ->
+            manufacturer?.let { (companyId) -> listOf((companyId and 0xFF).toUByte()) }
 
         // The alarm byte, 0x01 being the only known value
         manufacturer?.second?.let { it.size > 15 && it[1] == 0xEA.toByte() && it[2] == 0xCA.toByte() } == true ->

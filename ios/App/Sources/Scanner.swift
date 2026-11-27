@@ -12,8 +12,9 @@ import UIKit
 final class Scanner: NSObject, CBCentralManagerDelegate {
 
     /// Pecham and Bekubee KY (0x27A5), Wicarlink and Sysgration (0xFBB0), Bekubee TPMS (0xA827),
-    /// TC.TPMS (0xA828)
-    static let services = ["27A5", "FBB0", "A827", "A828"].map { CBUUID(string: $0) }
+    /// TC.TPMS (0xA828), SY-4300 (0xCC13). YC-0001's is unknown, and iOS can't scan for a name: it
+    /// isn't found until it is
+    static let services = ["27A5", "FBB0", "A827", "A828", "CC13"].map { CBUUID(string: $0) }
 
     /// How long a beacon's report holds off the next one in the background. iOS suspends an app about
     /// 10 s after a report. Just over the 5 s a report needs confirming after, so the second one counts.

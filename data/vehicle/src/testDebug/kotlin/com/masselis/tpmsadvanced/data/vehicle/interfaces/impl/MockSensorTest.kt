@@ -4,8 +4,10 @@ import com.masselis.tpmsadvanced.data.vehicle.interfaces.impl.MockSensor.BEKUBEE
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.impl.MockSensor.BEKUBEE_TPMS
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.impl.MockSensor.PECHAM
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.impl.MockSensor.SYSGRATION
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.impl.MockSensor.SY_4300
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.impl.MockSensor.TC_TPMS
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.impl.MockSensor.WICARLINK
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.impl.MockSensor.YC_0001
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.FRONT_LEFT
 import com.masselis.tpmsadvanced.data.vehicle.model.SensorLocation.REAR_RIGHT
@@ -48,9 +50,14 @@ internal class MockSensorTest {
         BEKUBEE_TPMS to 1f,
         SYSGRATION to 0.001f,
         TC_TPMS to 0.6895f,
+        SY_4300 to 0.6895f,
+        YC_0001 to 0.6895f,
     )
 
-    /** The 16-bit service UUID the scan filters must find in each advertisement */
+    /**
+     * The 16-bit service UUID the scan filters must find in each advertisement, in a complete or an
+     * incomplete list. YC-0001 has none, the scan filters find it by its name.
+     */
     private val serviceUuid = mapOf(
         PECHAM to 0x27A5,
         BEKUBEE_KY to 0x27A5,
@@ -58,6 +65,7 @@ internal class MockSensorTest {
         BEKUBEE_TPMS to 0xA827,
         SYSGRATION to 0xFBB0,
         TC_TPMS to 0xA828,
+        SY_4300 to 0xCC13,
     )
 
     @Test
@@ -67,10 +75,12 @@ internal class MockSensorTest {
                 val bytes = sensor.advertisement(reading)
                 val structures = bytes.adStructures()
                 assertTrue(
-                    structures[0x03]?.let { (it[0].toInt() and 0xFF) or ((it[1].toInt() and 0xFF) shl 8) } == serviceUuid[sensor],
+                    (structures[0x03] ?: structures[0x02])?.let { (it[0].toInt() and 0xFF) or ((it[1].toInt() and 0xFF) shl 8) } ==
+                        serviceUuid[sensor],
                     "$sensor must advertise its service UUID, the scan filters drop it otherwise"
                 )
-                val raw = bytes.decoded()
+                // With the address the scanner would give, which YC-0001's CRC covers
+                val raw = AdvertisingPacket(bytes).decode(reading.address)
                 assertEquals(
                     when (sensor) {
                         PECHAM -> RawPecham::class
@@ -79,6 +89,7 @@ internal class MockSensorTest {
                         BEKUBEE_TPMS -> RawBekubeeTpms::class
                         SYSGRATION -> RawSysgration::class
                         TC_TPMS -> RawTcTpms::class
+                        SY_4300, YC_0001 -> RawSy4300::class
                     },
                     raw?.let { it::class },
                     "$sensor $reading"
@@ -98,7 +109,7 @@ internal class MockSensorTest {
                         assertEquals(it / 10f, assertNotNull(tyre.batteryVoltage).volts, 0.05f, "$sensor $reading")
                     }
                 }
-                if (sensor != PECHAM && sensor != BEKUBEE_KY) assertEquals(reading.id, tyre.sensorId, "$sensor $reading")
+                if (sensor !in listOf(PECHAM, BEKUBEE_KY, SY_4300, YC_0001)) assertEquals(reading.id, tyre.sensorId, "$sensor $reading")
             }
         }
     }
@@ -115,7 +126,7 @@ internal class MockSensorTest {
 
     @Test
     fun `a low battery is reported as a voltage, not as an alarm`() {
-        listOf(PECHAM, BEKUBEE_KY, WICARLINK, BEKUBEE_TPMS, TC_TPMS).forEach { sensor ->
+        listOf(PECHAM, BEKUBEE_KY, WICARLINK, BEKUBEE_TPMS, TC_TPMS, SY_4300, YC_0001).forEach { sensor ->
             sensor
                 .advertisement(reading(kpa = 200f, celsius = 20f, battery = 20))
                 .decodedTyre()!!
@@ -136,18 +147,19 @@ internal class MockSensorTest {
     @Test
     fun `flags go to the status byte the tyre shows`() {
         reading(kpa = 200f, celsius = 20f, flags = 0x5A).let { reading ->
-            listOf(PECHAM, BEKUBEE_KY, WICARLINK, BEKUBEE_TPMS, SYSGRATION, TC_TPMS).forEach { sensor ->
+            listOf(PECHAM, BEKUBEE_KY, WICARLINK, BEKUBEE_TPMS, SYSGRATION, TC_TPMS, SY_4300, YC_0001).forEach { sensor ->
                 val advertisement = sensor.advertisement(reading)
-                assertNotNull(advertisement.decoded(), "$sensor with flags")
+                assertNotNull(AdvertisingPacket(advertisement).decode(reading.address), "$sensor with flags")
                 assertEquals(listOf<UByte>(0x5Au), AdvertisingPacket(advertisement).statusBytes, "$sensor")
             }
         }
         // Wicarlink's 9th pressure bit is byte 17 being 1
         assertEquals(1.toByte(), WICARLINK.advertisement(reading(kpa = 900f, celsius = 20f))[17])
         assertEquals(0.toByte(), WICARLINK.advertisement(reading(kpa = 200f, celsius = 20f))[17])
-        // Sysgration's and Wicarlink's alarm is their flags byte being 1
-        listOf(SYSGRATION, WICARLINK).forEach { sensor ->
-            assertTrue(sensor.advertisement(reading(kpa = 200f, celsius = 20f, flags = 1)).decodedTyre()!!.isAlarm, "$sensor")
+        // Sysgration's and Wicarlink's alarm is their flags byte being 1, SY-4300's and YC-0001's its bit 0x02
+        listOf(SYSGRATION, WICARLINK, SY_4300, YC_0001).forEach { sensor ->
+            val alarm = if (sensor == SY_4300 || sensor == YC_0001) 2 else 1
+            assertTrue(sensor.advertisement(reading(kpa = 200f, celsius = 20f, flags = alarm)).decodedTyre()!!.isAlarm, "$sensor")
             assertTrue(sensor.advertisement(reading(kpa = 200f, celsius = 20f, isAlarm = true)).decodedTyre()!!.isAlarm, "$sensor")
             assertFalse(sensor.advertisement(reading(kpa = 200f, celsius = 20f)).decodedTyre()!!.isAlarm, "$sensor")
         }
@@ -165,6 +177,16 @@ internal class MockSensorTest {
         assertFailsWith<IllegalArgumentException> { WICARLINK.advertisement(reading(kpa = 200f, celsius = 20f, id = 0x1000000)) }
         assertFailsWith<IllegalArgumentException> { SYSGRATION.advertisement(reading(kpa = 200f, celsius = 20f, id = 0x123456)) }
         assertFailsWith<IllegalArgumentException> { TC_TPMS.advertisement(reading(kpa = 200f, celsius = 20f, id = 0x1000000)) }
+        assertFailsWith<IllegalArgumentException> { SY_4300.advertisement(reading(kpa = 200f, celsius = 20f, isAlarm = true, flags = 2)) }
+    }
+
+    @Test
+    fun `a YC-0001 packet is only valid from the address it was built for`() {
+        YC_0001
+            .advertisement(reading(kpa = 200f, celsius = 20f).copy(address = "12:30:AF:00:04:5A"))
+            .let(::AdvertisingPacket)
+            .also { assertNotNull(it.decode("12:30:AF:00:04:5A")) }
+            .also { assertNull(it.decode("00:11:22:33:44:55")) }
     }
 
     /** AD structures by type, as `ScanRecord.parseFromBytes` splits them */

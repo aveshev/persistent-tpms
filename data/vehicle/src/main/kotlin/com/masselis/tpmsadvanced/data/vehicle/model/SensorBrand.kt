@@ -14,7 +14,9 @@ public enum class SensorBrand(internal val code: Long, public val batteryUnit: B
     WICARLINK(3, VOLT),
     BEKUBEE_TPMS(4, VOLT),
     SYSGRATION(5, PERCENT),
-    TC_TPMS(6, VOLT);
+    TC_TPMS(6, VOLT),
+    SY_4300(7, VOLT),
+    YC_0001(8, VOLT);
 
     public enum class BatteryUnit {
         VOLT,

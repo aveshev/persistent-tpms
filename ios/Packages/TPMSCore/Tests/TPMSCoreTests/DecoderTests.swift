@@ -89,6 +89,27 @@ final class DecoderTests: XCTestCase {
         XCTAssertEqual(unplugged.pressure.kpa, 0)
     }
 
+    /// nRF Connect captures of 2 SY-4300 sensors, one on a tyre and one at 0 psi, see Sy4300Test.kt
+    func testSy4300() throws {
+        let mounted = try XCTUnwrap(decode("080853592D34333030030213CC07FF001B1B0277D8"))
+        XCTAssertEqual(mounted.brand, .sy4300)
+        XCTAssertEqual(mounted.pressure.convert(.psi), 48.5, accuracy: 0.01)
+        XCTAssertEqual(mounted.temperature.celsius, 27)
+        XCTAssertEqual(try XCTUnwrap(mounted.batteryVoltage).volts, 2.7, accuracy: 0.01)
+        XCTAssertFalse(mounted.isAlarm)
+        let off = try XCTUnwrap(decode("080853592D34333030030213CC07FF001E1A00929E"))
+        XCTAssertEqual(off.pressure.convert(.psi), 0, accuracy: 0.01)
+        XCTAssertEqual(off.temperature.celsius, 26)
+        // 0x04, pressurizing, isn't an alarm, 0x02, an air leak, is
+        XCTAssertFalse(try XCTUnwrap(decode("080853592D34333030030213CC07FF041B1B027ACD")).isAlarm)
+        XCTAssertTrue(try XCTUnwrap(decode("080853592D34333030030213CC07FF021B1B027ACD")).isAlarm)
+        XCTAssertEqual(AdvertisingPacket(bytes: Data(hex: "080853592D34333030030213CC07FF041B1B027ACD")!).statusBytes, [0x04])
+        // Another name isn't this sensor
+        XCTAssertNil(decode("080853592D34333031030213CC07FF001B1B0277D8"))
+        // YC-0001, built with the vendor app's CRC (not checked on iOS)
+        XCTAssertEqual(decode("080859432D3030303107FF001B1B027748")?.brand, .yc0001)
+    }
+
     /// nRF Connect captures of one TC.TPMS sensor bought from Essgoo, address 34:30:07:10:80:9C, see TcTpmsTest.kt
     func testTcTpms() throws {
         let off = try XCTUnwrap(decode("080854432E54504D530CFF021E1E009234300710809C030328A8"))
@@ -147,6 +168,10 @@ final class DecoderTests: XCTestCase {
         let tcTpms = AdvertisingPacket(name: "TC.TPMS", serviceUUIDs: ["A828"], manufacturerData: Data(hex: "011E1E02A034300710809C")!)
         XCTAssertEqual(tcTpms.bytes.hex, "080854432E54504D530CFF011E1E02A034300710809C030328A8")
         XCTAssertEqual(tcTpms.decode()?.brand, .tcTpms)
+
+        let sy4300 = AdvertisingPacket(name: "SY-4300", serviceUUIDs: ["CC13"], manufacturerData: Data(hex: "001B1B0277D8")!)
+        XCTAssertEqual(sy4300.bytes.hex, "080853592D34333030030213CC07FF001B1B0277D8")
+        XCTAssertEqual(sy4300.decode()?.brand, .sy4300)
     }
 
     func testJavaHashCode() {
