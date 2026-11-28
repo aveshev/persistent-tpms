@@ -1,6 +1,8 @@
 import AVFoundation
+import PhotosUI
 import SwiftUI
 import TPMSCore
+import Vision
 
 /// What a scanned code leads to on the vehicle it was scanned for, once the camera has stopped
 /// looking, like the Android app's QrCodeResultViewModel
@@ -103,7 +105,8 @@ struct QrCodeOutcome {
 }
 
 /// Scans a QR code, then asks what to do with what it holds. The first code found stops the search,
-/// one which isn't a TPMS one only says so.
+/// one which isn't a TPMS one only says so. The sensor ID can be typed in instead, or the code read
+/// from pictures, the camera allowed or not.
 struct QrCodeScanView: View {
     let vehicle: Vehicle
     let location: TyreLocation
@@ -114,14 +117,23 @@ struct QrCodeScanView: View {
     @State private var isUnknownCode = false
     @State private var unknownCodeTask: Task<Void, Never>?
     @State private var outcome: QrCodeOutcome?
+    @State private var isEnteringId = false
+    @State private var typedId = ""
+    @State private var pictures: [PhotosPickerItem] = []
+    @State private var isReading = false
+    @State private var choices: [QrCodeResult] = []
+    @State private var noCodeInPictures = false
+    @State private var printedIds = PrintedIdReadings()
+    /// The printed ID is only offered once the code itself hasn't been read for a while
+    @State private var isSuggestionDue = false
 
     var body: some View {
         ZStack {
             Color.black.ignoresSafeArea()
             if access == .authorized {
-                QrCameraView(isActive: outcome == nil, onCode: read)
+                QrCameraView(isActive: outcome == nil, onCode: read, onTexts: { printedIds.read(QrCodeResult.printedIds(in: $0)) })
                     .ignoresSafeArea()
-                QrOverlay(text: isUnknownCode ? "Not a known TPMS QR code" : "Point the camera at the sensors' QR code")
+                QrOverlay()
             } else if access == .notDetermined {
                 ProgressView()
             } else {
@@ -136,6 +148,36 @@ struct QrCodeScanView: View {
                 }
                 .environment(\.colorScheme, .dark)
             }
+            VStack(spacing: 16) {
+                Spacer()
+                if access == .authorized {
+                    Text(isUnknownCode ? "Not a known TPMS QR code" : "Point the camera at the sensors' QR code")
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.center)
+                        // The largest text sizes shrinking to fit below the frame
+                        .minimumScaleFactor(0.3)
+                        .lineLimit(4)
+                    if isSuggestionDue, let id = printedIds.suggestion {
+                        // The camera keeps looking for the code meanwhile
+                        Button("Use the ID printed on the sensor: \(id)") { read(id) }
+                            .buttonStyle(.borderedProminent)
+                            .multilineTextAlignment(.center)
+                    }
+                }
+                HStack(spacing: 12) {
+                    Button("Enter ID") {
+                        typedId = ""
+                        isEnteringId = true
+                    }
+                    PhotosPicker("From gallery", selection: $pictures, matching: .images)
+                }
+                .buttonStyle(.bordered)
+                .tint(.white)
+                .disabled(isReading)
+            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 48)
+            if isReading { ProgressView().tint(.white) }
         }
         .navigationTitle("Scan QR code")
         .navigationBarTitleDisplayMode(.inline)
@@ -152,6 +194,37 @@ struct QrCodeScanView: View {
             if access == .notDetermined {
                 access = await AVCaptureDevice.requestAccess(for: .video) ? .authorized : .denied
             }
+            try? await Task.sleep(for: .seconds(10))
+            isSuggestionDue = true
+        }
+        .onChange(of: pictures) { _, items in
+            guard items.isEmpty == false else { return }
+            pictures = []
+            readPictures(items)
+        }
+        .alert("Sensor ID", isPresented: $isEnteringId) {
+            TextField("2221C5", text: $typedId)
+                .textInputAutocapitalization(.characters)
+                .autocorrectionDisabled()
+                .font(.body.monospaced())
+                .onChange(of: typedId) { _, text in
+                    let id = QrCodeResult.typedSensorId(text)
+                    if id != text { typedId = id }
+                }
+            Button("Continue") { read(typedId) }
+                .disabled(typedId.count < 6)
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The 6 characters printed by the sensor's QR code, 0 to 9 and A to F")
+        }
+        .confirmationDialog("Several QR codes found", isPresented: Binding(get: { choices.isEmpty == false }, set: { if $0 == false { choices = [] } }), titleVisibility: .visible) {
+            ForEach(choices, id: \.self) { result in
+                Button(label(of: result)) { found(result) }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+        .alert("No TPMS QR code in the selected pictures", isPresented: $noCodeInPictures) {
+            Button("OK", role: .cancel) {}
         }
         .alert(outcome?.title ?? "", isPresented: Binding(get: { outcome != nil }, set: { _ in }), presenting: outcome) { outcome in
             if let confirm = outcome.confirm {
@@ -171,11 +244,55 @@ struct QrCodeScanView: View {
         }
     }
 
+    private func found(_ result: QrCodeResult) {
+        guard outcome == nil else { return }
+        unknownCodeTask?.cancel()
+        isUnknownCode = false
+        outcome = .of(result, vehicle: vehicle, location: location, monitor: monitor)
+    }
+
+    private func label(of result: QrCodeResult) -> String {
+        switch result {
+        case let .wicarlink(id): "Wicarlink sensor \(id.asSensorId(.wicarlink))"
+        case let .sensors(sensors): "\(sensors.count) Sysgration sensors"
+        case let .shared(shared): "Sensors of \(shared.name)"
+        default: "A QR code that can't be used"
+        }
+    }
+
+    /// The code found in the pictures, or the choice of them when several are
+    private func readPictures(_ items: [PhotosPickerItem]) {
+        isReading = true
+        Task {
+            var pictures = [(codes: [String], texts: [String])]()
+            for item in items {
+                if let data = try? await item.loadTransferable(type: Data.self) {
+                    pictures.append(await Task.detached { Self.content(of: data) }.value)
+                }
+            }
+            isReading = false
+            let results = QrCodeResult.parse(pictures: pictures)
+            switch results.count {
+            case 0: noCodeInPictures = true
+            case 1: found(results[0])
+            default: choices = results
+            }
+        }
+    }
+
+    /// The QR codes and the text Vision finds in a picture, turned upright from its EXIF orientation
+    private nonisolated static func content(of data: Data) -> (codes: [String], texts: [String]) {
+        let codes = VNDetectBarcodesRequest()
+        codes.symbologies = [.qr]
+        let texts = VNRecognizeTextRequest.printedIds()
+        try? VNImageRequestHandler(data: data).perform([codes, texts])
+        return ((codes.results ?? []).compactMap(\.payloadStringValue).filter { $0.isEmpty == false }, texts.lines)
+    }
+
     private func read(_ code: String) {
         guard outcome == nil else { return }
         if let result = QrCodeResult.parse(code) {
-            unknownCodeTask?.cancel()
-            outcome = .of(result, vehicle: vehicle, location: location, monitor: monitor)
+            found(result)
         } else {
             // The camera reports a code at every frame it's in: the text stays while it's in view
             isUnknownCode = true
@@ -190,8 +307,6 @@ struct QrCodeScanView: View {
 
 /// The usual scanner look: the preview dimmed around a clear square, its corners marked
 private struct QrOverlay: View {
-    let text: String
-
     var body: some View {
         GeometryReader { geometry in
             let side = min(geometry.size.width, geometry.size.height) * 0.7
@@ -215,34 +330,50 @@ private struct QrOverlay: View {
                 }
             }
             .stroke(.white, style: StrokeStyle(lineWidth: 4, lineCap: .round, lineJoin: .round))
-            Text(text)
-                .foregroundStyle(.white)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-                // Kept between the frame and the bottom, the largest text sizes shrinking to fit
-                .minimumScaleFactor(0.3)
-                .frame(width: geometry.size.width, height: max(geometry.size.height - square.maxY - 48, 0))
-                .position(x: geometry.size.width / 2, y: square.maxY + (geometry.size.height - square.maxY) / 2)
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
     }
 }
 
-/// The back camera's preview, reporting every QR code it sees
+private extension VNRecognizeTextRequest {
+    /// Reads a sensor ID as printed, rather than correcting it into a word
+    static func printedIds() -> VNRecognizeTextRequest {
+        let request = VNRecognizeTextRequest()
+        request.recognitionLevel = .accurate
+        request.usesLanguageCorrection = false
+        return request
+    }
+
+    /// The best reading of each line, then of its words: a printed ID can be a word of a longer line,
+    /// or split into several words
+    var lines: [String] {
+        (results ?? [])
+            .compactMap { $0.topCandidates(1).first?.string }
+            .flatMap { line in [line] + line.split(separator: " ").map(String.init) }
+    }
+}
+
+/// The back camera's preview, reporting every QR code it sees, and the text of a frame every half
+/// second: reading text takes longer, the codes are still looked for in every frame
 private struct QrCameraView: UIViewRepresentable {
     let isActive: Bool
     let onCode: (String) -> Void
+    let onTexts: ([String]) -> Void
 
     final class PreviewView: UIView {
         override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
         var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
     }
 
-    final class Coordinator: NSObject, AVCaptureMetadataOutputObjectsDelegate {
+    final class Coordinator: NSObject, AVCaptureMetadataOutputObjectsDelegate, AVCaptureVideoDataOutputSampleBufferDelegate, @unchecked Sendable {
         let session = AVCaptureSession()
         private let queue = DispatchQueue(label: "qr-camera")
+        private let textQueue = DispatchQueue(label: "qr-camera-text")
+        /// Only touched on textQueue
+        private var textReadAt: CMTime?
         var onCode: (String) -> Void = { _ in }
+        var onTexts: ([String]) -> Void = { _ in }
 
         override init() {
             super.init()
@@ -257,6 +388,12 @@ private struct QrCameraView: UIViewRepresentable {
             session.addOutput(output)
             output.setMetadataObjectsDelegate(self, queue: .main)
             output.metadataObjectTypes = [.qr]
+            let frames = AVCaptureVideoDataOutput()
+            frames.alwaysDiscardsLateVideoFrames = true
+            if session.canAddOutput(frames) {
+                session.addOutput(frames)
+                frames.setSampleBufferDelegate(self, queue: textQueue)
+            }
         }
 
         func setRunning(_ running: Bool) {
@@ -271,6 +408,18 @@ private struct QrCameraView: UIViewRepresentable {
                 .compactMap { ($0 as? AVMetadataMachineReadableCodeObject)?.stringValue }
                 .forEach(onCode)
         }
+
+        func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+            let time = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+            if let textReadAt, CMTimeGetSeconds(CMTimeSubtract(time, textReadAt)) < 0.5 { return }
+            textReadAt = time
+            let request = VNRecognizeTextRequest.printedIds()
+            // The back camera's frames come sideways in portrait
+            try? VNImageRequestHandler(cmSampleBuffer: sampleBuffer, orientation: .right).perform([request])
+            let lines = request.lines
+            guard lines.isEmpty == false else { return }
+            DispatchQueue.main.async { [weak self] in self?.onTexts(lines) }
+        }
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -284,6 +433,7 @@ private struct QrCameraView: UIViewRepresentable {
 
     func updateUIView(_ view: PreviewView, context: Context) {
         context.coordinator.onCode = onCode
+        context.coordinator.onTexts = onTexts
         context.coordinator.setRunning(isActive)
     }
 

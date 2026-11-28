@@ -24,7 +24,7 @@ android-gradle-plugin = "com.android.tools.build:gradle:9.3.2"
 androidx-arch-core-testing = "androidx.arch.core:core-testing:2.2.0"
 androidx-camera2-core = "androidx.camera:camera-camera2:1.6.1"
 androidx-camera2-lifecycle = "androidx.camera:camera-lifecycle:1.6.1"
-androidx-camera2-mlkitvision = "androidx.camera:camera-mlkit-vision:1.6.1"
+androidx-camera-view = "androidx.camera:camera-view:1.6.1"
 androidx-compose-bom = "androidx.compose:compose-bom:2026.09.00"
 androidx-car-app = { module = "androidx.car.app:app", version.ref = "car-app" }
 androidx-car-app-testing = { module = "androidx.car.app:app-testing", version.ref = "car-app" }
@@ -57,6 +57,7 @@ google-firebase-bom = "com.google.firebase:firebase-bom:34.19.0"
 google-firebase-crashlytics = { module = "com.google.firebase:firebase-crashlytics" }
 google-play-services-location = "com.google.android.gms:play-services-location:21.3.0"
 google-mlkit-barecode = "com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.1"
+google-mlkit-text = "com.google.android.gms:play-services-mlkit-text-recognition:19.0.2"
 google-zxing-core = "com.google.zxing:core:3.5.3"
 google-oauth2-http = "com.google.auth:google-auth-library-oauth2-http:1.52.0"
 junit = "junit:junit:4.13.2"

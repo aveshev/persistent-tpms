@@ -22,11 +22,7 @@ import com.masselis.tpmsadvanced.feature.qrcode.model.QrCodeResult
 import com.masselis.tpmsadvanced.feature.qrcode.model.QrCodeSensor
 import com.masselis.tpmsadvanced.feature.qrcode.model.QrCodeSensors
 import com.masselis.tpmsadvanced.feature.qrcode.model.sensorsFor
-import io.mockk.every
 import io.mockk.mockk
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.test.runTest
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -40,9 +36,7 @@ internal class QrCodeSensorUseCaseTest {
 
     @Before
     fun setup() {
-        cameraAnalyser = mockk {
-            every { findQrCode(any()) } returns MutableSharedFlow()
-        }
+        cameraAnalyser = mockk()
     }
 
     private fun test() = QrCodeSensorUseCase(cameraAnalyser)
@@ -55,48 +49,32 @@ internal class QrCodeSensorUseCaseTest {
     )
 
     @Test
-    fun fourWheels() = runTest {
-        every { cameraAnalyser.findQrCode(any()) } returns MutableStateFlow("11AD8B&21563D&31A4F0&41A552")
-        test().analyse(mockk()).test {
-            assertEquals(QrCodeResult.Sensors(fourWheel), awaitItem())
-            cancelAndIgnoreRemainingEvents()
-        }
+    fun fourWheels() {
+        assertEquals(QrCodeResult.Sensors(fourWheel), test().decode("11AD8B&21563D&31A4F0&41A552"))
     }
 
     @Test
-    fun twoWheels() = runTest {
-        every { cameraAnalyser.findQrCode(any()) } returns MutableStateFlow("11AD8B&41A552")
-        test().analyse(mockk()).test {
-            assertEquals(
-                QrCodeResult.Sensors(
-                    QrCodeSensors.TwoWheel(
-                        QrCodeSensor(-1951592192, Wheel(FRONT_LEFT)),
-                        QrCodeSensor(1386561792, Wheel(REAR_RIGHT)),
-                    )
-                ),
-                awaitItem()
-            )
-            cancelAndIgnoreRemainingEvents()
-        }
+    fun twoWheels() {
+        assertEquals(
+            QrCodeResult.Sensors(
+                QrCodeSensors.TwoWheel(
+                    QrCodeSensor(-1951592192, Wheel(FRONT_LEFT)),
+                    QrCodeSensor(1386561792, Wheel(REAR_RIGHT)),
+                )
+            ),
+            test().decode("11AD8B&41A552")
+        )
     }
 
     // The cap reads 2221C5 too, the sensor advertises C5 21 22
     @Test
-    fun wicarlink() = runTest {
-        every { cameraAnalyser.findQrCode(any()) } returns MutableStateFlow("2221C5")
-        test().analyse(mockk()).test {
-            assertEquals(QrCodeResult.Wicarlink(0x2221C5), awaitItem())
-            cancelAndIgnoreRemainingEvents()
-        }
+    fun wicarlink() {
+        assertEquals(QrCodeResult.Wicarlink(0x2221C5), test().decode("2221C5"))
     }
 
     @Test
-    fun unknownCode() = runTest {
-        every { cameraAnalyser.findQrCode(any()) } returns MutableStateFlow("https://example.com")
-        test().analyse(mockk()).test {
-            assertNull(awaitItem())
-            cancelAndIgnoreRemainingEvents()
-        }
+    fun unknownCode() {
+        assertNull(test().decode("https://example.com"))
     }
 
     @Test

@@ -448,6 +448,17 @@
     <string name="qr_assign_sensors_of">"Assign the sensors of "</string>
     <string name="qr_assign_sysgration">"Assign the %1$s Sysgration sensors from this QR to "</string>
     <string name="qr_assign_wicarlink">"Assign the Wicarlink sensor "</string>
+    <string name="qr_enter_id">Enter ID</string>
+    <string name="qr_from_gallery">From gallery</string>
+    <string name="qr_use_printed_id">Use the ID printed on the sensor: %1$s</string>
+    <string name="qr_sensor_id">Sensor ID</string>
+    <string name="qr_sensor_id_hint">The 6 characters printed by the sensor\'s QR code, 0 to 9 and A to F</string>
+    <string name="qr_no_code_in_pictures">No TPMS QR code in the selected pictures</string>
+    <string name="qr_several_codes">Several QR codes found</string>
+    <string name="qr_choice_wicarlink">Wicarlink sensor %1$s</string>
+    <string name="qr_choice_sysgration">%1$d Sysgration sensors</string>
+    <string name="qr_choice_shared">Sensors of %1$s</string>
+    <string name="qr_choice_unusable">A QR code that can\'t be used</string>
     <string name="qr_dup_id">"\n\n⚠️ Filled QR Code contains the same sensor id multiple time"</string>
     <string name="qr_dup_wheel">"\n\n⚠️ Filled QR Code contains different sensors associated to the same wheel, "</string>
     <string name="qr_duplication">duplication:</string>
