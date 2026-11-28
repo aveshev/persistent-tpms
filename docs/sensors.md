@@ -5,14 +5,14 @@ permalink: /sensors/
 
 # Sensor models
 
-_Last updated: 27 November 2026 · [Русский](../ru/sensors/)_
+_Last updated: 28 November 2026 · [Русский](../ru/sensors/)_
 
 Sensors from different manufacturers differ in how often they send an update, in the steps they
 read the pressure in, and in whether they can tell that the wheel is rolling. What follows was
 measured on real sensors with Persistent TPMS. Something different on yours? Tell us in an
 [issue](https://github.com/aveshev/persistent-tpms/issues).
 
-## WiCarLink, older sensors
+## WiCarLink v1 (older sensors)
 
 - **Updates:** every 5.5 minutes, whether the vehicle moves or not, and at once whenever the
   pressure changes significantly.
@@ -20,7 +20,7 @@ measured on real sensors with Persistent TPMS. Something different on yours? Tel
   when cold, and the next one up once warm.
 - **Wheel rotation:** not detected.
 
-## WiCarLink, newer sensors
+## WiCarLink v2 (newer sensors)
 
 - **Updates:** every 10 minutes while the vehicle stands still. As soon as the wheel starts turning
   it sends an update at once, then about every 2 minutes: for at least 8 minutes, and for as long as
@@ -29,8 +29,9 @@ measured on real sensors with Persistent TPMS. Something different on yours? Tel
 - **Pressure steps:** about 0.45 psi (3.1 kPa). A steady tyre can go back and forth by one step as
   its temperature changes.
 - **Wheel rotation:** detected when the wheel starts turning.
-- **Telling them from the older ones:** the pressure moves in small steps of about 0.45 psi rather
-  than 1.5 psi, and updates come every 2 minutes while riding.
+- **Telling them from v1:** Persistent TPMS names each sensor "Wicarlink v1" or "Wicarlink v2" once
+  it has sent an update, where sensors are assigned and managed. The pressure also moves in small
+  steps of about 0.45 psi rather than 1.5 psi, and updates come every 2 minutes while riding.
 
 ## Pecham
 
