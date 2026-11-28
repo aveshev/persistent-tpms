@@ -37,9 +37,15 @@ import com.masselis.tpmsadvanced.core.ui.SettingsIntro
 import com.masselis.tpmsadvanced.core.ui.SettingsSectionHeader
 import com.masselis.tpmsadvanced.core.ui.SwitchSettingsItem
 import com.masselis.tpmsadvanced.core.ui.TextSettingsItem
+import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences.Companion.DEFAULT_SCREEN_OFF_SCAN_RESTART_SECONDS
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanMode
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanMode.BALANCED
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanMode.LOW_LATENCY
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanMode.LOW_POWER
 import com.masselis.tpmsadvanced.feature.main.R
 import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.DebugSettingsViewModel
 import com.masselis.tpmsadvanced.feature.main.ioc.Bindings.Companion.DebugSettingsViewModel
+import com.masselis.tpmsadvanced.feature.main.usecase.ListenTyreSmartDutyUseCase
 import kotlinx.coroutines.launch
 
 /**
@@ -62,6 +68,10 @@ internal fun DebugSettings(
     val showSensorId by viewModel.showSensorId.collectAsState()
     val showSensorFlags by viewModel.showSensorFlags.collectAsState()
     val balancedAfterFirstReading by viewModel.balancedAfterFirstReading.collectAsState()
+    val backgroundTyreScanMode by viewModel
+        .backgroundTyreScanMode
+        .collectAsState(initial = ListenTyreSmartDutyUseCase.DEFAULT_BACKGROUND_SCAN_MODE)
+    val screenOffScanRestartSeconds by viewModel.screenOffScanRestartSeconds.collectAsState()
     val language by AppLanguage.current.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -72,6 +82,12 @@ internal fun DebugSettings(
         onShowSensorFlags = { viewModel.showSensorFlags.value = it },
         balancedAfterFirstReading = balancedAfterFirstReading,
         onBalancedAfterFirstReading = { viewModel.balancedAfterFirstReading.value = it },
+        // Below Android 12 the tyre scan always stays on low latency, nothing to choose
+        backgroundTyreScanMode = backgroundTyreScanMode
+            .takeIf { ListenTyreSmartDutyUseCase.ALWAYS_LOW_LATENCY_IN_BACKGROUND.not() },
+        onBackgroundTyreScanMode = viewModel::setBackgroundTyreScanMode,
+        screenOffScanRestartSeconds = screenOffScanRestartSeconds,
+        onScreenOffScanRestartSeconds = { viewModel.screenOffScanRestartSeconds.value = it },
         language = language,
         onLanguage = { AppLanguage.current.value = it },
         onExportDatabase = {
@@ -102,6 +118,10 @@ private fun DebugSettings(
     onShowSensorFlags: (Boolean) -> Unit,
     balancedAfterFirstReading: Boolean,
     onBalancedAfterFirstReading: (Boolean) -> Unit,
+    backgroundTyreScanMode: ScanMode?,
+    onBackgroundTyreScanMode: (ScanMode) -> Unit,
+    screenOffScanRestartSeconds: Int,
+    onScreenOffScanRestartSeconds: (Int) -> Unit,
     language: AppLanguage,
     onLanguage: (AppLanguage) -> Unit,
     onExportDatabase: () -> Unit,
@@ -141,6 +161,11 @@ private fun DebugSettings(
             onCheckedChange = onBalancedAfterFirstReading,
             modifier = Modifier.testTag(DebugSettingsTags.balancedAfterFirstReading),
         )
+        backgroundTyreScanMode?.let {
+            BackgroundTyreScanModeSettingsItem(it, onBackgroundTyreScanMode)
+            // The scans only restart from Android 12, like the mode
+            ScreenOffScanRestartSettingsItem(screenOffScanRestartSeconds, onScreenOffScanRestartSeconds)
+        }
     }
     SettingsSectionHeader("Data")
     SettingsGroup {
@@ -163,6 +188,10 @@ internal fun DebugSettingsPreview() {
         onShowSensorFlags = {},
         balancedAfterFirstReading = false,
         onBalancedAfterFirstReading = {},
+        backgroundTyreScanMode = BALANCED,
+        onBackgroundTyreScanMode = {},
+        screenOffScanRestartSeconds = DEFAULT_SCREEN_OFF_SCAN_RESTART_SECONDS,
+        onScreenOffScanRestartSeconds = {},
         language = SYSTEM,
         onLanguage = {},
         onExportDatabase = {},
@@ -174,10 +203,102 @@ internal object DebugSettingsTags {
     const val showSensorId = "DebugSettingsTags_showSensorId"
     const val showSensorFlags = "DebugSettingsTags_showSensorFlags"
     const val balancedAfterFirstReading = "DebugSettingsTags_balancedAfterFirstReading"
+    const val backgroundTyreScanMode = "DebugSettingsTags_backgroundTyreScanMode"
+    const val backgroundTyreScanModeOption = "DebugSettingsTags_backgroundTyreScanModeOption"
+    const val screenOffScanRestart = "DebugSettingsTags_screenOffScanRestart"
+    const val screenOffScanRestartOption = "DebugSettingsTags_screenOffScanRestartOption"
     const val language = "DebugSettingsTags_language"
     const val languageOption = "DebugSettingsTags_languageOption"
     const val exportDatabase = "DebugSettingsTags_exportDatabase"
 }
+
+/**
+ * The mode of the tyre scan while the app isn't visible, from a dropdown, to check whether a phone
+ * throttles low latency there
+ */
+@Composable
+private fun BackgroundTyreScanModeSettingsItem(mode: ScanMode, onMode: (ScanMode) -> Unit) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    Box {
+        TextSettingsItem(
+            headline = "Background scan mode",
+            supporting = "${mode.label}, for the tyres while the app isn't visible",
+            onClick = { expanded = true },
+            modifier = Modifier.testTag(DebugSettingsTags.backgroundTyreScanMode),
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            ListenTyreSmartDutyUseCase.BACKGROUND_SCAN_MODES.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.label) },
+                    onClick = {
+                        onMode(option)
+                        expanded = false
+                    },
+                    trailingIcon = {
+                        if (option == mode) Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.check_24px),
+                            contentDescription = "Selected",
+                        )
+                    },
+                    modifier = Modifier.testTag("${DebugSettingsTags.backgroundTyreScanModeOption}_${option.name}"),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * How often the tyre scans restart while the screen is off, from a dropdown: some phones suspend a
+ * scan shortly after it starts with the screen off
+ */
+@Composable
+private fun ScreenOffScanRestartSettingsItem(seconds: Int, onSeconds: (Int) -> Unit) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    Box {
+        TextSettingsItem(
+            headline = "Restart while the screen is off",
+            supporting = "${seconds.restartLabel}, for the tyre scans",
+            onClick = { expanded = true },
+            modifier = Modifier.testTag(DebugSettingsTags.screenOffScanRestart),
+        )
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            SCREEN_OFF_RESTART_SECONDS.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option.restartLabel) },
+                    onClick = {
+                        onSeconds(option)
+                        expanded = false
+                    },
+                    trailingIcon = {
+                        if (option == seconds) Icon(
+                            imageVector = ImageVector.vectorResource(R.drawable.check_24px),
+                            contentDescription = "Selected",
+                        )
+                    },
+                    modifier = Modifier.testTag("${DebugSettingsTags.screenOffScanRestartOption}_$option"),
+                )
+            }
+        }
+    }
+}
+
+// 0 keeps the usual restart, every 4 minutes
+@Suppress("MagicNumber")
+private val SCREEN_OFF_RESTART_SECONDS = listOf(DEFAULT_SCREEN_OFF_SCAN_RESTART_SECONDS, 30, 10, 0)
+
+private val Int.restartLabel
+    get() = when (this) {
+        0 -> "Every 4 minutes, as with the screen on"
+        DEFAULT_SCREEN_OFF_SCAN_RESTART_SECONDS -> "At screen off, then every $this s (default)"
+        else -> "At screen off, then every $this s"
+    }
+
+private val ScanMode.label
+    get() = when (this) {
+        LOW_POWER -> "Low power"
+        BALANCED -> "Balanced"
+        LOW_LATENCY -> "Low latency"
+    }
 
 /** The app's language, from a dropdown */
 @Composable

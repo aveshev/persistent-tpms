@@ -1,6 +1,10 @@
 package com.masselis.tpmsadvanced.feature.main.usecase
 
 import app.cash.turbine.test
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanMode
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanMode.BALANCED
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanMode.LOW_LATENCY
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanMode.LOW_POWER
 import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import io.mockk.every
 import io.mockk.mockk
@@ -19,7 +23,7 @@ internal class ListenTyreSmartDutyUseCaseTest {
     private lateinit var scanner: LocatedTyreScannerUseCase
     private lateinit var balanced: MutableStateFlow<Boolean>
     private lateinit var isAppVisible: MutableStateFlow<Boolean>
-    private var keepsLowLatencyInBackground = false
+    private lateinit var backgroundMode: MutableStateFlow<ScanMode>
     private lateinit var lowPowerWatch: MutableStateFlow<Boolean>
 
     private val first = mockk<Tyre.Located>()
@@ -36,17 +40,17 @@ internal class ListenTyreSmartDutyUseCaseTest {
         }
         balanced = MutableStateFlow(false)
         isAppVisible = MutableStateFlow(true)
-        keepsLowLatencyInBackground = false
+        backgroundMode = MutableStateFlow(BALANCED)
         lowPowerWatch = MutableStateFlow(false)
     }
 
     private fun test() =
-        ListenTyreSmartDutyUseCase(scanner, balanced, isAppVisible, keepsLowLatencyInBackground, lowPowerWatch)
+        ListenTyreSmartDutyUseCase(scanner, balanced, isAppVisible, backgroundMode, lowPowerWatch)
 
     @Test
     fun `uses the low power scan while watching in the background`() = runTest {
         isAppVisible.value = false
-        keepsLowLatencyInBackground = true
+        backgroundMode.value = LOW_LATENCY
         balanced.value = true
         lowPowerWatch.value = true
         test().listen().test {
@@ -152,11 +156,42 @@ internal class ListenTyreSmartDutyUseCaseTest {
 
     @Test
     fun `a phone keeping low latency in the background stays on the high duty scan`() = runTest {
-        keepsLowLatencyInBackground = true
+        backgroundMode.value = LOW_LATENCY
         isAppVisible.value = false
         test().listen().test {
             assertEquals(first, awaitItem())
             assertEquals(second, awaitItem())
+            expectNoEvents()
+        }
+        verify(exactly = 0) { scanner.normalScan() }
+    }
+
+    @Test
+    fun `choosing low latency in the background switches the scan while the app isn't visible`() = runTest {
+        every { scanner.highDutyScan() } returns flow {
+            emit(first)
+            awaitCancellation()
+        }
+        every { scanner.normalScan() } returns flow {
+            emit(normal)
+            awaitCancellation()
+        }
+        isAppVisible.value = false
+        test().listen().test {
+            assertEquals(normal, awaitItem())
+            backgroundMode.value = LOW_LATENCY
+            assertEquals(first, awaitItem())
+            backgroundMode.value = BALANCED
+            assertEquals(normal, awaitItem())
+        }
+    }
+
+    @Test
+    fun `choosing low power uses the low power scan while the app isn't visible`() = runTest {
+        backgroundMode.value = LOW_POWER
+        isAppVisible.value = false
+        test().listen().test {
+            assertEquals(lowPower, awaitItem())
             expectNoEvents()
         }
         verify(exactly = 0) { scanner.normalScan() }

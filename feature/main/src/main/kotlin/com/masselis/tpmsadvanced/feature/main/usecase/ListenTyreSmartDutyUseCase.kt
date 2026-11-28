@@ -2,6 +2,10 @@ package com.masselis.tpmsadvanced.feature.main.usecase
 
 import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES.S
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanMode
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanMode.BALANCED
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanMode.LOW_LATENCY
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanMode.LOW_POWER
 import com.masselis.tpmsadvanced.data.vehicle.model.Tyre
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -11,7 +15,6 @@ import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
 
 /**
  * The high duty scan while the app is visible, the normal scan otherwise.
@@ -23,16 +26,17 @@ import kotlinx.coroutines.flow.map
  * toggled, and restarting the scan doesn't clear it. A balanced scan wasn't dropped, it stayed at
  * 730/182 in the background, even after a long low latency stint with the app visible.
  *
- * [keepsLowLatencyInBackground] keeps the high duty scan running in the background, for the phones
- * which don't do that, see [KEEPS_LOW_LATENCY_IN_BACKGROUND]. [balancedAfterFirstReading] overrides
- * both, it switches to the normal scan after the first reading. [lowPowerWatch] overrides them all
+ * [backgroundMode] is the scan used in the background: low latency on the phones which don't do
+ * that, see [ALWAYS_LOW_LATENCY_IN_BACKGROUND], and otherwise a debug option to find out how each phone
+ * treats each mode, see [BACKGROUND_SCAN_MODES]. [balancedAfterFirstReading] overrides it, it
+ * switches to the normal scan after the first reading. [lowPowerWatch] overrides them all
  * while the app isn't visible, with the low power scan.
  */
 internal class ListenTyreSmartDutyUseCase(
     private val scanner: LocatedTyreScannerUseCase,
     private val balancedAfterFirstReading: Flow<Boolean>,
     private val isAppVisible: Flow<Boolean>,
-    private val keepsLowLatencyInBackground: Boolean,
+    private val backgroundMode: Flow<ScanMode>,
     private val lowPowerWatch: Flow<Boolean>,
 ) : ListenTyreUseCase {
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -49,9 +53,15 @@ internal class ListenTyreSmartDutyUseCase(
                         emitAll(scanner.normalScan())
                     }
                     else isAppVisible
-                        .map { it || keepsLowLatencyInBackground }
+                        .combine(backgroundMode) { visible, mode -> if (visible) LOW_LATENCY else mode }
                         .distinctUntilChanged()
-                        .flatMapLatest { highDuty -> if (highDuty) scanner.highDutyScan() else scanner.normalScan() }
+                        .flatMapLatest { mode ->
+                            when (mode) {
+                                LOW_LATENCY -> scanner.highDutyScan()
+                                BALANCED -> scanner.normalScan()
+                                LOW_POWER -> scanner.lowPowerScan()
+                            }
+                        }
                 }
         }
 
@@ -63,6 +73,16 @@ internal class ListenTyreSmartDutyUseCase(
          * switching scans on leaving the app risks a deaf one. Android 12 and later scan without
          * location, and the Pixel's drop happens there.
          */
-        val KEEPS_LOW_LATENCY_IN_BACKGROUND: Boolean = SDK_INT < S
+        val ALWAYS_LOW_LATENCY_IN_BACKGROUND: Boolean = SDK_INT < S
+
+        /** The modes the tyre scan can use while the app isn't visible, from Android 12, a debug option */
+        val BACKGROUND_SCAN_MODES: List<ScanMode> = listOf(BALANCED, LOW_LATENCY, LOW_POWER)
+
+        /** The mode of the tyre scan while the app isn't visible when the debug option was never set */
+        val DEFAULT_BACKGROUND_SCAN_MODE: ScanMode = BALANCED
+
+        /** The mode a stored name stands for, the default one for an unknown or missing name */
+        fun String?.asBackgroundScanMode(): ScanMode =
+            BACKGROUND_SCAN_MODES.firstOrNull { it.name == this } ?: DEFAULT_BACKGROUND_SCAN_MODE
     }
 }

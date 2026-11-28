@@ -4,6 +4,7 @@ import com.masselis.tpmsadvanced.core.ui.isAppVisibleFlow
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
 import com.masselis.tpmsadvanced.data.unit.interfaces.UnitPreferences
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanMode.LOW_LATENCY
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.SensorDatabase
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.ReadingDatabase
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.VehicleDatabase
@@ -18,6 +19,7 @@ import com.masselis.tpmsadvanced.feature.main.interfaces.viewmodel.impl.TyreStat
 import com.masselis.tpmsadvanced.feature.main.ioc.vehicle.VehicleLifecycle
 import com.masselis.tpmsadvanced.feature.main.usecase.ListenBoundTyreUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.ListenTyreSmartDutyUseCase
+import com.masselis.tpmsadvanced.feature.main.usecase.ListenTyreSmartDutyUseCase.Companion.asBackgroundScanMode
 import com.masselis.tpmsadvanced.feature.main.usecase.ListenTyreUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.ListenTyreWithDatabaseUseCase
 import com.masselis.tpmsadvanced.feature.main.usecase.LocatedTyreScannerUseCase
@@ -37,6 +39,8 @@ import dev.zacsweers.metro.Provides
 import dev.zacsweers.metro.SingleIn
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 
 @Suppress("unused", "MaxLineLength", "FunctionNaming")
 @ContributesTo(scope = TyreComponent.Scope::class)
@@ -114,7 +118,10 @@ public interface TyreBindings {
         // A debug option: turning Debug off turns it off too
         combine(appPreferences.debugOptionsInUse, appPreferences.balancedAfterFirstReading, Boolean::and),
         isAppVisibleFlow,
-        ListenTyreSmartDutyUseCase.KEEPS_LOW_LATENCY_IN_BACKGROUND,
+        if (ListenTyreSmartDutyUseCase.ALWAYS_LOW_LATENCY_IN_BACKGROUND) flowOf(LOW_LATENCY)
+        else appPreferences
+            .backgroundTyreScanModeInUse
+            .map { it.asBackgroundScanMode() },
         lowPowerWatchUseCase.isWatching,
     )
 

@@ -17,10 +17,13 @@ import android.bluetooth.le.ScanSettings
 import android.bluetooth.le.ScanSettings.MATCH_MODE_AGGRESSIVE
 import android.bluetooth.le.ScanSettings.MATCH_NUM_ONE_ADVERTISEMENT
 import android.content.Context
+import android.content.Intent.ACTION_SCREEN_OFF
+import android.content.Intent.ACTION_SCREEN_ON
 import android.content.IntentFilter
 import android.os.Build
 import android.os.Build.VERSION.SDK_INT
 import android.os.Build.VERSION_CODES.R
+import android.os.PowerManager
 import android.os.SystemClock.elapsedRealtime
 import androidx.annotation.RequiresPermission
 import androidx.core.content.ContextCompat.RECEIVER_EXPORTED
@@ -57,11 +60,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted.Companion.WhileSubscribed
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
@@ -83,8 +88,14 @@ import kotlin.time.Duration.Companion.seconds
 
 @SuppressLint("MissingPermission")
 @Suppress("MaxLineLength")
+/**
+ * [screenOffRestart] is how often the tyre scans restart while the screen is off, null for the
+ * usual [SCAN_RESTART]: some phones suspend a scan with the screen off, see [restarts]. 15 s by
+ * default from Android 12, a debug option.
+ */
 internal class BluetoothLeScannerImpl(
-    private val context: Context
+    private val context: Context,
+    private val screenOffRestart: Flow<Duration?>,
 ) : BluetoothLeScanner {
 
     private val logger = Logger.withTag("BluetoothLeScannerImpl")
@@ -124,6 +135,39 @@ internal class BluetoothLeScannerImpl(
         // Read just before the receiver is registered: Bluetooth takes far longer to turn on than
         // the time in between, its "on" broadcast isn't missed
         .onStart { emit(bluetoothAdapter?.isEnabled == true) }
+
+    /** Whether the screen is off, from now on */
+    private val isScreenOff = IntentFilter()
+        .apply {
+            addAction(ACTION_SCREEN_ON)
+            addAction(ACTION_SCREEN_OFF)
+        }
+        // Protected system broadcasts, see asFlow()
+        .asFlow(RECEIVER_EXPORTED)
+        .map { context.getSystemService<PowerManager>()?.isInteractive == false }
+        .onStart { emit(context.getSystemService<PowerManager>()?.isInteractive == false) }
+        .distinctUntilChanged()
+
+    /**
+     * A tick at the start and at each restart. A HyperOS phone (Poco X6 Pro) suspends every scan
+     * at screen off, then again on a once-a-minute tick ("screen is off, force suspend scan"), and
+     * only a new scan runs again: [screenOffRestart] restarts it as the screen goes off, then at
+     * that pace.
+     */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    private fun restarts(usual: Duration?): Flow<Unit> = combine(isScreenOff, screenOffRestart) { off, restart ->
+        restart.takeIf { off } ?: usual
+    }
+        .distinctUntilChanged()
+        .flatMapLatest { every ->
+            flow {
+                emit(Unit)
+                if (every != null) while (true) {
+                    delay(every)
+                    emit(Unit)
+                }
+            }
+        }
 
     /** Every result of a scan with [filters] and [settings], debug builds adding the mock ones */
     @SuppressLint("InlinedApi")
@@ -199,14 +243,9 @@ internal class BluetoothLeScannerImpl(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     @RequiresPermission("android.permission.BLUETOOTH_SCAN")
-    private fun scan(mode: Int, restarts: Boolean = true) = flow {
-        emit(Unit)
+    private fun scan(mode: Int, restarts: Boolean = true) =
         // Below Android 12, a scan started while the app isn't visible may get no results
-        if (restarts && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) while (true) {
-            delay(SCAN_RESTART)
-            emit(Unit)
-        }
-    }
+        (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) restarts(SCAN_RESTART.takeIf { restarts }) else flowOf(Unit))
         .flatMapLatest {
             rawScan(
                 FILTERS,
@@ -246,7 +285,8 @@ internal class BluetoothLeScannerImpl(
     override fun normalScan(): Flow<Tyre.SensorInput> =
         shared(TyreScan(ScanSettings.SCAN_MODE_BALANCED)) { scan(ScanSettings.SCAN_MODE_BALANCED) }
 
-    // Not restarted: the restart is against Android's timeout, which moves a long scan to low power
+    // Not restarted but while the screen is off, see restarts(): the usual restart is against
+    // Android's timeout, which moves a long scan to low power
     @SuppressLint("MissingPermission")
     override fun lowPowerScan(): Flow<Tyre.SensorInput> =
         shared(TyreScan(ScanSettings.SCAN_MODE_LOW_POWER)) { scan(ScanSettings.SCAN_MODE_LOW_POWER, restarts = false) }

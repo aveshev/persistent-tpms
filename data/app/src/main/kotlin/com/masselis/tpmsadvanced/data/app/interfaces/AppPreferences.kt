@@ -61,6 +61,31 @@ public class AppPreferences internal constructor(
     public val balancedAfterFirstReading: MutableStateFlow<Boolean> =
         sharedPreferences.booleanFlow("BALANCED_AFTER_FIRST_READING", false)
 
+    /**
+     * The mode of the tyre scan while the app isn't visible, a debug option to check whether a phone
+     * throttles low latency there. Left as a name like [beaconScanMode]: the reader falls back on
+     * its default for an unknown one.
+     */
+    public val backgroundTyreScanMode: MutableStateFlow<String?> =
+        sharedPreferences.stringFlow("BACKGROUND_TYRE_SCAN_MODE")
+
+    /** [backgroundTyreScanMode] while [debugOptionsInUse], else null for the reader's default */
+    public val backgroundTyreScanModeInUse: StateFlow<String?> =
+        debugOptionsInUse.combineState(backgroundTyreScanMode) { inUse, mode -> mode.takeIf { inUse } }
+
+    /**
+     * How often, in seconds, the tyre scans restart while the screen is off, a debug option: HyperOS
+     * suspends a scan at screen off and then once a minute. 0 keeps the usual restart.
+     */
+    public val screenOffScanRestartSeconds: MutableStateFlow<Int> =
+        sharedPreferences.intFlow("SCREEN_OFF_SCAN_RESTART_SECONDS", DEFAULT_SCREEN_OFF_SCAN_RESTART_SECONDS)
+
+    /** [screenOffScanRestartSeconds] while [debugOptionsInUse], else [DEFAULT_SCREEN_OFF_SCAN_RESTART_SECONDS] */
+    public val screenOffScanRestartSecondsInUse: StateFlow<Int> =
+        debugOptionsInUse.combineState(screenOffScanRestartSeconds) { inUse, seconds ->
+            seconds.takeIf { inUse } ?: DEFAULT_SCREEN_OFF_SCAN_RESTART_SECONDS
+        }
+
     public val showTimeSinceUpdate: MutableStateFlow<Boolean> =
         sharedPreferences.booleanFlow("SHOW_TIME_SINCE_UPDATE", true)
 
@@ -418,6 +443,13 @@ public class AppPreferences internal constructor(
         public const val DEFAULT_RIDE_STALE_MINUTES: Int = 60
         private const val DEFAULT_PRESSURE_LOSS_MIN_DROP = 5f
         private const val DEFAULT_MAGNIFIER_SECONDS = 5
+
+        /**
+         * Restarting every 15 s kept a scan running about 75 % of the time with the screen off on a
+         * Poco X6 Pro, and cost nothing visible on a Pixel 7: no start errors, well under Android's
+         * 5 starts in 30 s
+         */
+        public const val DEFAULT_SCREEN_OFF_SCAN_RESTART_SECONDS: Int = 15
         private const val DEFAULT_DIM_DISPLAY_SECONDS = 60
         private const val DEFAULT_DIM_DISPLAY_DIVISOR = 50
     }

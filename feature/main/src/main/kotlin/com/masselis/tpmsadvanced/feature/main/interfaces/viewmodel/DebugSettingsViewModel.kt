@@ -5,8 +5,12 @@ import com.masselis.tpmsadvanced.core.common.appContext
 import com.masselis.tpmsadvanced.data.app.interfaces.AppPreferences
 import com.masselis.tpmsadvanced.data.app.interfaces.AppTier
 import com.masselis.tpmsadvanced.data.app.interfaces.AppTier.LITE
+import com.masselis.tpmsadvanced.data.vehicle.interfaces.BluetoothLeScanner.ScanMode
 import com.masselis.tpmsadvanced.data.vehicle.interfaces.DatabaseExport
+import com.masselis.tpmsadvanced.feature.main.usecase.ListenTyreSmartDutyUseCase.Companion.asBackgroundScanMode
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import java.io.File
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
@@ -20,6 +24,14 @@ internal class DebugSettingsViewModel(
     val showSensorId = appPreferences.showSensorId
     val showSensorFlags = appPreferences.showSensorFlags
     val balancedAfterFirstReading = appPreferences.balancedAfterFirstReading
+    private val backgroundTyreScanModeName = appPreferences.backgroundTyreScanMode
+    val backgroundTyreScanMode: Flow<ScanMode> = backgroundTyreScanModeName.map { it.asBackgroundScanMode() }
+
+    val screenOffScanRestartSeconds = appPreferences.screenOffScanRestartSeconds
+
+    fun setBackgroundTyreScanMode(mode: ScanMode) {
+        backgroundTyreScanModeName.value = mode.name
+    }
 
     // Owned by the background feature, which also puts their items on the debug page
     // Never on in Lite, which has no item for it: it can't detect activities
