@@ -711,4 +711,5 @@
         <item quantity="many">%1$d датчиков</item>
         <item quantity="other">%1$d датчика</item>
     </plurals>
+    <string name="sort_by_signal">Сортировать по сигналу</string>
 </resources>

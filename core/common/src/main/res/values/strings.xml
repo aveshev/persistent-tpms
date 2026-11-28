@@ -700,4 +700,5 @@
         <item quantity="one">%1$d sensor</item>
         <item quantity="other">%1$d sensors</item>
     </plurals>
+    <string name="sort_by_signal">Sort by signal</string>
 </resources>
