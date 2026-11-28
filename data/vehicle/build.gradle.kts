@@ -13,6 +13,7 @@ android {
 
 dependencies {
     implementation(project(":core:common"))
+    implementation(project(":data:app"))
     implementation(project(":core:ui"))
     api(project(":core:database"))
     implementation(project(":data:unit"))
